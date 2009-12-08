@@ -1,0 +1,825 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    $RCSfile: vtkSurfaceCursor.cxx,v $
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+
+#include "vtkSurfaceCursor.h"
+#include "vtkObjectFactory.h"
+
+#include "vtkRenderer.h"
+#include "vtkCamera.h"
+#include "vtkActor.h"
+#include "vtkVolume.h"
+#include "vtkImageActor.h"
+#include "vtkProp3DCollection.h"
+#include "vtkAssemblyPath.h"
+#include "vtkProperty.h"
+#include "vtkDataSetMapper.h"
+#include "vtkAbstractVolumeMapper.h"
+#include "vtkLookupTable.h"
+#include "vtkDataSetCollection.h"
+#include "vtkImageData.h"
+#include "vtkPolyData.h"
+#include "vtkPoints.h"
+#include "vtkCellArray.h"
+#include "vtkDataArray.h"
+#include "vtkDoubleArray.h"
+#include "vtkIntArray.h"
+#include "vtkPointData.h"
+#include "vtkMatrix4x4.h"
+#include "vtkMath.h"
+#include "vtkVolumePicker.h"
+#include "vtkCommand.h"
+
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.1 $");
+vtkStandardNewMacro(vtkSurfaceCursor);
+
+//----------------------------------------------------------------------------
+class vtkSurfaceCursorCommand : public vtkCommand
+{
+public:
+  static vtkSurfaceCursorCommand *New(vtkSurfaceCursor *cursor) {
+    return new vtkSurfaceCursorCommand(cursor); };
+
+  virtual void Execute(vtkObject *object, unsigned long event, void *data) {
+    this->Cursor->HandleEvent(object, event, data); };
+
+protected:
+  vtkSurfaceCursorCommand(vtkSurfaceCursor *cursor) {
+    this->Cursor = cursor; };
+
+  vtkSurfaceCursor* Cursor;
+
+private:
+  static vtkSurfaceCursorCommand *New(); // Not implemented.
+  vtkSurfaceCursorCommand(); // Not implemented.
+  vtkSurfaceCursorCommand(const vtkSurfaceCursorCommand&);  // Not implemented.
+  void operator=(const vtkSurfaceCursorCommand&);  // Not implemented.
+};
+
+//----------------------------------------------------------------------------
+vtkSurfaceCursor::vtkSurfaceCursor()
+{
+  this->DisplayPosition[0] = 0;
+  this->DisplayPosition[1] = 0;
+
+  this->Position[0] = 0.0;
+  this->Position[1] = 0.0;
+  this->Position[2] = 0.0;
+
+  this->Normal[0] = 0.0;
+  this->Normal[1] = 0.0;
+  this->Normal[2] = 1.0;
+
+  this->Vector[0] = 0.0;
+  this->Vector[1] = 1.0;
+  this->Vector[2] = 0.0;
+
+  this->Renderer = 0;
+
+  this->PointNormalAtCamera = 1;
+  this->State = 0;
+  this->Shape = 0;
+
+  this->Actor = vtkActor::New();
+  this->Matrix = vtkMatrix4x4::New();
+  this->Mapper = vtkDataSetMapper::New();
+  this->LookupTable = vtkLookupTable::New();
+  this->Mapper->SetLookupTable(this->LookupTable);
+  this->Mapper->UseLookupTableScalarRangeOn();
+  this->Shapes = vtkDataSetCollection::New();
+  this->Picker = vtkVolumePicker::New();
+
+  this->LookupTable->SetRampToLinear();
+  this->LookupTable->SetTableRange(0,255);
+  this->LookupTable->SetNumberOfTableValues(256);
+  this->LookupTable->SetSaturationRange(0,0);
+  this->LookupTable->SetValueRange(0,1);
+  this->LookupTable->Build();
+  this->LookupTable->SetTableValue(0, 1.0, 0.0, 0.0, 1.0);
+  this->LookupTable->SetTableValue(1, 0.0, 1.0, 0.0, 1.0);
+
+  this->Actor->PickableOff();
+  this->Actor->VisibilityOff();
+  this->Actor->GetProperty()->BackfaceCullingOn();
+  this->Actor->SetMapper(this->Mapper);
+  this->Actor->SetUserMatrix(this->Matrix);
+
+  this->MakeDefaultShapes();
+  this->SetShape(0);
+
+  this->Command = vtkSurfaceCursorCommand::New(this);
+}
+
+//----------------------------------------------------------------------------
+vtkSurfaceCursor::~vtkSurfaceCursor()
+{  
+  this->SetRenderer(0);
+
+  if (this->Command)
+    {
+    this->Command->Delete();
+    }
+  if (this->Matrix)
+    {
+    this->Matrix->Delete();
+    }
+  if (this->Shapes)
+    {
+    this->Shapes->Delete();
+    }
+  if (this->Mapper)
+    {
+    this->Mapper->Delete();
+    }
+  if (this->LookupTable)
+    {
+    this->LookupTable->Delete();
+    }
+  if (this->Actor)
+    {
+    this->Actor->Delete();
+    }
+  if (this->Picker)
+    {
+    this->Picker->Delete();
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
+{
+  if (renderer == this->Renderer)
+    {
+    return;
+    }
+
+  if (this->Renderer)
+    {
+    this->Renderer->RemoveObserver(this->Command);
+    this->Renderer->RemoveActor(this->Actor);
+    this->Renderer->Delete();
+    this->Renderer = 0;
+    }
+
+  if (renderer)
+    {
+    this->Renderer = renderer;
+    this->Renderer->Register(this);
+    this->Renderer->AddActor(this->Actor);
+    this->Renderer->AddObserver(vtkCommand::StartEvent,
+                                this->Command, -1);
+    }
+
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetColor(int i, double r, double b, double g)
+{
+  if (i >= 0 && i <= 255)
+    {
+    double rgba[4];
+    this->LookupTable->GetTableValue(i, rgba);
+    if (rgba[0] != r || rgba[1] != g || rgba[2] != b)
+      {
+      this->LookupTable->SetTableValue(i, r, g, b, 1.0);
+      this->Modified();
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::GetColor(int i, double rgb[3])
+{
+  if (i < 0) { i = 0; }
+  if (i > 255) { i = 255; }
+
+  double rgba[4];
+  this->LookupTable->GetTableValue(i, rgba);
+
+  rgb[0] = rgba[0];
+  rgb[1] = rgba[1];
+  rgb[2] = rgba[2];
+}  
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
+                                          vtkRenderer *renderer)
+{
+  // Go through all Prop3Ds that might be picked and update their data.
+  // This is necessary if any data has changed since the last render.
+
+  vtkPropCollection *props;
+  if ( picker->GetPickFromList() )
+    {
+    props = picker->GetPickList();
+    }
+  else
+    {
+    props = renderer->GetViewProps();
+    }
+
+  vtkProp *prop;
+  vtkCollectionSimpleIterator pit;
+  props->InitTraversal(pit);
+  while ( (prop = props->GetNextProp(pit)) )
+    {
+    vtkAssemblyPath *path;
+    prop->InitPathTraversal();
+    while ( (path = prop->GetNextPath()) )
+      {
+      if (!prop->GetPickable() || !prop->GetVisibility())
+        {
+        break;
+        }
+
+      vtkProp *anyProp = path->GetLastNode()->GetViewProp();
+      vtkActor *actor;
+      vtkVolume *volume;
+      vtkImageActor *imageActor;
+      
+      if ( (actor = vtkActor::SafeDownCast(anyProp)) )
+        {
+        vtkDataSet *data = actor->GetMapper()->GetInput();
+        if (data)
+          {
+          data->Update();
+          }
+        }
+      else if ( (volume = vtkVolume::SafeDownCast(anyProp)) )
+        {
+        vtkDataSet *data = volume->GetMapper()->GetDataSetInput();
+        if (data)
+          {
+          data->UpdateInformation();
+          data->SetUpdateExtentToWholeExtent();
+          data->Update();
+          }
+        }
+      else if ( (imageActor = vtkImageActor::SafeDownCast(anyProp)) )
+        {
+        vtkImageData *data = imageActor->GetInput();
+        if (data)
+          {
+          data->UpdateInformation();
+          int extent[6], wextent[6], dextent[6];
+          data->GetExtent(extent);
+          data->GetWholeExtent(wextent);
+          imageActor->GetDisplayExtent(dextent);
+          if (dextent[0] == -1)
+            {
+            for (int i = 0; i < 6; i++) { extent[i] = wextent[i]; }
+            if (extent[5] < extent[4])
+              {
+              extent[5] = extent[4];
+              }
+            }
+          else
+            {
+            for (int i = 0; i < 3; i++)
+              {
+              int l = 2*i;
+              int h = l+1;
+              // Clip the display extent with the whole extent
+              if (dextent[l] > wextent[l]) { dextent[l] = wextent[l]; }
+              if (dextent[h] < wextent[h]) { dextent[h] = wextent[h]; }
+              // Expand the extent to include the display extent
+              if (extent[l] > dextent[l]) { extent[l] = dextent[l]; }
+              if (extent[h] < dextent[h]) { extent[h] = dextent[h]; }
+              }
+            }
+          data->SetUpdateExtent(extent);
+          data->PropagateUpdateExtent();
+          data->UpdateData();
+          }
+        }
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
+// Use information from the picker to decide what the state should be
+
+void vtkSurfaceCursor::ComputeState()
+{
+  this->State = 0;
+
+  vtkVolumePicker *picker = this->Picker;
+  vtkProp3DCollection *props = picker->GetProp3Ds();
+  vtkCollectionSimpleIterator pit;
+  props->InitTraversal(pit);
+  vtkProp3D *prop = props->GetNextProp3D(pit);
+
+  if (prop)
+    {
+    // The object under the cursor is moveable
+    this->State = (this->State | VTK_SCURSOR_MOVEABLE);
+    }
+  else
+    {
+    // No prop means default state
+    return;
+    }
+  
+  if (picker->GetClippingPlaneId() >= 0)
+    {
+    this->State = (this->State | VTK_SCURSOR_PUSHABLE
+                               | VTK_SCURSOR_ROTATEABLE); 
+    }
+
+  if (picker->GetCroppingPlaneId() >= 0)
+    {
+    this->State = (this->State | VTK_SCURSOR_PUSHABLE);
+    }
+
+  if (prop->IsA("vtkActor"))
+    {
+    this->State = (this->State | VTK_SCURSOR_ACTOR);
+    }
+  else if (prop->IsA("vtkVolume"))
+    {
+    this->State = (this->State | VTK_SCURSOR_VOLUME);
+    }
+  else if (prop->IsA("vtkImageActor"))
+    {
+    this->State = (this->State | VTK_SCURSOR_IMAGE_ACTOR
+                               | VTK_SCURSOR_PUSHABLE);
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::ComputePosition()
+{
+  if (!this->Renderer)
+    {
+    return;
+    }
+
+  int x = this->DisplayPosition[0];
+  int y = this->DisplayPosition[1];
+
+  this->UpdatePropsForPick(this->Picker, this->Renderer);
+
+  vtkVolumePicker *picker = this->Picker;
+  picker->Pick(x, y, 0, this->Renderer);
+  picker->GetPickPosition(this->Position);
+  picker->GetPickNormal(this->Normal);
+
+  if (this->PointNormalAtCamera &&
+      vtkMath::Dot(this->Renderer->GetActiveCamera()
+                   ->GetDirectionOfProjection(),
+                   this->Normal) > 0)
+    {
+    this->Normal[0] = -this->Normal[0];
+    this->Normal[1] = -this->Normal[1];
+    this->Normal[2] = -this->Normal[2];
+    }
+
+  this->ComputeState();
+
+  this->ComputeVectorFromNormal(this->Normal, this->Vector,
+                                this->Renderer);
+
+  double *p = this->Position;
+  double *n = this->Normal;
+  double *v = this->Vector;
+  double u[3];
+  vtkMath::Cross(v, n, u);
+
+  vtkMatrix4x4 *matrix = this->Matrix;
+  for (int j = 0; j < 3; j++)
+    {
+    matrix->SetElement(j, 0, u[j]);
+    matrix->SetElement(j, 1, v[j]);
+    matrix->SetElement(j, 2, n[j]);
+    matrix->SetElement(j, 3, p[j]);
+    }
+  matrix->Modified();
+
+  // Set the size of the actor: 1 data unit length equals 1 screen pixel.
+  // Start by computing the height of the window at the cursor position.
+  double worldHeight = 1.0;
+  vtkCamera *camera = this->Renderer->GetActiveCamera();
+  if (camera->GetParallelProjection())
+    {
+    worldHeight = camera->GetParallelScale();
+    }
+  else
+    {
+    double c[3];
+    camera->GetPosition(c);
+    worldHeight = sqrt(vtkMath::Distance2BetweenPoints(p, c)) *
+      tan(0.5*camera->GetViewAngle()/57.296);
+    }
+
+  // Compare world height to window height.
+  int windowHeight = this->Renderer->GetSize()[1];
+  double scale = 1.0;
+  if (windowHeight > 0)
+    {
+    scale = worldHeight/windowHeight;
+    }
+
+  this->Actor->VisibilityOn();
+  this->Actor->SetScale(scale);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
+                                   void *)
+{
+  switch (event)
+    {
+    case vtkCommand::StartEvent:
+      {
+      if (object == this->Renderer)
+        {
+        this->ComputePosition();
+        }
+      }
+      break;
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetShape(int shape)
+{
+  vtkDataSet *data = this->Shapes->GetItem(shape);
+
+  if (data)
+    {
+    this->Mapper->SetInput(data);
+    this->Shape = shape;
+    }
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::AddShape(vtkDataSet *data)
+{
+  this->Shapes->AddItem(data);
+  
+  return (this->Shapes->GetNumberOfItems() - 1);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::MakeDefaultShapes()
+{
+  vtkDataSet *data;
+
+  data = this->MakeConeShape(0);
+  this->AddShape(data);
+  data->Delete();
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeSphereShape()
+{
+  double pi = vtkMath::DoublePi();
+  double radius = 10.0;
+  int resolution = 9;
+
+  vtkIdType *pointIds = new vtkIdType[4*(resolution+1)];
+
+  vtkIntArray *scalars = vtkIntArray::New();
+  vtkDoubleArray *normals = vtkDoubleArray::New();
+  normals->SetNumberOfComponents(3);
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkIdType nPoints = 0;
+ 
+  for (int colorIndex = 0; colorIndex < 2; colorIndex++)
+    {
+    // The sign (i.e. for top or bottom) is stored in s
+    double s = 1 - 2*colorIndex;
+
+    // The unit position vector of the point is stored in v
+    double v[3];
+    v[0] = 0;
+    v[1] = 0;
+    v[2] = s;
+
+    points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
+    normals->InsertNextTupleValue(v);
+    scalars->InsertNextTupleValue(&colorIndex);
+      
+    int n = (resolution + 1)/2;
+    int m = 2*resolution;
+
+    for (int j = 1; j <= n; j++)
+      {
+      double phi = pi*j/resolution;
+      double r = sin(phi);
+      v[2] = cos(phi)*s;
+      if (2*j >= resolution)
+        {
+        v[2] = 0;
+        }
+
+      for (int k = 0; k < m; k++)
+        {
+        double theta = pi*k/resolution;
+        v[0] = r*cos(theta);
+        v[1] = r*sin(theta)*s;
+        points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
+        normals->InsertNextTupleValue(v);
+        scalars->InsertNextTupleValue(&colorIndex);
+        }
+      }
+
+    // Make the fan for the top
+    pointIds[0] = nPoints++;
+    for (int ii = 0; ii < (m-1); ii++)
+      {
+      pointIds[1] = nPoints + ii;
+      pointIds[2] = nPoints + ii + 1;
+      strips->InsertNextCell(3, pointIds);
+      }
+    pointIds[1] = nPoints + m - 1;
+    pointIds[2] = nPoints;
+    strips->InsertNextCell(3, pointIds);
+
+    // Make the strips for the rest
+    for (int jj = 1; jj < n; jj++)
+      {
+      for (int kk = 0; kk < m; kk++)
+        {
+        pointIds[2*kk] = nPoints + kk;
+        pointIds[2*kk+1] = nPoints + kk + m;
+        }
+      pointIds[2*m] = nPoints;
+      pointIds[2*m+1] = nPoints + m;
+      strips->InsertNextCell(2*(m+1), pointIds);
+      nPoints += m;
+      }
+
+    nPoints += m;
+    }
+
+  delete [] pointIds;
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->SetPoints(points);
+  points->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+  data->GetPointData()->SetNormals(normals);
+  normals->Delete();
+
+  return data;
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeConeShape(int dual)
+{
+  double pi = vtkMath::DoublePi();
+  double radius = 16.0;
+  double height = 30.0;
+  int resolution = 20;
+
+  vtkIdType *pointIds = new vtkIdType[2*(resolution+1)];
+
+  vtkIntArray *scalars = vtkIntArray::New();
+  vtkDoubleArray *normals = vtkDoubleArray::New();
+  normals->SetNumberOfComponents(3);
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkIdType nPoints = 0;
+ 
+  int sides = (dual ? 2 : 1);
+
+  for (int colorIndex = 0; colorIndex < sides; colorIndex++)
+    {
+    // The sign (i.e. for top or bottom) is stored in s
+    double s = 1 - 2*colorIndex;
+
+    // The length of the side of the cone
+    double l = sqrt(radius*radius + height*height);
+    double f1 = radius/l;
+    double f2 = height/l;
+
+    // The unit normal vector
+    double v[3];
+
+    // The point of the cone
+    for (int i = 0; i < 2; i++)
+      {
+      double r = radius*i;
+      double z = height*i;
+      double offset = 0.5*(1 - i);
+
+      for (int j = 0; j < resolution; j++)
+        {
+        double theta = 2*pi*(j + offset)/resolution;
+        double ct = cos(theta);
+        double st = sin(theta);
+        v[0] = f2*ct;
+        v[1] = f2*st*s;
+        v[2] = -f1*s;
+        points->InsertNextPoint(r*ct, r*st*s, z*s);
+        normals->InsertNextTupleValue(v);
+        scalars->InsertNextTupleValue(&colorIndex);
+        }
+      }
+
+    // The base of the cone
+    v[0] = 0;
+    v[1] = 0;
+    v[2] = s;
+    points->InsertNextPoint(0, 0, height*s);
+    normals->InsertNextTupleValue(v);
+    scalars->InsertNextTupleValue(&colorIndex); 
+
+    for (int k = 0; k < resolution; k++)
+      {
+      double theta = 2*pi*k/resolution;
+      points->InsertNextPoint(radius*cos(theta), radius*sin(theta)*s, height*s);
+      normals->InsertNextTupleValue(v);
+      scalars->InsertNextTupleValue(&colorIndex);
+      }
+
+    // Make the fan for the top
+    for (int ii = 0; ii < (resolution-1); ii++)
+      {
+      pointIds[0] = nPoints + ii;
+      pointIds[1] = nPoints + ii + resolution + 1;
+      pointIds[2] = nPoints + ii + resolution;
+      strips->InsertNextCell(3, pointIds);
+      }
+    pointIds[0] = nPoints + 2*resolution - 1;
+    pointIds[1] = nPoints + resolution - 1;
+    pointIds[2] = nPoints + resolution;
+    strips->InsertNextCell(3, pointIds);
+    nPoints += 2*resolution;
+ 
+    // Make the fan for the base
+    pointIds[0] = nPoints++;
+    for (int jj = 0; jj < (resolution-1); jj++)
+      {
+      pointIds[1] = nPoints + jj;
+      pointIds[2] = nPoints + jj + 1;
+      strips->InsertNextCell(3, pointIds);
+      }
+    pointIds[1] = nPoints + resolution - 1;
+    pointIds[2] = nPoints;
+    strips->InsertNextCell(3, pointIds);
+    nPoints += resolution;
+    }
+
+  delete [] pointIds;
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->SetPoints(points);
+  points->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+  data->GetPointData()->SetNormals(normals);
+  normals->Delete();
+
+  return data;
+}
+
+/*
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeArrowShape()
+{
+  static unsigned char color1[] = { 255,   0,   0, 255 }; 
+  static unsigned char color2[] = { 255,   0,   0, 255 }; 
+}
+*/
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeCrossShape()
+{
+  double radius = 20.0;
+  double inner = 7.0;
+  double thickness = 2.0;
+
+  double xmin = inner;
+  double xmax = radius;
+  double ymin = -thickness;
+  double ymax = +thickness;
+  double zmin = 0;
+  double zmax = thickness;
+
+  vtkIntArray *scalars = vtkIntArray::New();
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkIdType nPoints = 0;
+  
+  for (int colorIndex = 0; colorIndex < 2; colorIndex++)
+    {
+    for (int j = 0; j < 4; j++)
+      {
+      double z = zmax;
+      for (int k = 0; k < 2; k++)
+        {
+        points->InsertNextPoint(xmin, ymin, z);
+        points->InsertNextPoint(xmin, ymax, z);
+        points->InsertNextPoint(xmax, ymax, z);
+        points->InsertNextPoint(xmax, ymin, z);
+        scalars->InsertNextTupleValue(&colorIndex);
+        scalars->InsertNextTupleValue(&colorIndex);
+        scalars->InsertNextTupleValue(&colorIndex);
+        scalars->InsertNextTupleValue(&colorIndex);
+        z = zmin;
+        }
+   
+      static vtkIdType rectIds[5][4] = { { 1, 0, 2, 3 },
+                                         { 4, 0, 5, 1 },
+                                         { 5, 1, 6, 2 },
+                                         { 6, 2, 7, 3 },
+                                         { 7, 3, 4, 0 } };
+      vtkIdType pointIds[4];
+      for (int ii = 0; ii < 5; ii++)
+        {
+        for (int jj = 0; jj < 4; jj++)
+          {
+          pointIds[jj] = rectIds[ii][jj]+nPoints;
+          }
+        strips->InsertNextCell(4, pointIds);
+        }
+      nPoints += 8;
+
+      // do a rotation of 90 degrees for next piece
+      double tmp1 = ymin;
+      double tmp2 = ymax;
+      ymin = -xmax;
+      ymax = -xmin;
+      xmin = tmp1;
+      xmax = tmp2;
+      }
+
+    // do the other side
+    zmin = -zmin;
+    zmax = -zmax;
+    xmin = -xmin;
+    xmax = -xmax;
+    }
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->SetPoints(points);
+  points->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+
+  return data;
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
+                                               double vector[3],
+                                               vtkRenderer *renderer)
+{
+  // Get ViewUp from camera, orthogonalize to the normal.
+  vtkCamera *camera = renderer->GetActiveCamera();
+  vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
+
+  double u[3];
+  u[0] = matrix->GetElement(1,0);
+  u[1] = matrix->GetElement(1,1);
+  u[2] = matrix->GetElement(1,2);
+
+  // dot will be 1.0 if viewup and normal are the same
+  double dot = vtkMath::Dot(normal, vector);
+
+  if (dot > 0.999)
+    {
+    // blend the vector with the view plane normal for stability
+    u[0] += matrix->GetElement(2,0) * (dot - 0.999);
+    u[1] += matrix->GetElement(2,1) * (dot - 0.999);
+    u[2] += matrix->GetElement(2,2) * (dot - 0.999);
+    }
+
+  double v[3];
+  vtkMath::Cross(normal, u, v);
+  vtkMath::Cross(v, normal, u); 
+
+  double norm = vtkMath::Norm(u);
+  vector[0] = u[0]/norm;
+  vector[1] = u[1]/norm;
+  vector[2] = u[2]/norm;
+}
+
+
