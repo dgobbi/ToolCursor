@@ -46,8 +46,11 @@
 
 #include "vtkImplicitModeller.h"
 #include "vtkContourFilter.h"
+#include "vtkStripper.h"
+#include "vtkReverseSense.h"
+#include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -987,8 +990,8 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
   int color = 0;
 
   static double coords[7][3] = {
-    { 0, 1, 0 }, { 8, 1, 0 }, { 8, 3, 0 }, { 12, 0.01, 0 },
-    { 8, -3, 0 }, { 8, -1, 0 }, { 0, -1, 0 },
+    { 2, 1, 0 }, { 8, 1, 0 }, { 8, 3, 0 }, { 12, 0.01, 0 },
+    { 8, -3, 0 }, { 8, -1, 0 }, { 2, -1, 0 },
   };
 
   static vtkIdType polyIds[] = {
@@ -1013,13 +1016,68 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
 
   vtkContourFilter *contour = vtkContourFilter::New();
   contour->SetInputConnection(modeller->GetOutputPort());
+  contour->ComputeNormalsOn();
   contour->SetValue(0, 0.2);
 
-  contour->Update();
+  // The image is inside-out, and so is the contour
+  vtkReverseSense *reverse = vtkReverseSense::New();
+  reverse->SetInputConnection(contour->GetOutputPort());
+  reverse->ReverseCellsOn();
+  reverse->ReverseNormalsOn();
+
+  vtkStripper *stripper = vtkStripper::New();
+  stripper->SetInputConnection(reverse->GetOutputPort());
+
+  stripper->Update();
+
+  vtkPolyData *leafData = stripper->GetOutput();
+  vtkPoints *leafPoints = leafData->GetPoints();
+  vtkCellArray *leafStrips = leafData->GetStrips();
+  vtkDataArray *leafNormals = leafData->GetPointData()->GetNormals();
 
   vtkPolyData *data = vtkPolyData::New();
-  data->DeepCopy(contour->GetOutput());
+  points = vtkPoints::New();
+  vtkDoubleArray *normals = vtkDoubleArray::New();
+  normals->SetNumberOfComponents(3);
+  vtkCellArray *strips = vtkCellArray::New();
 
+  vtkTransform *transform = vtkTransform::New();
+  static double rotate90[16] = {
+    0,-1, 0, 0,
+    1, 0, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  };
+                    
+  for (int j = 0; j < 4; j++)
+    {
+    vtkIdType nPoints = points->GetNumberOfPoints();
+    transform->TransformPoints(leafPoints, points);
+    transform->TransformNormals(leafNormals, normals);
+    vtkIdType npts;
+    vtkIdType *pts;
+    leafStrips->InitTraversal();
+    while (leafStrips->GetNextCell(npts, pts))
+      {
+      strips->InsertNextCell(npts);
+      for (vtkIdType k = 0; k < npts; k++)
+        {
+        strips->InsertCellPoint(pts[k] + nPoints);
+        }
+      }
+    transform->Concatenate(rotate90);
+    }
+  transform->Delete();
+
+  data->SetPoints(points);
+  points->Delete();
+  data->GetPointData()->SetNormals(normals);
+  normals->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+
+  stripper->Delete();
+  reverse->Delete();
   contour->Delete();
   modeller->Delete();
 
