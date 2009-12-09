@@ -187,7 +187,7 @@ greenCone.GetProperty().SetColor(0,1,0)
 #ren.AddViewProp(redCone)
 #ren.AddViewProp(greenCone)
 
-ren.SetBackground(0.5, 0.5, 0.5)
+#ren.SetBackground(0.5, 0.5, 0.5)
 ren.ResetCameraClippingRange()
 #---------------------------------------------------------
 # the picker

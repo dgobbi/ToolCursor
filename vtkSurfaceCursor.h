@@ -171,6 +171,7 @@ protected:
   virtual void MakeDefaultShapes();
 
   static vtkDataSet *MakePointerShape();
+  static vtkDataSet *MakeCrosshairsShape();
   static vtkDataSet *MakeCrossShape(int splitCross);
   static vtkDataSet *MakeSphereShape(int splitSphere);
   static vtkDataSet *MakeConeShape(int doubleCone);

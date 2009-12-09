@@ -44,7 +44,7 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -518,6 +518,10 @@ void vtkSurfaceCursor::MakeDefaultShapes()
   this->AddShape(data);
   data->Delete();
 
+  data = this->MakeCrosshairsShape();
+  this->AddShape(data);
+  data->Delete();
+
   data = this->MakeCrossShape(0);
   this->AddShape(data);
   data->Delete();
@@ -578,7 +582,7 @@ vtkDataSet *vtkSurfaceCursor::MakePointerShape()
     8, 14, 15, 16, 17, 18, 19, 20, 14,
   };
 
-  // Add the points twice: white, then black, and black again
+  // Add the points three times: white, then black, and black again
   for (int i = 0; i < 7; i++)
     {
     points->InsertNextPoint(coords[i][0] - hotspot[0],
@@ -615,6 +619,101 @@ vtkDataSet *vtkSurfaceCursor::MakePointerShape()
   points->Delete();
   data->SetStrips(strips);
   strips->Delete();
+  data->SetLines(lines);
+  lines->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+
+  return data;
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeCrosshairsShape()
+{
+  vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
+  scalars->SetNumberOfComponents(4);
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *lines = vtkCellArray::New();  
+  
+  static unsigned char black[4] = {  0,   0,   0, 255};
+  static unsigned char white[4] = {255, 255, 255, 255};
+
+  const double radius = 8;
+  const double inner = 3;
+
+  static double coords[8][2] = {
+    { 0, -radius }, { 0, -inner }, { 0, +inner }, { 0, +radius },
+    { -radius, 0 }, { -inner, 0 }, { +inner, 0 }, { +radius, 0 },
+  };
+
+  static double outCoords[16][2] = {
+    { -1, -radius-1 }, { +1, -radius-1 }, { +1, -inner+1 }, { -1, -inner+1 }, 
+    { +1, +radius+1 }, { -1, +radius+1 }, { -1, +inner-1 }, { +1, +inner-1 }, 
+    { -radius-1, -1 }, { -radius-1, +1 }, { -inner+1, +1 }, { -inner+1, -1 }, 
+    { +radius+1, +1 }, { +radius+1, -1 }, { +inner-1, -1 }, { +inner-1, +1 }, 
+  };
+
+  static vtkIdType toplineIds[] = {
+    2, 0, 1,
+    2, 2, 3,
+    2, 4, 5,
+    2, 6, 7,
+  };
+
+  static vtkIdType botlineIds[] = {
+    2, 8, 9,
+    2, 10, 11,
+    2, 12, 13,
+    2, 14, 15,
+  };
+
+  static vtkIdType outlineIds[] = {
+    5, 16, 17, 18, 19, 16,
+    5, 20, 21, 22, 23, 20,
+    5, 24, 25, 26, 27, 24,
+    5, 28, 29, 30, 31, 28,
+  };
+
+  for (int i = 0; i < 8; i++)
+    {
+    points->InsertNextPoint(coords[i][0]+0.5, coords[i][1]-0.5, +0.1);
+    scalars->InsertNextTupleValue(black);
+    }
+
+  for (int j = 0; j < 8; j++)
+    {
+    points->InsertNextPoint(coords[j][0]+0.5, coords[j][1]-0.5, -0.1);
+    scalars->InsertNextTupleValue(black);
+    }
+
+  for (int k = 0; k < 16; k++)
+    {
+    points->InsertNextPoint(outCoords[k][0]+0.5, outCoords[k][1]-0.5, 0);
+    scalars->InsertNextTupleValue(white);
+    }
+
+  // Make the crosshairs
+  lines->InsertNextCell(toplineIds[0], &toplineIds[1]);
+  lines->InsertNextCell(toplineIds[3], &toplineIds[4]);
+  lines->InsertNextCell(toplineIds[6], &toplineIds[7]);
+  lines->InsertNextCell(toplineIds[9], &toplineIds[10]);
+
+  // Make the crosshairs
+  lines->InsertNextCell(botlineIds[0], &botlineIds[1]);
+  lines->InsertNextCell(botlineIds[3], &botlineIds[4]);
+  lines->InsertNextCell(botlineIds[6], &botlineIds[7]);
+  lines->InsertNextCell(botlineIds[9], &botlineIds[10]);
+
+  // Make the outline
+  lines->InsertNextCell(outlineIds[0], &outlineIds[1]);
+  lines->InsertNextCell(outlineIds[6], &outlineIds[7]);
+  lines->InsertNextCell(outlineIds[12], &outlineIds[13]);
+  lines->InsertNextCell(outlineIds[18], &outlineIds[19]);
+  lines->InsertNextCell(outlineIds[24], &outlineIds[25]);
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->SetPoints(points);
+  points->Delete();
   data->SetLines(lines);
   lines->Delete();
   data->GetPointData()->SetScalars(scalars);
