@@ -47,10 +47,12 @@
 #include "vtkImplicitModeller.h"
 #include "vtkContourFilter.h"
 #include "vtkStripper.h"
+#include "vtkPolyDataNormals.h"
 #include "vtkReverseSense.h"
+#include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -459,7 +461,7 @@ void vtkSurfaceCursor::ComputePosition()
     }
   else if (this->State & VTK_SCURSOR_MOVEABLE)
     {
-    this->SetShape(VTK_SCURSOR_MOVER);
+    this->SetShape(VTK_SCURSOR_ROCKER);
     }
   else
     {
@@ -555,11 +557,11 @@ void vtkSurfaceCursor::MakeDefaultShapes()
   this->AddShape(data);
   data->Delete();
 
-  data = this->MakeMoverShape();
+  data = this->MakeMoverShape(0);
   this->AddShape(data);
   data->Delete();
 
-  data = this->MakeRockerShape();
+  data = this->MakeMoverShape(1);
   this->AddShape(data);
   data->Delete();
 
@@ -982,7 +984,7 @@ vtkDataSet *vtkSurfaceCursor::MakeConeShape(int dual)
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
+vtkDataSet *vtkSurfaceCursor::MakeMoverShape(int warped)
 {
   vtkPoints *points = vtkPoints::New();
   vtkCellArray *polys = vtkCellArray::New();
@@ -990,8 +992,8 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
   int color = 0;
 
   static double coords[7][3] = {
-    { 2, 1, 0 }, { 8, 1, 0 }, { 8, 3, 0 }, { 12, 0.01, 0 },
-    { 8, -3, 0 }, { 8, -1, 0 }, { 2, -1, 0 },
+    { 4, 2, 0 }, { 15, 2, 0 }, { 14, 8, 0 }, { 24, 0.01, 0 },
+    { 14, -8, 0 }, { 15, -2, 0 }, { 4, -2, 0 },
   };
 
   static vtkIdType polyIds[] = {
@@ -1012,25 +1014,33 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
 
   vtkImplicitModeller *modeller = vtkImplicitModeller::New();
   modeller->SetInput(arrow);
-  modeller->SetSampleDimensions(50, 20, 8);
+  modeller->SetSampleDimensions(32, 16, 8);
 
   vtkContourFilter *contour = vtkContourFilter::New();
   contour->SetInputConnection(modeller->GetOutputPort());
-  contour->ComputeNormalsOn();
-  contour->SetValue(0, 0.2);
+  contour->SetValue(0, 0.5);
 
   // The image is inside-out, and so is the contour
   vtkReverseSense *reverse = vtkReverseSense::New();
   reverse->SetInputConnection(contour->GetOutputPort());
   reverse->ReverseCellsOn();
-  reverse->ReverseNormalsOn();
+
+  vtkWarpTo *warp = vtkWarpTo::New();
+  warp->SetInputConnection(reverse->GetOutputPort());
+  warp->SetPosition(10.0, 0.0, -10.0);
+  warp->SetScaleFactor((warped ? 1.0 : 0.5));
+  warp->AbsoluteOn();
+
+  vtkPolyDataNormals *polyNormals = vtkPolyDataNormals::New();
+  polyNormals->SetInputConnection(warp->GetOutputPort());
+  polyNormals->SplittingOn();
 
   vtkStripper *stripper = vtkStripper::New();
-  stripper->SetInputConnection(reverse->GetOutputPort());
+  stripper->SetInputConnection(polyNormals->GetOutputPort());
 
   stripper->Update();
 
-  vtkPolyData *leafData = stripper->GetOutput();
+  vtkPolyData *leafData = static_cast<vtkPolyData *>(stripper->GetOutput());
   vtkPoints *leafPoints = leafData->GetPoints();
   vtkCellArray *leafStrips = leafData->GetStrips();
   vtkDataArray *leafNormals = leafData->GetPointData()->GetNormals();
@@ -1040,14 +1050,24 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
   vtkDoubleArray *normals = vtkDoubleArray::New();
   normals->SetNumberOfComponents(3);
   vtkCellArray *strips = vtkCellArray::New();
+  vtkIntArray *scalars = vtkIntArray::New();
 
   vtkTransform *transform = vtkTransform::New();
+  transform->PostMultiply();
+
   static double rotate90[16] = {
     0,-1, 0, 0,
     1, 0, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1,
   };
+
+  if (warped)
+    {
+    transform->RotateY(30);
+    transform->Scale(1.2, 1.0, 1.0);
+    transform->Translate(0, 0, 10);
+    }
                     
   for (int j = 0; j < 4; j++)
     {
@@ -1065,7 +1085,13 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
         strips->InsertCellPoint(pts[k] + nPoints);
         }
       }
+    vtkIdType n = leafPoints->GetNumberOfPoints();
+    for (int ii = 0; ii < n; ii++)
+      {
+      scalars->InsertNextTupleValue(&color);
+      }
     transform->Concatenate(rotate90);
+    color = !color;
     }
   transform->Delete();
 
@@ -1073,42 +1099,31 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
   points->Delete();
   data->GetPointData()->SetNormals(normals);
   normals->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
   data->SetStrips(strips);
   strips->Delete();
 
+  polyNormals->Delete();
   stripper->Delete();
+  warp->Delete();
   reverse->Delete();
   contour->Delete();
   modeller->Delete();
-
-  vtkIntArray *scalars = vtkIntArray::New();
-  vtkIdType nPoints = data->GetNumberOfPoints();
-  for (int j = 0; j < nPoints; j++)
-    {
-    scalars->InsertNextTupleValue(&color);
-    }
-  data->GetPointData()->SetScalars(scalars);
-  scalars->Delete();
 
   return data;
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursor::MakeRockerShape()
-{
-  return vtkSurfaceCursor::MakeConeShape(0);
-}
-
-//----------------------------------------------------------------------------
 vtkDataSet *vtkSurfaceCursor::MakePusherShape()
 {
-  return vtkSurfaceCursor::MakeConeShape(0);
+  return vtkSurfaceCursor::MakeMoverShape(0);
 }
 
 //----------------------------------------------------------------------------
 vtkDataSet *vtkSurfaceCursor::MakeSpinnerShape()
 {
-  return vtkSurfaceCursor::MakeConeShape(0);
+  return vtkSurfaceCursor::MakeMoverShape(0);
 }
 
 //----------------------------------------------------------------------------

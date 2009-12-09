@@ -189,8 +189,7 @@ protected:
   static vtkDataSet *MakeCrossShape(int splitCross);
   static vtkDataSet *MakeSphereShape(int splitSphere);
   static vtkDataSet *MakeConeShape(int doubleCone);
-  static vtkDataSet *MakeMoverShape();
-  static vtkDataSet *MakeRockerShape();
+  static vtkDataSet *MakeMoverShape(int warped);
   static vtkDataSet *MakePusherShape();
   static vtkDataSet *MakeSpinnerShape();
 
