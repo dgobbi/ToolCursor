@@ -44,7 +44,7 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -115,9 +115,11 @@ vtkSurfaceCursor::vtkSurfaceCursor()
 
   this->Actor->PickableOff();
   this->Actor->VisibilityOff();
-  this->Actor->GetProperty()->BackfaceCullingOn();
   this->Actor->SetMapper(this->Mapper);
   this->Actor->SetUserMatrix(this->Matrix);
+
+  vtkProperty *property = this->Actor->GetProperty();
+  property->BackfaceCullingOn();
 
   this->MakeDefaultShapes();
   this->SetShape(0);
@@ -440,21 +442,22 @@ void vtkSurfaceCursor::ComputePosition()
   // Compute the "state" from the picked information
   this->ComputeState();
 
+  // Setting the cursor shape from the state is very crude for now
   if (this->State & VTK_SCURSOR_IMAGE_ACTOR)
     {
-    this->SetShape(0);
+    this->SetShape(VTK_SCURSOR_CROSS);
     }
   else if (this->State & VTK_SCURSOR_PUSHABLE)
     {
-    this->SetShape(1);
+    this->SetShape(VTK_SCURSOR_CROSS);
     }
   else if (this->State & VTK_SCURSOR_MOVEABLE)
     {
-    this->SetShape(3);
+    this->SetShape(VTK_SCURSOR_CONE);
     }
   else
     {
-    this->SetShape(0);
+    this->SetShape(VTK_SCURSOR_POINTER);
     }
 
   // Compute an "up" vector for the cursor
@@ -633,6 +636,7 @@ vtkDataSet *vtkSurfaceCursor::MakeCrosshairsShape()
   vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
   scalars->SetNumberOfComponents(4);
   vtkPoints *points = vtkPoints::New();
+  vtkCellArray *strips = vtkCellArray::New();  
   vtkCellArray *lines = vtkCellArray::New();  
   
   static unsigned char black[4] = {  0,   0,   0, 255};
@@ -649,8 +653,8 @@ vtkDataSet *vtkSurfaceCursor::MakeCrosshairsShape()
   static double outCoords[16][2] = {
     { -1, -radius-1 }, { +1, -radius-1 }, { +1, -inner+1 }, { -1, -inner+1 }, 
     { +1, +radius+1 }, { -1, +radius+1 }, { -1, +inner-1 }, { +1, +inner-1 }, 
-    { -radius-1, -1 }, { -radius-1, +1 }, { -inner+1, +1 }, { -inner+1, -1 }, 
-    { +radius+1, +1 }, { +radius+1, -1 }, { +inner-1, -1 }, { +inner-1, +1 }, 
+    { -radius-1, +1 }, { -radius-1, -1 }, { -inner+1, -1 }, { -inner+1, +1 }, 
+    { +radius+1, -1 }, { +radius+1, +1 }, { +inner-1, +1 }, { +inner-1, -1 }, 
   };
 
   static vtkIdType toplineIds[] = {
@@ -672,6 +676,13 @@ vtkDataSet *vtkSurfaceCursor::MakeCrosshairsShape()
     5, 20, 21, 22, 23, 20,
     5, 24, 25, 26, 27, 24,
     5, 28, 29, 30, 31, 28,
+  };
+
+  static vtkIdType stripIds[] = {
+    4, 16, 17, 19, 18,
+    4, 20, 21, 23, 22,
+    4, 24, 25, 27, 26,
+    4, 28, 29, 31, 30,
   };
 
   for (int i = 0; i < 8; i++)
@@ -711,11 +722,19 @@ vtkDataSet *vtkSurfaceCursor::MakeCrosshairsShape()
   lines->InsertNextCell(outlineIds[18], &outlineIds[19]);
   lines->InsertNextCell(outlineIds[24], &outlineIds[25]);
 
+  // Fill the outline
+  strips->InsertNextCell(stripIds[0], &stripIds[1]);
+  strips->InsertNextCell(stripIds[5], &stripIds[6]);
+  strips->InsertNextCell(stripIds[10], &stripIds[11]);
+  strips->InsertNextCell(stripIds[15], &stripIds[16]);
+
   vtkPolyData *data = vtkPolyData::New();
   data->SetPoints(points);
   points->Delete();
   data->SetLines(lines);
   lines->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
   data->GetPointData()->SetScalars(scalars);
   scalars->Delete();
 

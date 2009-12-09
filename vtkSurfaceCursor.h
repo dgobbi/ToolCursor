@@ -43,6 +43,16 @@ class vtkCommand;
 #define VTK_SCURSOR_VOLUME       0x20
 #define VTK_SCURSOR_IMAGE_ACTOR  0x40
 
+// Predefined cursor shapes
+#define VTK_SCURSOR_POINTER      0
+#define VTK_SCURSOR_CROSSHAIRS   1
+#define VTK_SCURSOR_CROSS        2
+#define VTK_SCURSOR_CROSS_SPLIT  3
+#define VTK_SCURSOR_CONE         4
+#define VTK_SCURSOR_CONE_DUAL    5
+#define VTK_SCURSOR_SPHERE       6
+#define VTK_SCURSOR_SPHERE_SPLIT 7
+
 class VTK_EXPORT vtkSurfaceCursor : public vtkObject
 {
 public:
