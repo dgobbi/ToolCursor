@@ -187,6 +187,8 @@ greenCone.GetProperty().SetColor(0,1,0)
 #ren.AddViewProp(redCone)
 #ren.AddViewProp(greenCone)
 
+ren.SetBackground(0.5, 0.5, 0.5)
+ren.ResetCameraClippingRange()
 #---------------------------------------------------------
 # the picker
 picker = vtk.vtkSurfacePicker()
@@ -196,7 +198,6 @@ picker.AddLocator(skinLocator)
 
 cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
-
 
 # A function to point an actor along a vector
 def PointCone(actor,nx,ny,nz): #,px,py,pz):

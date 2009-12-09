@@ -110,6 +110,11 @@ public:
   int AddShape(vtkDataSet *cursor);
 
   // Description:
+  // Set the scale factor for the cursor, usually to make it larger.
+  vtkSetMacro(Scale, double);
+  vtkGetMacro(Scale, double);
+
+  // Description:
   // Set the colors to use for the cursor.  The first color is used for
   // the part of the cursor on the "near" side, and the second color is
   // used for the part of the cursor on the "far".  Other colors are
@@ -152,6 +157,7 @@ protected:
   int PointNormalAtCamera;
   int Shape;
   int State;
+  double Scale;
   vtkMatrix4x4 *Matrix;
   vtkDataSetCollection *Shapes;
   vtkDataSetMapper *Mapper;
@@ -164,11 +170,17 @@ protected:
   virtual void ComputeState();
   virtual void MakeDefaultShapes();
 
-  static vtkDataSet *MakeCrossShape();
-  static vtkDataSet *MakeSphereShape();
+  static vtkDataSet *MakePointerShape();
+  static vtkDataSet *MakeCrossShape(int splitCross);
+  static vtkDataSet *MakeSphereShape(int splitSphere);
   static vtkDataSet *MakeConeShape(int doubleCone);
+
+  static double ComputeScale(const double position[3], vtkRenderer *renderer);
+  static void ComputeMatrix(const double position[3], const double normal[3],
+                            const double vector[3], vtkMatrix4x4 *matrix); 
   static void ComputeVectorFromNormal(const double normal[3], double vector[3],
                                       vtkRenderer *renderer);
+
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
 
 private:

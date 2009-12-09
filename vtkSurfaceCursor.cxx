@@ -20,8 +20,11 @@
 #include "vtkCamera.h"
 #include "vtkActor.h"
 #include "vtkVolume.h"
+#include "vtkVolumeMapper.h"
 #include "vtkImageActor.h"
 #include "vtkProp3DCollection.h"
+#include "vtkPlaneCollection.h"
+#include "vtkPlane.h"
 #include "vtkAssemblyPath.h"
 #include "vtkProperty.h"
 #include "vtkDataSetMapper.h"
@@ -41,7 +44,7 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -90,6 +93,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->PointNormalAtCamera = 1;
   this->State = 0;
   this->Shape = 0;
+  this->Scale = 1.0;
 
   this->Actor = vtkActor::New();
   this->Matrix = vtkMatrix4x4::New();
@@ -319,6 +323,9 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 
 void vtkSurfaceCursor::ComputeState()
 {
+  const double planeTol = 1e-6;
+  const double normalTol = 1e-15;
+
   this->State = 0;
 
   vtkVolumePicker *picker = this->Picker;
@@ -326,6 +333,7 @@ void vtkSurfaceCursor::ComputeState()
   vtkCollectionSimpleIterator pit;
   props->InitTraversal(pit);
   vtkProp3D *prop = props->GetNextProp3D(pit);
+  vtkAbstractMapper3D *mapper = picker->GetMapper();
 
   if (prop)
     {
@@ -338,15 +346,48 @@ void vtkSurfaceCursor::ComputeState()
     return;
     }
   
-  if (picker->GetClippingPlaneId() >= 0)
+  if (mapper && picker->GetClippingPlaneId() >= 0)
     {
-    this->State = (this->State | VTK_SCURSOR_PUSHABLE
-                               | VTK_SCURSOR_ROTATEABLE); 
+    // Make sure that our Position lies on the plane and that our Normal
+    // is perpendicular to the plane.
+
+    vtkPlane *plane = mapper->GetClippingPlanes()->GetItem(
+      picker->GetClippingPlaneId());
+
+    double u[3];
+    vtkMath::Cross(plane->GetNormal(), this->Normal, u);
+
+    if (fabs(plane->EvaluateFunction(this->Position)) < planeTol &&
+        vtkMath::Norm(u) < normalTol)
+      {
+      this->State = (this->State | VTK_SCURSOR_PUSHABLE
+                                 | VTK_SCURSOR_ROTATEABLE); 
+      }
     }
 
-  if (picker->GetCroppingPlaneId() >= 0)
+  if (mapper->IsA("vtkVolumeMapper") && picker->GetCroppingPlaneId() >= 0)
     {
-    this->State = (this->State | VTK_SCURSOR_PUSHABLE);
+    // Also ensure that our Position lies on the cropping plane
+    int planeId = picker->GetCroppingPlaneId();
+    vtkVolumeMapper *volumeMapper = static_cast<vtkVolumeMapper *>(mapper); 
+
+    double bounds[6];
+    volumeMapper->GetCroppingRegionPlanes(bounds);
+
+    double mapperPos[3];
+    picker->GetMapperPosition(mapperPos);
+
+    double planeNormal[3], mapperNormal[3], u[3];
+    planeNormal[0] = planeNormal[1] = planeNormal[2] = 0.0;
+    planeNormal[planeId/2] = 1.0;
+    picker->GetMapperNormal(mapperNormal);
+    vtkMath::Cross(planeNormal, mapperNormal, u);
+
+    if (fabs(mapperPos[planeId/2] - bounds[planeId]) < planeTol &&
+        vtkMath::Norm(u) < normalTol)
+      {
+      this->State = (this->State | VTK_SCURSOR_PUSHABLE);
+      }
     }
 
   if (prop->IsA("vtkActor"))
@@ -375,13 +416,17 @@ void vtkSurfaceCursor::ComputePosition()
   int x = this->DisplayPosition[0];
   int y = this->DisplayPosition[1];
 
+  // Update the props that might be picked.  This is necessary
+  // if there hasn't been a Render since the last change.
   this->UpdatePropsForPick(this->Picker, this->Renderer);
 
+  // Do the pick!
   vtkVolumePicker *picker = this->Picker;
   picker->Pick(x, y, 0, this->Renderer);
   picker->GetPickPosition(this->Position);
   picker->GetPickNormal(this->Normal);
 
+  // Direct the normal towards the camera if PointNormalAtCamera is On
   if (this->PointNormalAtCamera &&
       vtkMath::Dot(this->Renderer->GetActiveCamera()
                    ->GetDirectionOfProjection(),
@@ -392,53 +437,39 @@ void vtkSurfaceCursor::ComputePosition()
     this->Normal[2] = -this->Normal[2];
     }
 
+  // Compute the "state" from the picked information
   this->ComputeState();
 
-  this->ComputeVectorFromNormal(this->Normal, this->Vector,
-                                this->Renderer);
-
-  double *p = this->Position;
-  double *n = this->Normal;
-  double *v = this->Vector;
-  double u[3];
-  vtkMath::Cross(v, n, u);
-
-  vtkMatrix4x4 *matrix = this->Matrix;
-  for (int j = 0; j < 3; j++)
+  if (this->State & VTK_SCURSOR_IMAGE_ACTOR)
     {
-    matrix->SetElement(j, 0, u[j]);
-    matrix->SetElement(j, 1, v[j]);
-    matrix->SetElement(j, 2, n[j]);
-    matrix->SetElement(j, 3, p[j]);
+    this->SetShape(0);
     }
-  matrix->Modified();
-
-  // Set the size of the actor: 1 data unit length equals 1 screen pixel.
-  // Start by computing the height of the window at the cursor position.
-  double worldHeight = 1.0;
-  vtkCamera *camera = this->Renderer->GetActiveCamera();
-  if (camera->GetParallelProjection())
+  else if (this->State & VTK_SCURSOR_PUSHABLE)
     {
-    worldHeight = camera->GetParallelScale();
+    this->SetShape(1);
+    }
+  else if (this->State & VTK_SCURSOR_MOVEABLE)
+    {
+    this->SetShape(3);
     }
   else
     {
-    double c[3];
-    camera->GetPosition(c);
-    worldHeight = sqrt(vtkMath::Distance2BetweenPoints(p, c)) *
-      tan(0.5*camera->GetViewAngle()/57.296);
+    this->SetShape(0);
     }
 
-  // Compare world height to window height.
-  int windowHeight = this->Renderer->GetSize()[1];
-  double scale = 1.0;
-  if (windowHeight > 0)
-    {
-    scale = worldHeight/windowHeight;
-    }
+  // Compute an "up" vector for the cursor
+  this->ComputeVectorFromNormal(this->Normal, this->Vector,
+                                this->Renderer);
+
+  // Compute the pose matrix for the cursor
+  this->ComputeMatrix(this->Position, this->Normal, this->Vector,
+                      this->Matrix);
+
+  // Scale for the cursor to always be the same number of pixels across.
+  double scale = this->ComputeScale(this->Position, this->Renderer);
 
   this->Actor->VisibilityOn();
-  this->Actor->SetScale(scale);
+  this->Actor->SetScale(scale*this->Scale);
 }
 
 //----------------------------------------------------------------------------
@@ -483,16 +514,120 @@ void vtkSurfaceCursor::MakeDefaultShapes()
 {
   vtkDataSet *data;
 
+  data = this->MakePointerShape();
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeCrossShape(0);
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeCrossShape(1);
+  this->AddShape(data);
+  data->Delete();
+
   data = this->MakeConeShape(0);
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeConeShape(1);
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeSphereShape(0);
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeSphereShape(1);
   this->AddShape(data);
   data->Delete();
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursor::MakeSphereShape()
+vtkDataSet *vtkSurfaceCursor::MakePointerShape()
+{
+  vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
+  scalars->SetNumberOfComponents(4);
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *strips = vtkCellArray::New();  
+  vtkCellArray *lines = vtkCellArray::New();  
+  
+  static unsigned char black[4] = {  0,   0,   0, 255};
+  static unsigned char white[4] = {255, 255, 255, 255};
+
+  static double hotspot[2] = { 0.5, -0.5 };
+  static double coords[7][2] = {
+    {  1,  -1 },
+    {  1, -15 },
+    {  4, -12 },
+    {  8, -19 },
+    { 10, -18 },
+    {  7, -11 },
+    { 11, -11 },
+  };
+
+  static vtkIdType stripIds[] = {
+    3, 0, 1, 2,
+    3, 0, 2, 5,
+    3, 0, 5, 6,
+    4, 2, 3, 5, 4,
+  };
+
+  static vtkIdType lineIds[] = {
+    8, 7, 8, 9, 10, 11, 12, 13, 7,
+    8, 14, 15, 16, 17, 18, 19, 20, 14,
+  };
+
+  // Add the points twice: white, then black, and black again
+  for (int i = 0; i < 7; i++)
+    {
+    points->InsertNextPoint(coords[i][0] - hotspot[0],
+                            coords[i][1] - hotspot[1], 0.0);
+    scalars->InsertNextTupleValue(white);
+    }
+
+  for (int j = 0; j < 7; j++)
+    {
+    points->InsertNextPoint(coords[j][0] - hotspot[0],
+                            coords[j][1] - hotspot[1], +0.1);
+    scalars->InsertNextTupleValue(black);
+    }
+
+  for (int k = 0; k < 7; k++)
+    {
+    points->InsertNextPoint(coords[k][0] - hotspot[0],
+                            coords[k][1] - hotspot[1], -0.1);
+    scalars->InsertNextTupleValue(black);
+    }
+
+  // Make the strips
+  strips->InsertNextCell(stripIds[0], &stripIds[1]);
+  strips->InsertNextCell(stripIds[4], &stripIds[5]);
+  strips->InsertNextCell(stripIds[8], &stripIds[9]);
+  strips->InsertNextCell(stripIds[12], &stripIds[13]);
+
+  // Make the lines
+  lines->InsertNextCell(lineIds[0], &lineIds[1]);
+  lines->InsertNextCell(lineIds[8], &lineIds[9]);
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->SetPoints(points);
+  points->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+  data->SetLines(lines);
+  lines->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+
+  return data;
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeSphereShape(int dual)
 {
   double pi = vtkMath::DoublePi();
-  double radius = 10.0;
+  double radius = 5.0;
   int resolution = 9;
 
   vtkIdType *pointIds = new vtkIdType[4*(resolution+1)];
@@ -504,7 +639,9 @@ vtkDataSet *vtkSurfaceCursor::MakeSphereShape()
   vtkCellArray *strips = vtkCellArray::New();
   vtkIdType nPoints = 0;
  
-  for (int colorIndex = 0; colorIndex < 2; colorIndex++)
+  int colorIndex = 0;
+
+  for (int i = 0; i < 2; i++)
     {
     // The sign (i.e. for top or bottom) is stored in s
     double s = 1 - 2*colorIndex;
@@ -570,6 +707,11 @@ vtkDataSet *vtkSurfaceCursor::MakeSphereShape()
       }
 
     nPoints += m;
+
+    if (dual)
+      {
+      colorIndex = 1;
+      }
     }
 
   delete [] pointIds;
@@ -591,8 +733,8 @@ vtkDataSet *vtkSurfaceCursor::MakeSphereShape()
 vtkDataSet *vtkSurfaceCursor::MakeConeShape(int dual)
 {
   double pi = vtkMath::DoublePi();
-  double radius = 16.0;
-  double height = 30.0;
+  double radius = 8.0;
+  double height = 15.0;
   int resolution = 20;
 
   vtkIdType *pointIds = new vtkIdType[2*(resolution+1)];
@@ -699,34 +841,28 @@ vtkDataSet *vtkSurfaceCursor::MakeConeShape(int dual)
   return data;
 }
 
-/*
 //----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursor::MakeArrowShape()
+vtkDataSet *vtkSurfaceCursor::MakeCrossShape(int dual)
 {
-  static unsigned char color1[] = { 255,   0,   0, 255 }; 
-  static unsigned char color2[] = { 255,   0,   0, 255 }; 
-}
-*/
-//----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursor::MakeCrossShape()
-{
-  double radius = 20.0;
-  double inner = 7.0;
+  double radius = 10.0;
+  double inner = 3.5;
   double thickness = 2.0;
 
   double xmin = inner;
   double xmax = radius;
-  double ymin = -thickness;
-  double ymax = +thickness;
+  double ymin = -thickness*0.5;
+  double ymax = +thickness*0.5;
   double zmin = 0;
-  double zmax = thickness;
+  double zmax = thickness*0.5;
 
   vtkIntArray *scalars = vtkIntArray::New();
   vtkPoints *points = vtkPoints::New();
   vtkCellArray *strips = vtkCellArray::New();
   vtkIdType nPoints = 0;
   
-  for (int colorIndex = 0; colorIndex < 2; colorIndex++)
+  int colorIndex = 0;
+
+  for (int i = 0; i < 2; i++)
     {
     for (int j = 0; j < 4; j++)
       {
@@ -774,6 +910,11 @@ vtkDataSet *vtkSurfaceCursor::MakeCrossShape()
     zmax = -zmax;
     xmin = -xmin;
     xmax = -xmax;
+
+    if (dual)
+      {
+      colorIndex = 1;
+      }
     }
 
   vtkPolyData *data = vtkPolyData::New();
@@ -785,6 +926,56 @@ vtkDataSet *vtkSurfaceCursor::MakeCrossShape()
   scalars->Delete();
 
   return data;
+}
+
+//----------------------------------------------------------------------------
+double vtkSurfaceCursor::ComputeScale(const double position[3],
+                                      vtkRenderer *renderer)
+{
+  // Find the cursor scale factor such that 1 data unit length
+  // equals 1 screen pixel at the cursor's distance from the camera.
+  // Start by computing the height of the window at the cursor position.
+  double worldHeight = 1.0;
+  vtkCamera *camera = renderer->GetActiveCamera();
+  if (camera->GetParallelProjection())
+    {
+    worldHeight = 2*camera->GetParallelScale();
+    }
+  else
+    {
+    double cameraPosition[3];
+    camera->GetPosition(cameraPosition);
+    worldHeight = 2*(sqrt(vtkMath::Distance2BetweenPoints(position,
+                                                        cameraPosition))
+                     * tan(0.5*camera->GetViewAngle()/57.296));
+    }
+
+  // Compare world height to window height.
+  int windowHeight = renderer->GetSize()[1];
+  double scale = 1.0;
+  if (windowHeight > 0)
+    {
+    scale = worldHeight/windowHeight;
+    }
+
+  return scale;
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::ComputeMatrix(const double p[3], const double n[3],
+                                     const double v[3], vtkMatrix4x4 *matrix)
+{
+  double u[3];
+  vtkMath::Cross(v, n, u);
+
+  for (int j = 0; j < 3; j++)
+    {
+    matrix->SetElement(j, 0, u[j]);
+    matrix->SetElement(j, 1, v[j]);
+    matrix->SetElement(j, 2, n[j]);
+    matrix->SetElement(j, 3, p[j]);
+    }
+  matrix->Modified();
 }
 
 //----------------------------------------------------------------------------
