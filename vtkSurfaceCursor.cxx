@@ -44,7 +44,10 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.4 $");
+#include "vtkImplicitModeller.h"
+#include "vtkContourFilter.h"
+
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -453,7 +456,7 @@ void vtkSurfaceCursor::ComputePosition()
     }
   else if (this->State & VTK_SCURSOR_MOVEABLE)
     {
-    this->SetShape(VTK_SCURSOR_CONE);
+    this->SetShape(VTK_SCURSOR_MOVER);
     }
   else
     {
@@ -546,6 +549,22 @@ void vtkSurfaceCursor::MakeDefaultShapes()
   data->Delete();
 
   data = this->MakeSphereShape(1);
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeMoverShape();
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeRockerShape();
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakePusherShape();
+  this->AddShape(data);
+  data->Delete();
+
+  data = this->MakeSpinnerShape();
   this->AddShape(data);
   data->Delete();
 }
@@ -957,6 +976,81 @@ vtkDataSet *vtkSurfaceCursor::MakeConeShape(int dual)
   normals->Delete();
 
   return data;
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeMoverShape()
+{
+  vtkPoints *points = vtkPoints::New();
+  vtkCellArray *polys = vtkCellArray::New();
+
+  int color = 0;
+
+  static double coords[7][3] = {
+    { 0, 1, 0 }, { 8, 1, 0 }, { 8, 3, 0 }, { 12, 0.01, 0 },
+    { 8, -3, 0 }, { 8, -1, 0 }, { 0, -1, 0 },
+  };
+
+  static vtkIdType polyIds[] = {
+    7, 0, 1, 2, 3, 4, 5, 6,
+  };
+
+  for (int i = 0; i < 7; i++)
+    {
+    points->InsertNextPoint(coords[i]);
+    }
+  polys->InsertNextCell(polyIds[0], &polyIds[1]);
+
+  vtkPolyData *arrow = vtkPolyData::New();
+  arrow->SetPoints(points);
+  points->Delete();
+  arrow->SetPolys(polys);
+  polys->Delete();
+
+  vtkImplicitModeller *modeller = vtkImplicitModeller::New();
+  modeller->SetInput(arrow);
+  modeller->SetSampleDimensions(50, 20, 8);
+
+  vtkContourFilter *contour = vtkContourFilter::New();
+  contour->SetInputConnection(modeller->GetOutputPort());
+  contour->SetValue(0, 0.2);
+
+  contour->Update();
+
+  vtkPolyData *data = vtkPolyData::New();
+  data->DeepCopy(contour->GetOutput());
+
+  contour->Delete();
+  modeller->Delete();
+
+  vtkIntArray *scalars = vtkIntArray::New();
+  vtkIdType nPoints = data->GetNumberOfPoints();
+  for (int j = 0; j < nPoints; j++)
+    {
+    scalars->InsertNextTupleValue(&color);
+    }
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+
+  return data;
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeRockerShape()
+{
+  return vtkSurfaceCursor::MakeConeShape(0);
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakePusherShape()
+{
+  return vtkSurfaceCursor::MakeConeShape(0);
+}
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkSurfaceCursor::MakeSpinnerShape()
+{
+  return vtkSurfaceCursor::MakeConeShape(0);
 }
 
 //----------------------------------------------------------------------------

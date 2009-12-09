@@ -52,6 +52,10 @@ class vtkCommand;
 #define VTK_SCURSOR_CONE_DUAL    5
 #define VTK_SCURSOR_SPHERE       6
 #define VTK_SCURSOR_SPHERE_SPLIT 7
+#define VTK_SCURSOR_MOVER        8
+#define VTK_SCURSOR_ROCKER       9
+#define VTK_SCURSOR_PUSHER       10
+#define VTK_SCURSOR_SPINNER      11
 
 class VTK_EXPORT vtkSurfaceCursor : public vtkObject
 {
@@ -185,6 +189,10 @@ protected:
   static vtkDataSet *MakeCrossShape(int splitCross);
   static vtkDataSet *MakeSphereShape(int splitSphere);
   static vtkDataSet *MakeConeShape(int doubleCone);
+  static vtkDataSet *MakeMoverShape();
+  static vtkDataSet *MakeRockerShape();
+  static vtkDataSet *MakePusherShape();
+  static vtkDataSet *MakeSpinnerShape();
 
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
