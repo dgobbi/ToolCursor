@@ -52,7 +52,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -106,6 +106,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Actor = vtkActor::New();
   this->Matrix = vtkMatrix4x4::New();
   this->Mapper = vtkDataSetMapper::New();
+  this->Mapper->StaticOn();
   this->LookupTable = vtkLookupTable::New();
   this->Mapper->SetLookupTable(this->LookupTable);
   this->Mapper->UseLookupTableScalarRangeOn();
@@ -470,7 +471,7 @@ void vtkSurfaceCursor::ComputePosition()
 
   // Compute an "up" vector for the cursor
   this->ComputeVectorFromNormal(this->Normal, this->Vector,
-                                this->Renderer);
+                                this->Mapper, this->Renderer);
 
   // Compute the pose matrix for the cursor
   this->ComputeMatrix(this->Position, this->Normal, this->Vector,
@@ -1131,7 +1132,7 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape(int warped)
 vtkDataSet *vtkSurfaceCursor::MakePusherShape()
 {
   vtkPolyData *leafData = vtkSurfaceCursor::MakeWarpedArrow(
-    10.0, 0.0, 10.0, 0.1);
+    10.0, 0.0, 10.0, 0.0);
   vtkPoints *leafPoints = leafData->GetPoints();
   vtkCellArray *leafStrips = leafData->GetStrips();
   vtkDataArray *leafNormals = leafData->GetPointData()->GetNormals();
@@ -1141,6 +1142,7 @@ vtkDataSet *vtkSurfaceCursor::MakePusherShape()
   vtkDoubleArray *normals = vtkDoubleArray::New();
   normals->SetNumberOfComponents(3);
   vtkCellArray *strips = vtkCellArray::New();
+  vtkCellArray *lines = vtkCellArray::New();
   vtkIntArray *scalars = vtkIntArray::New();
 
   vtkTransform *transform = vtkTransform::New();
@@ -1155,11 +1157,11 @@ vtkDataSet *vtkSurfaceCursor::MakePusherShape()
 
   transform->Concatenate(rotate90);
   transform->Scale(1.0, 1.0, 1.0);
-  transform->Translate(-0.4, 0, 24);
+  transform->Translate(0, 0, 24);
 
   int color = 0;
 
-  for (int j = 0; j < 4; j++)
+  for (int i = 0; i < 2; i++)
     {
     vtkIdType nPoints = points->GetNumberOfPoints();
     transform->TransformPoints(leafPoints, points);
@@ -1170,9 +1172,9 @@ vtkDataSet *vtkSurfaceCursor::MakePusherShape()
     while (leafStrips->GetNextCell(npts, pts))
       {
       strips->InsertNextCell(npts);
-      for (vtkIdType k = 0; k < npts; k++)
+      for (vtkIdType j = 0; j < npts; j++)
         {
-        strips->InsertCellPoint(pts[k] + nPoints);
+        strips->InsertCellPoint(pts[j] + nPoints);
         }
       }
     vtkIdType nn = leafPoints->GetNumberOfPoints();
@@ -1180,17 +1182,44 @@ vtkDataSet *vtkSurfaceCursor::MakePusherShape()
       {
       scalars->InsertNextTupleValue(&color);
       }
+    // This transform puts the arrows tail-to-tail, instead of tip-to-tip 
     transform->Translate(0, 0, -44);
     transform->Scale(-1,1,-1);
-    if (j%2)
-      {
-      transform->Scale(-1,-1,1);
-      }
     color = !color;
     }
   transform->Delete();
 
   leafData->Delete();
+
+  // Make a ring for when arrow viewed tail-on
+  const double lineRadius = 8;
+  const int lineResolution = 24; // must be divisible by 8
+  int polylen = lineResolution/8 + 1;
+  double normal[3];
+  normal[0] = normal[1] = 0.0;
+  normal[2] = 1.0;
+  for (int j = 0; j < 2; j++)
+    {
+    color = 0;
+    for (int k = 0; k < 8; k++)
+      {
+      vtkIdType nPoints = points->GetNumberOfPoints();
+      lines->InsertNextCell(polylen);
+      for (int ii = 0; ii < polylen; ii++)
+        {
+        double angle = 2*vtkMath::DoublePi()*(k*(polylen-1)+ii)/lineResolution;
+        // The 0.99 is to make x slightly thinner than y
+        points->InsertNextPoint(0.99*lineRadius*cos(angle),
+                                lineRadius*sin(angle),
+                                0.1*(1 - 2*j));
+        scalars->InsertNextTupleValue(&color);
+        normals->InsertNextTupleValue(normal);
+        lines->InsertCellPoint(ii + nPoints);
+        }
+      normal[2] = -normal[2];
+      color = !color;
+      }
+    }
 
   data->SetPoints(points);
   points->Delete();
@@ -1200,6 +1229,8 @@ vtkDataSet *vtkSurfaceCursor::MakePusherShape()
   scalars->Delete();
   data->SetStrips(strips);
   strips->Delete();
+  data->SetLines(lines);
+  lines->Delete();
 
   return data;
 }
@@ -1416,31 +1447,61 @@ void vtkSurfaceCursor::ComputeMatrix(const double p[3], const double n[3],
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
                                                double vector[3],
+                                               vtkDataSetMapper *cursorMapper,
                                                vtkRenderer *renderer)
 {
-  // Get ViewUp from camera, orthogonalize to the normal.
+  // Get the camera orientation
   vtkCamera *camera = renderer->GetActiveCamera();
   vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
 
-  double u[3];
-  u[0] = matrix->GetElement(1,0);
-  u[1] = matrix->GetElement(1,1);
-  u[2] = matrix->GetElement(1,2);
+  // These ints say how we want to create the vector
+  int direction = 1; // We want to align the cursor y vector with...
+  int primary = 1;   // the camera view up vector if possible...
+  int secondary = 2; // or with the view plane normal otherwise.
 
-  // dot will be 1.0 if viewup and normal are the same
-  double dot = vtkMath::Dot(normal, vector);
+  // If the data is "flat" and the flat dimension is not the z dimension,
+  // then point the flat side at the camera.
+  double bounds[6], thickness[3];
+  cursorMapper->GetBounds(bounds);
+  thickness[2] = bounds[5] - bounds[4];
+  int minDim = 2;
+  for (int i = 0; i < 2; i++)
+    {
+    thickness[i] = bounds[2*i+1] - bounds[2*i];
+    if (thickness[i] < thickness[minDim])
+      {
+      minDim = i;
+      }
+    }
+  if (minDim != 2 && thickness[minDim] < 0.5*thickness[2])
+    {
+    direction = minDim;
+    primary = 2;
+    secondary = 1;
+    }
+
+  // Get primary direction from camera, orthogonalize to the normal.
+  double u[3];
+  u[0] = matrix->GetElement(primary,0);
+  u[1] = matrix->GetElement(primary,1);
+  u[2] = matrix->GetElement(primary,2);
+
+  // dot will be 1.0 if primary and normal are the same
+  double dot = vtkMath::Dot(normal, u);
 
   if (dot > 0.999)
     {
-    // blend the vector with the view plane normal for stability
-    u[0] += matrix->GetElement(2,0) * (dot - 0.999);
-    u[1] += matrix->GetElement(2,1) * (dot - 0.999);
-    u[2] += matrix->GetElement(2,2) * (dot - 0.999);
+    // blend the vector with the secondary for stability
+    u[0] += matrix->GetElement(secondary,0) * (dot - 0.999);
+    u[1] += matrix->GetElement(secondary,1) * (dot - 0.999);
+    u[2] += matrix->GetElement(secondary,2) * (dot - 0.999);
     }
 
-  double v[3];
-  vtkMath::Cross(normal, u, v);
-  vtkMath::Cross(v, normal, u); 
+  vtkMath::Cross(normal, u, u);
+  if (direction == 1)
+    {
+    vtkMath::Cross(u, normal, u); 
+    }
 
   double norm = vtkMath::Norm(u);
   vector[0] = u[0]/norm;

@@ -200,6 +200,7 @@ protected:
   static void ComputeMatrix(const double position[3], const double normal[3],
                             const double vector[3], vtkMatrix4x4 *matrix); 
   static void ComputeVectorFromNormal(const double normal[3], double vector[3],
+                                      vtkDataSetMapper *cursorMapper,
                                       vtkRenderer *renderer);
 
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
