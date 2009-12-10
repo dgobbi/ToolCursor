@@ -198,6 +198,7 @@ picker.AddLocator(skinLocator)
 
 cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
+cursor.SetScale(1)
 
 # A function to point an actor along a vector
 def PointCone(actor,nx,ny,nz): #,px,py,pz):

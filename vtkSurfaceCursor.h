@@ -27,6 +27,7 @@ class vtkActor;
 class vtkRenderer;
 class vtkMatrix4x4;
 class vtkLookupTable;
+class vtkPolyData;
 class vtkDataSet;
 class vtkDataSetMapper;
 class vtkDataSetCollection;
@@ -192,6 +193,8 @@ protected:
   static vtkDataSet *MakeMoverShape(int warped);
   static vtkDataSet *MakePusherShape();
   static vtkDataSet *MakeSpinnerShape();
+  static vtkPolyData *MakeWarpedArrow(double warpX, double warpY,
+                                      double warpZ, double warpScale);
 
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
