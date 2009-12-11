@@ -221,11 +221,13 @@ def MoveCursor(iren,event=""):
         level = level | 2
       elif iren.GetKeySym() == "Shift_L":
         level = level | 1
+      print "KeyPress shift=%i, control=%i, keysym=\"%s\"" % (iren.GetShiftKey(), iren.GetControlKey(), iren.GetKeySym())
     elif event == "KeyReleaseEvent":
       if iren.GetKeySym() == "Control_L":
         level = level & ~2
       elif iren.GetKeySym() == "Shift_L":
         level = level & ~1
+      print "KeyRelease shift=%i, control=%i, keysym=\"%s\"" % (iren.GetShiftKey(), iren.GetControlKey(), iren.GetKeySym())
     cursor.SetLevel(level)
     iren.Render()
 
