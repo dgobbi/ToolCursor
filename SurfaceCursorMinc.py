@@ -211,7 +211,11 @@ def PointCone(actor,nx,ny,nz): #,px,py,pz):
         actor.RotateWXYZ(180, (nx+n)*0.5, ny*0.5, nz*0.5)
 
 def MoveCursor(iren,event=""):
-    level = iren.GetShiftKey() + 2*iren.GetControlKey()
+    level = 0
+    if iren.GetShiftKey():
+      level = level | 1
+    if iren.GetControlKey():
+      level = level | 2
     if event == "KeyPressEvent":
       if iren.GetKeySym() == "Control_L":
         level = level | 2
