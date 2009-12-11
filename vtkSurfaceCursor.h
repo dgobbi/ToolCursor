@@ -35,7 +35,17 @@ class vtkPicker;
 class vtkVolumePicker;
 class vtkCommand;
 
-// Cursor states, depending on what is under the cursor
+// Cursor interaction levels.  Generally, "0" is the base interaction
+// level, while "1" is with Shift and "2" is with Control.
+#define VTK_SCURSOR_LEVEL_0       0
+#define VTK_SCURSOR_LEVEL_1       1
+#define VTK_SCURSOR_LEVEL_2       2
+#define VTK_SCURSOR_LEVEL_3       3
+
+// Cursor states, which describe what is under the cursor.
+// The combination of modifier and state will control what
+// the cursor shape will be and what will happen when the
+// cursor is dragged.
 #define VTK_SCURSOR_DEFAULT      0x0
 #define VTK_SCURSOR_MOVEABLE     0x1
 #define VTK_SCURSOR_PUSHABLE     0x2
@@ -44,15 +54,17 @@ class vtkCommand;
 #define VTK_SCURSOR_VOLUME       0x20
 #define VTK_SCURSOR_IMAGE_ACTOR  0x40
 
-// Predefined cursor shapes
+// Copies of basic system cursors
 #define VTK_SCURSOR_POINTER      0
 #define VTK_SCURSOR_CROSSHAIRS   1
+// Geometrical shapes
 #define VTK_SCURSOR_CROSS        2
 #define VTK_SCURSOR_CROSS_SPLIT  3
 #define VTK_SCURSOR_CONE         4
 #define VTK_SCURSOR_CONE_DUAL    5
 #define VTK_SCURSOR_SPHERE       6
 #define VTK_SCURSOR_SPHERE_SPLIT 7
+// Action cursors
 #define VTK_SCURSOR_MOVER        8
 #define VTK_SCURSOR_ROCKER       9
 #define VTK_SCURSOR_PUSHER       10
@@ -110,6 +122,11 @@ public:
   vtkVolumePicker *GetPicker() { return this->Picker; };
 
   // Description:
+  // Set the activation level of the cursor.  
+  void SetLevel(int level);
+  int GetLevel() { return this->Level; };
+
+  // Description:
   // Get the state of the cursor.  This refers to what is under the cursor,
   // and hence what kinds of actions the cursor can take.
   int GetState() { return this->State; };
@@ -156,6 +173,10 @@ public:
   // internal use.
   virtual void HandleEvent(vtkObject *object, unsigned long event, void *data);
 
+  // Description:
+  // Must modify the actor to force re-render.
+  virtual void Modified();
+
 protected:
   vtkSurfaceCursor();
   ~vtkSurfaceCursor();
@@ -171,6 +192,7 @@ protected:
 
   int PointNormalAtCamera;
   int Shape;
+  int Level;
   int State;
   double Scale;
   vtkMatrix4x4 *Matrix;
@@ -183,6 +205,7 @@ protected:
   vtkCommand *Command;
 
   virtual void ComputeState();
+  virtual void ComputeShape();
   virtual void MakeDefaultShapes();
 
   static vtkDataSet *MakePointerShape();

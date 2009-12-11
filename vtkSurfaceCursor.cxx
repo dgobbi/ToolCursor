@@ -52,7 +52,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.11 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -99,6 +99,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Renderer = 0;
 
   this->PointNormalAtCamera = 1;
+  this->Level = 0;
   this->State = 0;
   this->Shape = 0;
   this->Scale = 1.0;
@@ -330,6 +331,65 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 }
 
 //----------------------------------------------------------------------------
+void vtkSurfaceCursor::ComputeShape()
+{
+  int state = this->State;
+  int level = this->Level;
+  int shape = VTK_SCURSOR_POINTER;
+
+  // Setting the cursor shape from the state is very crude for now
+  switch (level)
+    {
+    case 0:
+      {
+      if ((state & VTK_SCURSOR_IMAGE_ACTOR) ||
+          (state & VTK_SCURSOR_VOLUME) && (state & VTK_SCURSOR_PUSHABLE))
+        {
+        shape = VTK_SCURSOR_CROSS_SPLIT;
+        }
+      else if ((state & VTK_SCURSOR_VOLUME) ||
+               (state & VTK_SCURSOR_ACTOR))
+        {
+        shape = VTK_SCURSOR_CONE;
+        }
+      }
+      break;
+
+    case 1:
+      {
+      if ((state & VTK_SCURSOR_PUSHABLE))
+        {
+        shape = VTK_SCURSOR_PUSHER;
+        }
+      else if ((state & VTK_SCURSOR_MOVEABLE))
+        {
+        shape = VTK_SCURSOR_MOVER;
+        }
+      else
+        {
+        shape = VTK_SCURSOR_CROSSHAIRS;
+        }
+      }
+      break;
+
+    case 2:
+      {
+      if ((state & VTK_SCURSOR_PUSHABLE))
+        {
+        shape = VTK_SCURSOR_ROCKER;
+        }
+      else if ((state & VTK_SCURSOR_MOVEABLE))
+        {
+        shape = VTK_SCURSOR_SPINNER;
+        }
+      }
+      break;
+    }
+
+  this->SetShape(shape);
+}
+
+//----------------------------------------------------------------------------
 // Use information from the picker to decide what the state should be
 
 void vtkSurfaceCursor::ComputeState()
@@ -448,26 +508,14 @@ void vtkSurfaceCursor::ComputePosition()
     this->Normal[2] = -this->Normal[2];
     }
 
-  // Compute the "state" from the picked information
+  // Compute the "state" from the picked information.  The "state" needs to
+  // be split into two ints: there should be a "pick info" bitfield that
+  // describes what's under the cursor, and another "state" that describes the
+  // ongoing interaction and which is locked until the action is completed. 
   this->ComputeState();
 
-  // Setting the cursor shape from the state is very crude for now
-  if (this->State & VTK_SCURSOR_IMAGE_ACTOR)
-    {
-    this->SetShape(VTK_SCURSOR_CROSS);
-    }
-  else if (this->State & VTK_SCURSOR_PUSHABLE)
-    {
-    this->SetShape(VTK_SCURSOR_PUSHER);
-    }
-  else if (this->State & VTK_SCURSOR_MOVEABLE)
-    {
-    this->SetShape(VTK_SCURSOR_MOVER);
-    }
-  else
-    {
-    this->SetShape(VTK_SCURSOR_POINTER);
-    }
+  // Compute the cursor shape from the state.  
+  this->ComputeShape();
 
   // Compute an "up" vector for the cursor
   this->ComputeVectorFromNormal(this->Normal, this->Vector,
@@ -485,6 +533,13 @@ void vtkSurfaceCursor::ComputePosition()
 }
 
 //----------------------------------------------------------------------------
+void vtkSurfaceCursor::Modified()
+{
+  this->Mapper->Modified();
+  this->Superclass::Modified();
+}
+
+//----------------------------------------------------------------------------
 void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
                                    void *)
 {
@@ -499,6 +554,18 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
       }
       break;
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetLevel(int level)
+{
+  if (this->Level == level)
+    {
+    return;
+    }
+    
+  this->Level = level;
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -1081,9 +1148,9 @@ vtkDataSet *vtkSurfaceCursor::MakeMoverShape(int warped)
 
   if (warped)
     {
-    transform->RotateY(30);
-    transform->Scale(1.2, 1.0, 1.0);
-    transform->Translate(0, 0, 10);
+    transform->RotateY(36);
+    transform->Scale(1.5, 1.0, 1.0);
+    transform->Translate(0, 0, 14);
     }
 
   int color = 0;

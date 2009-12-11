@@ -211,6 +211,18 @@ def PointCone(actor,nx,ny,nz): #,px,py,pz):
         actor.RotateWXYZ(180, (nx+n)*0.5, ny*0.5, nz*0.5)
 
 def MoveCursor(iren,event=""):
+    level = iren.GetShiftKey() + 2*iren.GetControlKey()
+    if event == "KeyPressEvent":
+      if iren.GetKeySym() == "Control_L":
+        level = level | 2
+      elif iren.GetKeySym() == "Shift_L":
+        level = level | 1
+    elif event == "KeyReleaseEvent":
+      if iren.GetKeySym() == "Control_L":
+        level = level & ~2
+      elif iren.GetKeySym() == "Shift_L":
+        level = level & ~1
+    cursor.SetLevel(level)
     iren.Render()
 
 def OnRender(ren,event=""):
@@ -228,6 +240,8 @@ def OnRender(ren,event=""):
 #---------------------------------------------------------
 # custom interaction
 iren.AddObserver("MouseMoveEvent", MoveCursor)
+iren.AddObserver("KeyPressEvent", MoveCursor)
+iren.AddObserver("KeyReleaseEvent", MoveCursor)
 ren.AddObserver("StartEvent", OnRender)
 
 iren.Start()
