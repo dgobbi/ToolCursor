@@ -231,8 +231,13 @@ def MoveCursor(iren,event=""):
     cursor.SetLevel(level)
     iren.Render()
 
-def OnRender(ren,event=""):
+def EnterRenWin(iren, event=""):
     renWin.HideCursor()
+
+def LeaveRenWin(iren, event=""):
+    renWin.ShowCursor()
+
+def OnRender(ren,event=""):
     x,y = iren.GetLastEventPosition()
     cursor.SetDisplayPosition(x,y)
     picker = cursor.GetPicker()
@@ -248,6 +253,8 @@ def OnRender(ren,event=""):
 iren.AddObserver("MouseMoveEvent", MoveCursor)
 iren.AddObserver("KeyPressEvent", MoveCursor)
 iren.AddObserver("KeyReleaseEvent", MoveCursor)
+iren.AddObserver("EnterEvent", EnterRenWin)
+iren.AddObserver("LeaveEvent", LeaveRenWin)
 ren.AddObserver("StartEvent", OnRender)
 
 iren.Start()
