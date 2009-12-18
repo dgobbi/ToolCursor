@@ -52,7 +52,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.12 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -343,7 +343,8 @@ void vtkSurfaceCursor::ComputeShape()
     case 0:
       {
       if ((state & VTK_SCURSOR_IMAGE_ACTOR) ||
-          (state & VTK_SCURSOR_VOLUME) && (state & VTK_SCURSOR_PUSHABLE))
+          ((state & VTK_SCURSOR_VOLUME) &&
+           (state & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
         {
         shape = VTK_SCURSOR_CROSS_SPLIT;
         }
@@ -357,11 +358,11 @@ void vtkSurfaceCursor::ComputeShape()
 
     case 1:
       {
-      if ((state & VTK_SCURSOR_PUSHABLE))
+      if ((state & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
         {
         shape = VTK_SCURSOR_PUSHER;
         }
-      else if ((state & VTK_SCURSOR_MOVEABLE))
+      else if ((state & VTK_SCURSOR_PROP3D))
         {
         shape = VTK_SCURSOR_MOVER;
         }
@@ -374,11 +375,11 @@ void vtkSurfaceCursor::ComputeShape()
 
     case 2:
       {
-      if ((state & VTK_SCURSOR_PUSHABLE))
+      if ((state & VTK_SCURSOR_CROP_PLANE))
         {
         shape = VTK_SCURSOR_ROCKER;
         }
-      else if ((state & VTK_SCURSOR_MOVEABLE))
+      else if ((state & VTK_SCURSOR_PROP3D))
         {
         shape = VTK_SCURSOR_SPINNER;
         }
@@ -406,17 +407,12 @@ void vtkSurfaceCursor::ComputeState()
   vtkProp3D *prop = props->GetNextProp3D(pit);
   vtkAbstractMapper3D *mapper = picker->GetMapper();
 
-  if (prop)
+  if (!prop)
     {
-    // The object under the cursor is moveable
-    this->State = (this->State | VTK_SCURSOR_MOVEABLE);
-    }
-  else
-    {
-    // No prop means default state
+    // No prop, nothing to do
     return;
     }
-  
+
   if (mapper && picker->GetClippingPlaneId() >= 0)
     {
     // Make sure that our Position lies on the plane and that our Normal
@@ -431,8 +427,7 @@ void vtkSurfaceCursor::ComputeState()
     if (fabs(plane->EvaluateFunction(this->Position)) < planeTol &&
         vtkMath::Norm(u) < normalTol)
       {
-      this->State = (this->State | VTK_SCURSOR_PUSHABLE
-                                 | VTK_SCURSOR_ROTATEABLE); 
+      this->State = (this->State | VTK_SCURSOR_CLIP_PLANE);
       }
     }
 
@@ -457,7 +452,7 @@ void vtkSurfaceCursor::ComputeState()
     if (fabs(mapperPos[planeId/2] - bounds[planeId]) < planeTol &&
         vtkMath::Norm(u) < normalTol)
       {
-      this->State = (this->State | VTK_SCURSOR_PUSHABLE);
+      this->State = (this->State | VTK_SCURSOR_CROP_PLANE);
       }
     }
 
@@ -471,8 +466,7 @@ void vtkSurfaceCursor::ComputeState()
     }
   else if (prop->IsA("vtkImageActor"))
     {
-    this->State = (this->State | VTK_SCURSOR_IMAGE_ACTOR
-                               | VTK_SCURSOR_PUSHABLE);
+    this->State = (this->State | VTK_SCURSOR_IMAGE_ACTOR);
     }
 }
 

@@ -42,17 +42,13 @@ class vtkCommand;
 #define VTK_SCURSOR_LEVEL_2       2
 #define VTK_SCURSOR_LEVEL_3       3
 
-// Cursor states, which describe what is under the cursor.
-// The combination of modifier and state will control what
-// the cursor shape will be and what will happen when the
-// cursor is dragged.
-#define VTK_SCURSOR_DEFAULT      0x0
-#define VTK_SCURSOR_MOVEABLE     0x1
-#define VTK_SCURSOR_PUSHABLE     0x2
-#define VTK_SCURSOR_ROTATEABLE   0x4
-#define VTK_SCURSOR_ACTOR        0x10
-#define VTK_SCURSOR_VOLUME       0x20
-#define VTK_SCURSOR_IMAGE_ACTOR  0x40
+// Cursor information, describes what is under the cursor.
+#define VTK_SCURSOR_PROP3D       0x0F00
+#define VTK_SCURSOR_ACTOR        0x0100
+#define VTK_SCURSOR_VOLUME       0x0200
+#define VTK_SCURSOR_IMAGE_ACTOR  0x0400
+#define VTK_SCURSOR_CLIP_PLANE   0x1000
+#define VTK_SCURSOR_CROP_PLANE   0x2000
 
 // Copies of basic system cursors
 #define VTK_SCURSOR_POINTER      0
