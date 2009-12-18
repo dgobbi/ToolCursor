@@ -238,7 +238,7 @@ def LeaveRenWin(iren, event=""):
     renWin.ShowCursor()
 
 def OnRender(ren,event=""):
-    x,y = iren.GetLastEventPosition()
+    x,y = iren.GetEventPosition()
     cursor.SetDisplayPosition(x,y)
     picker = cursor.GetPicker()
     p = picker.GetPickPosition()
