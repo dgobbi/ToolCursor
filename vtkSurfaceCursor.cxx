@@ -19,6 +19,7 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkInteractorStyle.h"
 #include "vtkCamera.h"
 #include "vtkActor.h"
 #include "vtkVolume.h"
@@ -54,7 +55,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.17 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.18 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -360,22 +361,6 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
     {
     case 0:
       {
-      if ((pickFlags & VTK_SCURSOR_IMAGE_ACTOR) ||
-          ((pickFlags & VTK_SCURSOR_VOLUME) &&
-           (pickFlags & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
-        {
-        shape = VTK_SCURSOR_CROSS_SPLIT;
-        }
-      else if ((pickFlags & VTK_SCURSOR_VOLUME) ||
-               (pickFlags & VTK_SCURSOR_ACTOR))
-        {
-        shape = VTK_SCURSOR_CONE;
-        }
-      }
-      break;
-
-    case 1:
-      {
       if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
         {
         shape = VTK_SCURSOR_PUSHER;
@@ -391,7 +376,7 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
       }
       break;
 
-    case 2:
+    case 1:
       {
       if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
         {
@@ -400,6 +385,22 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
       else if ((pickFlags & VTK_SCURSOR_PROP3D))
         {
         shape = VTK_SCURSOR_SPINNER;
+        }
+      }
+      break;
+
+    case 2:
+      {
+      if ((pickFlags & VTK_SCURSOR_IMAGE_ACTOR) ||
+          ((pickFlags & VTK_SCURSOR_VOLUME) &&
+           (pickFlags & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
+        {
+        shape = VTK_SCURSOR_CROSS_SPLIT;
+        }
+      else if ((pickFlags & VTK_SCURSOR_VOLUME) ||
+               (pickFlags & VTK_SCURSOR_ACTOR))
+        {
+        shape = VTK_SCURSOR_CONE;
         }
       }
       break;
@@ -421,7 +422,7 @@ int vtkSurfaceCursor::ComputeAction(int mode, int pickFlags, int button)
 
   switch (mode)
     {
-    case 1:
+    case 0:
       {
       if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
         {
@@ -434,7 +435,7 @@ int vtkSurfaceCursor::ComputeAction(int mode, int pickFlags, int button)
       }
       break;
 
-    case 2:
+    case 1:
       {
       if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
         {
@@ -650,11 +651,12 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
       // Don't show cursor if nothing is underneath of it.
       this->Actor->SetVisibility((this->PickFlags != 0));
       }
-
+    // Must return to avoid the Render at the end of HandleEvent.
     return;
     }
   else if (event == vtkCommand::EndEvent)
     {
+    // At end of RenderWindow render, check whether cursor is visible
     vtkRenderWindow *renwin = vtkRenderWindow::SafeDownCast(object);
     if (renwin && this->MouseInRenderer)
       {
@@ -667,10 +669,37 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
         {
         renwin->ShowCursor();
         }
+
+      // If something interesting is under the cursor, then disable the
+      // InteractorStyle so that we can process the events.
+      vtkRenderWindowInteractor *iren =
+        static_cast<vtkRenderWindow *>(object)->GetInteractor();
+      vtkInteractorStyle *istyle;
+
+      if (iren && (istyle = vtkInteractorStyle::SafeDownCast(
+                              iren->GetInteractorStyle())))
+        {
+        // The "item of interest" is hard-coded for now.
+        int itemOfInterest = ((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) ||
+                              (this->PickFlags & VTK_SCURSOR_CROP_PLANE));
+
+        if (istyle->GetInteractor() && itemOfInterest && !istyle->GetState())
+          {
+          // The first line forces it to release focus
+          istyle->OnLeftButtonUp();
+          istyle->SetInteractor(0);
+          }
+        else if (!istyle->GetInteractor() && !itemOfInterest && !this->Action)
+          {
+          istyle->SetInteractor(iren);
+          }
+        }
       }
+    // Must return to avoid the Render at the end of HandleEvent.
+    return;
     }
 
-  // Check to see if the object is an interactor.
+  // If the object is an interactor, then handle interaction events.
   vtkRenderWindowInteractor *iren =
     vtkRenderWindowInteractor::SafeDownCast(object);
 
@@ -678,6 +707,10 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
     {
     return;
     } 
+
+  // Check whether there is an active interactor style
+  vtkInteractorObserver *istyle = iren->GetInteractorStyle();
+  int ignoreButtons = (istyle && istyle->GetInteractor());
 
   // The interactor events are used to do just three things:
   // 1) set this->MouseInRenderer to control cursor visibility
@@ -730,16 +763,19 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
       break;
     case vtkCommand::LeftButtonPressEvent:
       {
+      if (ignoreButtons) { return; }
       this->SetModifier(this->Modifier | VTK_SCURSOR_B1);
       }
       break;
     case vtkCommand::RightButtonPressEvent:
       {
+      if (ignoreButtons) { return; }
       this->SetModifier(this->Modifier | VTK_SCURSOR_B2);
       }
       break;
     case vtkCommand::MiddleButtonPressEvent:
       {
+      if (ignoreButtons) { return; }
       this->SetModifier(this->Modifier | VTK_SCURSOR_B3);
       }
       break;
@@ -766,6 +802,12 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 {
+
+  if (this->Action)
+    {
+    cerr << "Perform action " << this->Action << "\n";
+    }
+
   switch (this->Action)
     {
     case VTK_SCURSOR_PUSH:
@@ -850,6 +892,7 @@ void vtkSurfaceCursor::SetAction(int action)
   if (this->Action)
     {
     // Terminate the previous action.
+    cerr << "End action " << this->Action << "\n";
     }
 
   this->Action = action;
@@ -858,6 +901,7 @@ void vtkSurfaceCursor::SetAction(int action)
   if (action)
     {
     // Initiate the new action.
+    cerr << "Start action " << this->Action << "\n";
     }
 }
 

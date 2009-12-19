@@ -18,8 +18,9 @@ else:
 ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
 renWin.AddRenderer(ren)
+istyle = vtk.vtkInteractorStyleTrackballCamera()
 iren = vtk.vtkRenderWindowInteractor()
-iren.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
+iren.SetInteractorStyle(istyle)
 iren.SetRenderWindow(renWin)
 
 #---------------------------------------------------------
