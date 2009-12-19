@@ -54,7 +54,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.15 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.16 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
 
   this->PointNormalAtCamera = 1;
   this->Modifier = 0;
-  this->Level = 0;
+  this->Mode = 0;
   this->PickFlags = 0;
   this->Shape = 0;
   this->Action = 0;
@@ -336,27 +336,27 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeLevel(int modifier)
+int vtkSurfaceCursor::ComputeMode(int modifier)
 {
   if ( (modifier & VTK_SCURSOR_SHIFT) )
     {
-    return VTK_SCURSOR_LEVEL_1;
+    return 1;
     }
   else if ( (modifier & VTK_SCURSOR_CONTROL) )
     {
-    return VTK_SCURSOR_LEVEL_2;
+    return 2;
     }
 
-  return VTK_SCURSOR_LEVEL_0;
+  return 0;
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeShape(int level, int pickFlags)
+int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
 {
   int shape = VTK_SCURSOR_POINTER;
 
   // Setting the cursor shape from the pickFlags is very crude for now
-  switch (level)
+  switch (mode)
     {
     case 0:
       {
@@ -409,7 +409,7 @@ int vtkSurfaceCursor::ComputeShape(int level, int pickFlags)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeAction(int level, int pickFlags, int button)
+int vtkSurfaceCursor::ComputeAction(int mode, int pickFlags, int button)
 {
   // One button only.
   if (button != VTK_SCURSOR_B1)
@@ -419,7 +419,7 @@ int vtkSurfaceCursor::ComputeAction(int level, int pickFlags, int button)
 
   int action = 0;
 
-  switch (level)
+  switch (mode)
     {
     case 1:
       {
@@ -569,7 +569,7 @@ void vtkSurfaceCursor::ComputePosition()
   this->PickFlags = this->ComputePickFlags(this->Picker);
 
   // Compute the cursor shape from the state.  
-  this->SetShape(this->ComputeShape(this->Level, this->PickFlags));
+  this->SetShape(this->ComputeShape(this->Mode, this->PickFlags));
 
   // Compute an "up" vector for the cursor.
   this->ComputeVectorFromNormal(this->Normal, this->Vector,
@@ -797,8 +797,8 @@ void vtkSurfaceCursor::SetModifier(int modifier)
     return;
     }
     
-  // Map the modifier to the Level.
-  this->SetLevel(this->ComputeLevel(modifier));
+  // Map the modifier to the Mode.
+  this->SetMode(this->ComputeMode(modifier));
 
   // Map the modifier to the Action.
   // Do an XOR to find out what bits have changed.
@@ -821,7 +821,7 @@ void vtkSurfaceCursor::SetModifier(int modifier)
       if ((bitsSet & VTK_SCURSOR_B1)) { button = VTK_SCURSOR_B1; }
       else if ((bitsSet & VTK_SCURSOR_B2)) { button = VTK_SCURSOR_B2; }
       else if ((bitsSet & VTK_SCURSOR_B3)) { button = VTK_SCURSOR_B3; }
-      this->SetAction(this->ComputeAction(this->Level, this->PickFlags,
+      this->SetAction(this->ComputeAction(this->Mode, this->PickFlags,
                                           button));
       this->ActionButton = button;
       }
@@ -854,14 +854,14 @@ void vtkSurfaceCursor::SetAction(int action)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetLevel(int level)
+void vtkSurfaceCursor::SetMode(int mode)
 {
-  if (this->Level == level)
+  if (this->Mode == mode)
     {
     return;
     }
     
-  this->Level = level;
+  this->Mode = mode;
   this->Modified();
 }
 

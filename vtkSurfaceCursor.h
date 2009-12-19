@@ -41,14 +41,7 @@ class vtkCommand;
 #define VTK_SCURSOR_PUSH          2
 #define VTK_SCURSOR_SPIN          3
 
-// Cursor interaction levels.  Generally, "0" is the base interaction
-// level, while "1" is with Shift and "2" is with Control.
-#define VTK_SCURSOR_LEVEL_0       0
-#define VTK_SCURSOR_LEVEL_1       1
-#define VTK_SCURSOR_LEVEL_2       2
-#define VTK_SCURSOR_LEVEL_3       3
-
-// Event modifiers, which usually control the level.
+// Event modifiers, which usually control the mode.
 #define VTK_SCURSOR_SHIFT        0x01
 #define VTK_SCURSOR_CAPS         0x02
 #define VTK_SCURSOR_CONTROL      0x04
@@ -140,15 +133,18 @@ public:
   int GetPickFlags() { return this->PickFlags; };
 
   // Description:
-  // Set the activation level of the cursor.  This is a semi-internal
-  // method.  The level is usually computed from the Modifier ivar by the
-  // ComputeLevel() method.
-  void SetLevel(int level);
-  int GetLevel() { return this->Level; };
+  // Set the current mode for the cursor.  The mode is usually computed
+  // from the Modifier ivar by the ComputeMode() method, i.e. the mode will
+  // usually change in response to modifier keys like "Shift" and "Control".
+  // If you don't use SetModifier() or BindInteractor(), then you can set
+  // the mode manually with this method.
+  void SetMode(int mode);
+  int GetMode() { return this->Mode; };
 
   // Description:
-  // Set the cursor shaped.  This is a semi-internal method.  The shape
-  // is usually computed from the Level and the PickFlags.
+  // Set the cursor shaped.  If you use BindInteractor() or SetModifier()
+  // then the shape will be computed from the Mode and the PickFlags.  If
+  // you don't use these methods, then you can set the shape manually.
   void SetShape(int shape);
   int GetShape() { return this->Shape; };
 
@@ -205,7 +201,7 @@ public:
   virtual void MoveToDisplayPosition(double x, double y);
 
   // Description:
-  // Set or get the modifier bitfield.  This will set the Level and the
+  // Set or get the modifier bitfield.  This will set the Mode and the
   // cursor Shape, and if the modifier bits indicate that a mouse button
   // has been pressed, it will also set the Action.  If you want to set
   // the Action manually (i.e. if you don't like the default bindings)
@@ -214,15 +210,18 @@ public:
   int GetModifier() { return this->Modifier; };
 
   // Description:
-  // Set the current action.  This is usually set or cleared as a response
-  // to a mouse button press or release.  The value of Action controls what
-  // happens when MoveToDisplayPosition() is called.
+  // Set the current action.  If you use BindInteractor() or SetModifier(),
+  // then this will be set automatically in response to button events.  If
+  // you don't use either of these methods, then you can set Action
+  // manually.  The value of Action controls what happens when
+  // MoveToDisplayPosition() is called.
   virtual void SetAction(int action);
   int GetAction() { return this->Action; };
 
   // Description:
   // Set whether the mouse is in the renderer.  This controls cursor
-  // visibility.
+  // visibility.  If you use BindToInteractor(), this method is called
+  // automatically when required.
   virtual void SetMouseInRenderer(int inside);
   int GetMouseInRenderer() { return this->MouseInRenderer; };
 
@@ -246,7 +245,7 @@ protected:
 
   int PointNormalAtCamera;
   int Shape;
-  int Level;
+  int Mode;
   int PickFlags;
   int Action;
   int ActionButton;
@@ -262,9 +261,9 @@ protected:
   vtkRenderer *Renderer;
   vtkCommand *Command;
 
-  virtual int ComputeLevel(int modifier);
-  virtual int ComputeShape(int level, int pickFlags);
-  virtual int ComputeAction(int level, int pickFlags, int button);
+  virtual int ComputeMode(int modifier);
+  virtual int ComputeShape(int mode, int pickFlags);
+  virtual int ComputeAction(int mode, int pickFlags, int button);
 
   virtual void MakeDefaultShapes();
   static vtkDataSet *MakePointerShape();
