@@ -161,32 +161,6 @@ camera.SetViewUp(0,0,1)
 
 renWin.Render()
 
-#---------------------------------------------------------
-# the cone points along the -x axis
-coneSource = vtk.vtkConeSource()
-coneSource.CappingOn()
-coneSource.SetHeight(12)
-coneSource.SetRadius(5)
-coneSource.SetResolution(31)
-coneSource.SetCenter(6,0,0)
-coneSource.SetDirection(-1,0,0)
-
-coneMapper = vtk.vtkDataSetMapper()
-coneMapper.SetInputConnection(coneSource.GetOutputPort())
-
-redCone = vtk.vtkActor()
-redCone.PickableOff()
-redCone.SetMapper(coneMapper)
-redCone.GetProperty().SetColor(1,0,0)
-
-greenCone = vtk.vtkActor()
-greenCone.PickableOff()
-greenCone.SetMapper(coneMapper)
-greenCone.GetProperty().SetColor(0,1,0)
-
-#ren.AddViewProp(redCone)
-#ren.AddViewProp(greenCone)
-
 #ren.SetBackground(0.5, 0.5, 0.5)
 ren.ResetCameraClippingRange()
 #---------------------------------------------------------
@@ -199,62 +173,14 @@ picker.AddLocator(skinLocator)
 cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
-
-# A function to point an actor along a vector
-def PointCone(actor,nx,ny,nz): #,px,py,pz):
-    actor.SetOrientation(0.0, 0.0, 0.0)
-    n = math.sqrt(nx**2 + ny**2 + nz**2)
-    if (nx < 0.0):
-        actor.RotateWXYZ(180, 0, 1, 0)
-        actor.RotateWXYZ(180, (nx-n)*0.5, ny*0.5, nz*0.5)
-    else:
-        actor.RotateWXYZ(180, (nx+n)*0.5, ny*0.5, nz*0.5)
-
-def MoveCursor(iren,event=""):
-    level = 0
-    if iren.GetShiftKey():
-      level = level | 1
-    if iren.GetControlKey():
-      level = level | 2
-    if event == "KeyPressEvent":
-      if iren.GetKeySym() == "Control_L":
-        level = level | 2
-      elif iren.GetKeySym() == "Shift_L":
-        level = level | 1
-      print "KeyPress shift=%i, control=%i, keysym=\"%s\"" % (iren.GetShiftKey(), iren.GetControlKey(), iren.GetKeySym())
-    elif event == "KeyReleaseEvent":
-      if iren.GetKeySym() == "Control_L":
-        level = level & ~2
-      elif iren.GetKeySym() == "Shift_L":
-        level = level & ~1
-      print "KeyRelease shift=%i, control=%i, keysym=\"%s\"" % (iren.GetShiftKey(), iren.GetControlKey(), iren.GetKeySym())
-    cursor.SetLevel(level)
-    iren.Render()
-
-def EnterRenWin(iren, event=""):
-    renWin.HideCursor()
-
-def LeaveRenWin(iren, event=""):
-    renWin.ShowCursor()
+cursor.BindInteractor(iren)
 
 def OnRender(ren,event=""):
     x,y = iren.GetEventPosition()
     cursor.SetDisplayPosition(x,y)
-    picker = cursor.GetPicker()
-    p = picker.GetPickPosition()
-    n = picker.GetPickNormal()
-    redCone.SetPosition(p[0],p[1],p[2])
-    PointCone(redCone,n[0],n[1],n[2])
-    greenCone.SetPosition(p[0],p[1],p[2])
-    PointCone(greenCone,-n[0],-n[1],-n[2])
 
 #---------------------------------------------------------
 # custom interaction
-iren.AddObserver("MouseMoveEvent", MoveCursor)
-iren.AddObserver("KeyPressEvent", MoveCursor)
-iren.AddObserver("KeyReleaseEvent", MoveCursor)
-iren.AddObserver("EnterEvent", EnterRenWin)
-iren.AddObserver("LeaveEvent", LeaveRenWin)
 ren.AddObserver("StartEvent", OnRender)
 
 iren.Start()

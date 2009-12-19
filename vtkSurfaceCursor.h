@@ -25,6 +25,7 @@
 
 class vtkActor;
 class vtkRenderer;
+class vtkRenderWindowInteractor;
 class vtkMatrix4x4;
 class vtkLookupTable;
 class vtkPolyData;
@@ -35,6 +36,11 @@ class vtkPicker;
 class vtkVolumePicker;
 class vtkCommand;
 
+// Cursor actions.
+#define VTK_SCURSOR_ROTATE        1
+#define VTK_SCURSOR_PUSH          2
+#define VTK_SCURSOR_SPIN          3
+
 // Cursor interaction levels.  Generally, "0" is the base interaction
 // level, while "1" is with Shift and "2" is with Control.
 #define VTK_SCURSOR_LEVEL_0       0
@@ -42,7 +48,17 @@ class vtkCommand;
 #define VTK_SCURSOR_LEVEL_2       2
 #define VTK_SCURSOR_LEVEL_3       3
 
-// Cursor information, describes what is under the cursor.
+// Event modifiers, which usually control the level.
+#define VTK_SCURSOR_SHIFT        0x01
+#define VTK_SCURSOR_CAPS         0x02
+#define VTK_SCURSOR_CONTROL      0x04
+#define VTK_SCURSOR_META         0x08
+#define VTK_SCURSOR_ALT          0x16
+#define VTK_SCURSOR_B1          0x100
+#define VTK_SCURSOR_B2          0x200
+#define VTK_SCURSOR_B3          0x400
+
+// Pick flags, these describe what is under the cursor.
 #define VTK_SCURSOR_PROP3D       0x0F00
 #define VTK_SCURSOR_ACTOR        0x0100
 #define VTK_SCURSOR_VOLUME       0x0200
@@ -50,17 +66,17 @@ class vtkCommand;
 #define VTK_SCURSOR_CLIP_PLANE   0x1000
 #define VTK_SCURSOR_CROP_PLANE   0x2000
 
-// Copies of basic system cursors
+// Cursor shapes. Copies of basic system cursors
 #define VTK_SCURSOR_POINTER      0
 #define VTK_SCURSOR_CROSSHAIRS   1
-// Geometrical shapes
+// Cursor shapes. Geometrical shapes.
 #define VTK_SCURSOR_CROSS        2
 #define VTK_SCURSOR_CROSS_SPLIT  3
 #define VTK_SCURSOR_CONE         4
 #define VTK_SCURSOR_CONE_DUAL    5
 #define VTK_SCURSOR_SPHERE       6
 #define VTK_SCURSOR_SPHERE_SPLIT 7
-// Action cursors
+// Cursor shapes. Action cursors.
 #define VTK_SCURSOR_MOVER        8
 #define VTK_SCURSOR_ROCKER       9
 #define VTK_SCURSOR_PUSHER       10
@@ -85,12 +101,12 @@ public:
 
   // Description:
   // Set the current (x,y) display location for the cursor.
-  vtkSetVector2Macro(DisplayPosition, int);
-  vtkGetVector2Macro(DisplayPosition, int);
+  vtkSetVector2Macro(DisplayPosition, double);
+  vtkGetVector2Macro(DisplayPosition, double);
 
   // Description:
   // Compute the cursor position based on the display position.
-  void ComputePosition();
+  virtual void ComputePosition();
 
   // Description:
   // Get the cursor position in world coordinates.
@@ -118,17 +134,21 @@ public:
   vtkVolumePicker *GetPicker() { return this->Picker; };
 
   // Description:
-  // Set the activation level of the cursor.  
+  // Get the pick flags.  The flags provide information about what was
+  // under the cursor the last time that a pick was done.  The flags are
+  // used to determine what kinds of actions the cursor can take.
+  int GetPickFlags() { return this->PickFlags; };
+
+  // Description:
+  // Set the activation level of the cursor.  This is a semi-internal
+  // method.  The level is usually computed from the Modifier ivar by the
+  // ComputeLevel() method.
   void SetLevel(int level);
   int GetLevel() { return this->Level; };
 
   // Description:
-  // Get the state of the cursor.  This refers to what is under the cursor,
-  // and hence what kinds of actions the cursor can take.
-  int GetState() { return this->State; };
-
-  // Description:
-  // Set the cursor shaped.
+  // Set the cursor shaped.  This is a semi-internal method.  The shape
+  // is usually computed from the Level and the PickFlags.
   void SetShape(int shape);
   int GetShape() { return this->Shape; };
 
@@ -165,12 +185,50 @@ public:
   vtkGetMacro(PointNormalAtCamera, int);
 
   // Description:
-  // The central event handler for the cursor.  This is primarily meant for
-  // internal use.
+  // Bind an interactor.  This will add observers for all mouse and keyboard
+  // events that the cursor needs.  All bound events are observed via the
+  // HandleEvent() method.  An alternative to binding an Interactor is to
+  // call the MoveToDisplayPosition(), SetModifier(), and SetMouseInRenderer()
+  // methods directly.
+  virtual void BindInteractor(vtkRenderWindowInteractor *iren);
+
+  // Description:
+  // The central event handler for the cursor.  All interactor events go
+  // through this method. 
   virtual void HandleEvent(vtkObject *object, unsigned long event, void *data);
 
   // Description:
-  // Must modify the actor to force re-render.
+  // Move the cursor to a specific position, usually in response to the
+  // mouse motion.  This is not a passive method like SetDisplayPosition().
+  // Depending on the Action ivar, the motion will go to the appropriate
+  // interaction method. 
+  virtual void MoveToDisplayPosition(double x, double y);
+
+  // Description:
+  // Set or get the modifier bitfield.  This will set the Level and the
+  // cursor Shape, and if the modifier bits indicate that a mouse button
+  // has been pressed, it will also set the Action.  If you want to set
+  // the Action manually (i.e. if you don't like the default bindings)
+  // then you should not call this method.
+  virtual void SetModifier(int modifier);  
+  int GetModifier() { return this->Modifier; };
+
+  // Description:
+  // Set the current action.  This is usually set or cleared as a response
+  // to a mouse button press or release.  The value of Action controls what
+  // happens when MoveToDisplayPosition() is called.
+  virtual void SetAction(int action);
+  int GetAction() { return this->Action; };
+
+  // Description:
+  // Set whether the mouse is in the renderer.  This controls cursor
+  // visibility.
+  virtual void SetMouseInRenderer(int inside);
+  int GetMouseInRenderer() { return this->MouseInRenderer; };
+
+  // Description:
+  // We override this method to modify the actor, otherwise the
+  // RenderWindow won't know that it needs to render.
   virtual void Modified();
 
 protected:
@@ -179,7 +237,7 @@ protected:
 
   double OpacityThreshold;
 
-  int DisplayPosition[2];
+  double DisplayPosition[2];
   double Position[3];
   double Normal[3];
   double Vector[3];
@@ -189,7 +247,11 @@ protected:
   int PointNormalAtCamera;
   int Shape;
   int Level;
-  int State;
+  int PickFlags;
+  int Action;
+  int ActionButton;
+  int Modifier;
+  int MouseInRenderer;
   double Scale;
   vtkMatrix4x4 *Matrix;
   vtkDataSetCollection *Shapes;
@@ -200,10 +262,11 @@ protected:
   vtkRenderer *Renderer;
   vtkCommand *Command;
 
-  virtual void ComputeState();
-  virtual void ComputeShape();
-  virtual void MakeDefaultShapes();
+  virtual int ComputeLevel(int modifier);
+  virtual int ComputeShape(int level, int pickFlags);
+  virtual int ComputeAction(int level, int pickFlags, int button);
 
+  virtual void MakeDefaultShapes();
   static vtkDataSet *MakePointerShape();
   static vtkDataSet *MakeCrosshairsShape();
   static vtkDataSet *MakeCrossShape(int splitCross);
@@ -215,6 +278,7 @@ protected:
   static vtkPolyData *MakeWarpedArrow(double warpX, double warpY,
                                       double warpZ, double warpScale);
 
+  static int ComputePickFlags(vtkVolumePicker *picker);
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
                             const double vector[3], vtkMatrix4x4 *matrix); 
@@ -223,6 +287,8 @@ protected:
                                       vtkRenderer *renderer);
 
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
+
+  static int ModifierFromKeySym(const char *keysym);
 
 private:
   vtkSurfaceCursor(const vtkSurfaceCursor&);  //Not implemented

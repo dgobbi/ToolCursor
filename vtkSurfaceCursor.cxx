@@ -17,6 +17,8 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
 #include "vtkCamera.h"
 #include "vtkActor.h"
 #include "vtkVolume.h"
@@ -52,7 +54,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.13 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -81,8 +83,8 @@ private:
 //----------------------------------------------------------------------------
 vtkSurfaceCursor::vtkSurfaceCursor()
 {
-  this->DisplayPosition[0] = 0;
-  this->DisplayPosition[1] = 0;
+  this->DisplayPosition[0] = 0.0;
+  this->DisplayPosition[1] = 0.0;
 
   this->Position[0] = 0.0;
   this->Position[1] = 0.0;
@@ -99,9 +101,12 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Renderer = 0;
 
   this->PointNormalAtCamera = 1;
+  this->Modifier = 0;
   this->Level = 0;
-  this->State = 0;
+  this->PickFlags = 0;
   this->Shape = 0;
+  this->Action = 0;
+  this->ActionButton = 0;
   this->Scale = 1.0;
 
   this->Actor = vtkActor::New();
@@ -331,25 +336,38 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::ComputeShape()
+int vtkSurfaceCursor::ComputeLevel(int modifier)
 {
-  int state = this->State;
-  int level = this->Level;
+  if ( (modifier & VTK_SCURSOR_SHIFT) )
+    {
+    return VTK_SCURSOR_LEVEL_1;
+    }
+  else if ( (modifier & VTK_SCURSOR_CONTROL) )
+    {
+    return VTK_SCURSOR_LEVEL_2;
+    }
+
+  return VTK_SCURSOR_LEVEL_0;
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::ComputeShape(int level, int pickFlags)
+{
   int shape = VTK_SCURSOR_POINTER;
 
-  // Setting the cursor shape from the state is very crude for now
+  // Setting the cursor shape from the pickFlags is very crude for now
   switch (level)
     {
     case 0:
       {
-      if ((state & VTK_SCURSOR_IMAGE_ACTOR) ||
-          ((state & VTK_SCURSOR_VOLUME) &&
-           (state & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
+      if ((pickFlags & VTK_SCURSOR_IMAGE_ACTOR) ||
+          ((pickFlags & VTK_SCURSOR_VOLUME) &&
+           (pickFlags & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
         {
         shape = VTK_SCURSOR_CROSS_SPLIT;
         }
-      else if ((state & VTK_SCURSOR_VOLUME) ||
-               (state & VTK_SCURSOR_ACTOR))
+      else if ((pickFlags & VTK_SCURSOR_VOLUME) ||
+               (pickFlags & VTK_SCURSOR_ACTOR))
         {
         shape = VTK_SCURSOR_CONE;
         }
@@ -358,11 +376,11 @@ void vtkSurfaceCursor::ComputeShape()
 
     case 1:
       {
-      if ((state & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
+      if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
         {
         shape = VTK_SCURSOR_PUSHER;
         }
-      else if ((state & VTK_SCURSOR_PROP3D))
+      else if ((pickFlags & VTK_SCURSOR_PROP3D))
         {
         shape = VTK_SCURSOR_MOVER;
         }
@@ -375,11 +393,11 @@ void vtkSurfaceCursor::ComputeShape()
 
     case 2:
       {
-      if ((state & VTK_SCURSOR_CROP_PLANE))
+      if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
         {
         shape = VTK_SCURSOR_ROCKER;
         }
-      else if ((state & VTK_SCURSOR_PROP3D))
+      else if ((pickFlags & VTK_SCURSOR_PROP3D))
         {
         shape = VTK_SCURSOR_SPINNER;
         }
@@ -387,20 +405,60 @@ void vtkSurfaceCursor::ComputeShape()
       break;
     }
 
-  this->SetShape(shape);
+  return shape;
 }
 
 //----------------------------------------------------------------------------
-// Use information from the picker to decide what the state should be
+int vtkSurfaceCursor::ComputeAction(int level, int pickFlags, int button)
+{
+  // One button only.
+  if (button != VTK_SCURSOR_B1)
+    {
+    return 0;
+    }
 
-void vtkSurfaceCursor::ComputeState()
+  int action = 0;
+
+  switch (level)
+    {
+    case 1:
+      {
+      if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
+        {
+        action = VTK_SCURSOR_PUSH;
+        }
+      else if ((pickFlags & VTK_SCURSOR_PROP3D))
+        {
+        action = VTK_SCURSOR_ROTATE;
+        }
+      }
+      break;
+
+    case 2:
+      {
+      if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
+        {
+        action = VTK_SCURSOR_PUSH;
+        }
+      else if ((pickFlags & VTK_SCURSOR_PROP3D))
+        {
+        action = VTK_SCURSOR_SPIN;
+        }
+      }
+      break;
+    }
+
+  return action;
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
 {
   const double planeTol = 1e-6;
   const double normalTol = 1e-15;
 
-  this->State = 0;
+  int pickFlags = 0;
 
-  vtkVolumePicker *picker = this->Picker;
   vtkProp3DCollection *props = picker->GetProp3Ds();
   vtkCollectionSimpleIterator pit;
   props->InitTraversal(pit);
@@ -410,7 +468,7 @@ void vtkSurfaceCursor::ComputeState()
   if (!prop)
     {
     // No prop, nothing to do
-    return;
+    return 0;
     }
 
   if (mapper && picker->GetClippingPlaneId() >= 0)
@@ -422,12 +480,12 @@ void vtkSurfaceCursor::ComputeState()
       picker->GetClippingPlaneId());
 
     double u[3];
-    vtkMath::Cross(plane->GetNormal(), this->Normal, u);
+    vtkMath::Cross(plane->GetNormal(), picker->GetPickNormal(), u);
 
-    if (fabs(plane->EvaluateFunction(this->Position)) < planeTol &&
+    if (fabs(plane->EvaluateFunction(picker->GetPickPosition())) < planeTol &&
         vtkMath::Norm(u) < normalTol)
       {
-      this->State = (this->State | VTK_SCURSOR_CLIP_PLANE);
+      pickFlags = (pickFlags | VTK_SCURSOR_CLIP_PLANE);
       }
     }
 
@@ -452,22 +510,24 @@ void vtkSurfaceCursor::ComputeState()
     if (fabs(mapperPos[planeId/2] - bounds[planeId]) < planeTol &&
         vtkMath::Norm(u) < normalTol)
       {
-      this->State = (this->State | VTK_SCURSOR_CROP_PLANE);
+      pickFlags = (pickFlags | VTK_SCURSOR_CROP_PLANE);
       }
     }
 
   if (prop->IsA("vtkActor"))
     {
-    this->State = (this->State | VTK_SCURSOR_ACTOR);
+    pickFlags = (pickFlags | VTK_SCURSOR_ACTOR);
     }
   else if (prop->IsA("vtkVolume"))
     {
-    this->State = (this->State | VTK_SCURSOR_VOLUME);
+    pickFlags = (pickFlags | VTK_SCURSOR_VOLUME);
     }
   else if (prop->IsA("vtkImageActor"))
     {
-    this->State = (this->State | VTK_SCURSOR_IMAGE_ACTOR);
+    pickFlags = (pickFlags | VTK_SCURSOR_IMAGE_ACTOR);
     }
+
+  return pickFlags;
 }
 
 //----------------------------------------------------------------------------
@@ -506,12 +566,12 @@ void vtkSurfaceCursor::ComputePosition()
   // be split into two ints: there should be a "pick info" bitfield that
   // describes what's under the cursor, and another "state" that describes the
   // ongoing interaction and which is locked until the action is completed. 
-  this->ComputeState();
+  this->PickFlags = this->ComputePickFlags(this->Picker);
 
   // Compute the cursor shape from the state.  
-  this->ComputeShape();
+  this->SetShape(this->ComputeShape(this->Level, this->PickFlags));
 
-  // Compute an "up" vector for the cursor
+  // Compute an "up" vector for the cursor.
   this->ComputeVectorFromNormal(this->Normal, this->Vector,
                                 this->Mapper, this->Renderer);
 
@@ -522,7 +582,6 @@ void vtkSurfaceCursor::ComputePosition()
   // Scale for the cursor to always be the same number of pixels across.
   double scale = this->ComputeScale(this->Position, this->Renderer);
 
-  this->Actor->VisibilityOn();
   this->Actor->SetScale(scale*this->Scale);
 }
 
@@ -534,19 +593,230 @@ void vtkSurfaceCursor::Modified()
 }
 
 //----------------------------------------------------------------------------
+void vtkSurfaceCursor::BindInteractor(vtkRenderWindowInteractor *iren)
+{
+  iren->AddObserver(vtkCommand::EnterEvent, this->Command);
+  iren->AddObserver(vtkCommand::LeaveEvent, this->Command);
+  iren->AddObserver(vtkCommand::KeyPressEvent, this->Command);
+  iren->AddObserver(vtkCommand::KeyReleaseEvent, this->Command);
+  iren->AddObserver(vtkCommand::MouseMoveEvent, this->Command);
+  iren->AddObserver(vtkCommand::LeftButtonPressEvent, this->Command);
+  iren->AddObserver(vtkCommand::RightButtonPressEvent, this->Command);
+  iren->AddObserver(vtkCommand::MiddleButtonPressEvent, this->Command);
+  iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, this->Command);
+  iren->AddObserver(vtkCommand::RightButtonReleaseEvent, this->Command);
+  iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, this->Command);
+}
+
+//----------------------------------------------------------------------------
 void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
                                    void *)
 {
+  // First, look for the Renderer StartEvent
+  if (object == this->Renderer && event == vtkCommand::StartEvent)
+    {
+    this->ComputePosition();
+    return;
+    }
+
+  vtkRenderWindowInteractor *iren =
+    vtkRenderWindowInteractor::SafeDownCast(object);
+
+  if (!iren)
+    {
+    return;
+    } 
+
+  // The interactor events are used to do just three things:
+  // 1) set this->MouseInRenderer to control cursor visibility
+  // 2) set this->Modifier for modifier keys and mouse buttons
+  // 3) call MoveToDisplayPosition(x,y) when the mouse moves
+
   switch (event)
     {
-    case vtkCommand::StartEvent:
+    case vtkCommand::EnterEvent:
       {
-      if (object == this->Renderer)
+      this->SetMouseInRenderer(1);
+      iren->GetRenderWindow()->HideCursor();
+      }
+      break;
+    case vtkCommand::LeaveEvent:
+      {
+      this->SetMouseInRenderer(0);
+      iren->GetRenderWindow()->ShowCursor();
+      }
+      break;
+    case vtkCommand::KeyPressEvent:
+      {
+      int modifierBits = this->ModifierFromKeySym(iren->GetKeySym());
+      if (modifierBits)
         {
-        this->ComputePosition();
+        this->SetModifier(this->Modifier | modifierBits);
         }
       }
       break;
+    case vtkCommand::KeyReleaseEvent:
+      {
+      int modifierBits = this->ModifierFromKeySym(iren->GetKeySym());
+      if (modifierBits)
+        {
+        this->SetModifier(this->Modifier & ~modifierBits);
+        }
+      }
+      break;
+    case vtkCommand::MouseMoveEvent:
+      {
+      int x, y;
+      iren->GetMousePosition(&x, &y);
+      // The Enter/Leave events aren't enough, because mouse drags don't
+      // post the Leave event until the mouse button is released.
+      int inRenderer = (this->Renderer && this->Renderer->IsInViewport(x, y));
+      if (inRenderer != this->MouseInRenderer)
+        {
+        this->SetMouseInRenderer(inRenderer);
+        if (inRenderer)
+          {
+          iren->GetRenderWindow()->HideCursor();
+          }
+        else
+          {
+          iren->GetRenderWindow()->ShowCursor();
+          }
+        }
+      this->MoveToDisplayPosition(x, y);
+      }
+      break;
+    case vtkCommand::LeftButtonPressEvent:
+      {
+      this->SetModifier(this->Modifier | VTK_SCURSOR_B1);
+      }
+      break;
+    case vtkCommand::RightButtonPressEvent:
+      {
+      this->SetModifier(this->Modifier | VTK_SCURSOR_B2);
+      }
+      break;
+    case vtkCommand::MiddleButtonPressEvent:
+      {
+      this->SetModifier(this->Modifier | VTK_SCURSOR_B3);
+      }
+      break;
+    case vtkCommand::LeftButtonReleaseEvent:
+      {
+      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B1);
+      }
+      break;
+    case vtkCommand::RightButtonReleaseEvent:
+      {
+      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B2);
+      }
+      break;
+    case vtkCommand::MiddleButtonReleaseEvent:
+      {
+      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B3);
+      }
+      break;
+    }
+
+  iren->Render();
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
+{
+  switch (this->Action)
+    {
+    case VTK_SCURSOR_PUSH:
+      {
+      }
+      break;
+    case VTK_SCURSOR_ROTATE:
+      {
+      }
+      break;
+    case VTK_SCURSOR_SPIN:
+      {
+      }
+      break;
+    }
+
+  this->SetDisplayPosition(x, y);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetMouseInRenderer(int inside)
+{
+  if (this->MouseInRenderer == inside)
+    {
+    return;
+    }
+    
+  this->MouseInRenderer = inside;
+  this->Actor->SetVisibility(inside);
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetModifier(int modifier)
+{
+  if (this->Modifier == modifier)
+    {
+    return;
+    }
+    
+  // Map the modifier to the Level.
+  this->SetLevel(this->ComputeLevel(modifier));
+
+  // Map the modifier to the Action.
+  // Do an XOR to find out what bits have changed.
+  int bitsChanged = (this->Modifier ^ modifier);
+  // Check for mouse button changes.
+  if (bitsChanged & (VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
+    {
+    int bitsSet = (bitsChanged & modifier);
+    int bitsCleared = (bitsChanged & ~modifier);
+
+    // Check whether the active action button was released.
+    if (this->Action && (bitsCleared & this->ActionButton))
+      {
+      this->SetAction(0);
+      this->ActionButton = 0;
+      }
+    else if (!this->Action && bitsSet)
+      {
+      int button = 0;
+      if ((bitsSet & VTK_SCURSOR_B1)) { button = VTK_SCURSOR_B1; }
+      else if ((bitsSet & VTK_SCURSOR_B2)) { button = VTK_SCURSOR_B2; }
+      else if ((bitsSet & VTK_SCURSOR_B3)) { button = VTK_SCURSOR_B3; }
+      this->SetAction(this->ComputeAction(this->Level, this->PickFlags,
+                                          button));
+      this->ActionButton = button;
+      }
+    }
+
+  this->Modifier = modifier;
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetAction(int action)
+{
+  if (action == this->Action)
+    {
+    return;
+    }
+
+  if (this->Action)
+    {
+    // Terminate the previous action.
+    }
+
+  this->Action = action;
+  this->Modified();
+
+  if (action)
+    {
+    // Initiate the new action.
     }
 }
 
@@ -1568,6 +1838,38 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
   vector[0] = u[0]/norm;
   vector[1] = u[1]/norm;
   vector[2] = u[2]/norm;
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::ModifierFromKeySym(const char *keysym)
+{
+  if (keysym)
+    {
+    // These match the Tk modifier bits.  Also the following:
+    // 1st button = 256, 2nd button = 512, middle button = 1024
+    if (strncmp(keysym, "Shift_", 6) == 0)
+      {
+      return VTK_SCURSOR_SHIFT;
+      }
+    else if (strncmp(keysym, "Caps_Lock", 9) == 0)
+      {
+      return VTK_SCURSOR_CAPS;
+      }
+    else if (strncmp(keysym, "Control_", 8) == 0)
+      {
+      return VTK_SCURSOR_CONTROL;
+      }
+    else if (strncmp(keysym, "Meta_", 5) == 0)
+      {
+      return VTK_SCURSOR_META;
+      }
+    else if (strncmp(keysym, "Alt_", 4) == 0)
+      {
+      return VTK_SCURSOR_ALT;
+      }
+    }
+
+  return 0;
 }
 
 
