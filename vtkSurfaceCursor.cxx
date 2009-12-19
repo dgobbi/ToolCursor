@@ -54,7 +54,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.16 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.17 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -611,6 +611,7 @@ void vtkSurfaceCursor::BindInteractor(vtkRenderWindowInteractor *iren)
   if (renwin)
     {
     renwin->AddObserver(vtkCommand::StartEvent, this->Command);
+    renwin->AddObserver(vtkCommand::EndEvent, this->Command);
     }
   else
     {
@@ -646,9 +647,27 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
       // Compute the position when the Renderer renders, since it needs to
       // update all of the props in the scene.
       this->ComputePosition();
+      // Don't show cursor if nothing is underneath of it.
+      this->Actor->SetVisibility((this->PickFlags != 0));
       }
 
     return;
+    }
+  else if (event == vtkCommand::EndEvent)
+    {
+    vtkRenderWindow *renwin = vtkRenderWindow::SafeDownCast(object);
+    if (renwin && this->MouseInRenderer)
+      {
+      // Hide system cursor if 3D cursor is visible.
+      if (this->Actor->GetVisibility())
+        {
+        renwin->HideCursor();
+        }
+      else
+        {
+        renwin->ShowCursor();
+        }
+      }
     }
 
   // Check to see if the object is an interactor.
@@ -670,13 +689,11 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
     case vtkCommand::EnterEvent:
       {
       this->SetMouseInRenderer(1);
-      iren->GetRenderWindow()->HideCursor();
       }
       break;
     case vtkCommand::LeaveEvent:
       {
       this->SetMouseInRenderer(0);
-      iren->GetRenderWindow()->ShowCursor();
       }
       break;
     case vtkCommand::KeyPressEvent:
@@ -707,14 +724,6 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
       if (inRenderer != this->MouseInRenderer)
         {
         this->SetMouseInRenderer(inRenderer);
-        if (inRenderer)
-          {
-          iren->GetRenderWindow()->HideCursor();
-          }
-        else
-          {
-          iren->GetRenderWindow()->ShowCursor();
-          }
         }
       this->MoveToDisplayPosition(x, y);
       }
@@ -785,7 +794,6 @@ void vtkSurfaceCursor::SetMouseInRenderer(int inside)
     }
     
   this->MouseInRenderer = inside;
-  this->Actor->SetVisibility(inside);
   this->Modified();
 }
 
