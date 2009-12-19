@@ -19,6 +19,7 @@ ren = vtk.vtkRenderer()
 renWin = vtk.vtkRenderWindow()
 renWin.AddRenderer(ren)
 iren = vtk.vtkRenderWindowInteractor()
+iren.GetInteractorStyle().SetCurrentStyleToTrackballCamera()
 iren.SetRenderWindow(renWin)
 
 #---------------------------------------------------------
@@ -174,13 +175,5 @@ cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 cursor.BindInteractor(iren)
-
-def OnRender(ren,event=""):
-    x,y = iren.GetEventPosition()
-    cursor.SetDisplayPosition(x,y)
-
-#---------------------------------------------------------
-# custom interaction
-ren.AddObserver("StartEvent", OnRender)
 
 iren.Start()

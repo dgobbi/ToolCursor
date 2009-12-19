@@ -54,7 +54,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.14 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -606,19 +606,52 @@ void vtkSurfaceCursor::BindInteractor(vtkRenderWindowInteractor *iren)
   iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, this->Command);
   iren->AddObserver(vtkCommand::RightButtonReleaseEvent, this->Command);
   iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, this->Command);
+
+  vtkRenderWindow *renwin = iren->GetRenderWindow();
+  if (renwin)
+    {
+    renwin->AddObserver(vtkCommand::StartEvent, this->Command);
+    }
+  else
+    {
+    vtkErrorMacro("Connect the RenderWindow to the Interactor before calling"
+                  " BindInteractor()");
+    }
 }
 
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
                                    void *)
 {
-  // First, look for the Renderer StartEvent
-  if (object == this->Renderer && event == vtkCommand::StartEvent)
+  // Capture the start of the RenderWindow and Renderer renders.
+  if (event == vtkCommand::StartEvent)
     {
-    this->ComputePosition();
+    if (object->IsA("vtkRenderWindow"))
+      {
+      // Set the DisplayPosition when the RenderWindow renders.  We will
+      // only be hooked into RenderWindow::StartEvent if BindInteractor()
+      // was called with a valid interactor.
+      vtkRenderWindowInteractor *iren =
+        static_cast<vtkRenderWindow *>(object)->GetInteractor();
+
+      if (iren)
+        {
+        int x, y;
+        iren->GetEventPosition(x, y);
+        this->SetDisplayPosition(x, y);
+        }
+      }
+    else if (object == this->Renderer)
+      {
+      // Compute the position when the Renderer renders, since it needs to
+      // update all of the props in the scene.
+      this->ComputePosition();
+      }
+
     return;
     }
 
+  // Check to see if the object is an interactor.
   vtkRenderWindowInteractor *iren =
     vtkRenderWindowInteractor::SafeDownCast(object);
 
@@ -667,7 +700,7 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
     case vtkCommand::MouseMoveEvent:
       {
       int x, y;
-      iren->GetMousePosition(&x, &y);
+      iren->GetEventPosition(x, y);
       // The Enter/Leave events aren't enough, because mouse drags don't
       // post the Leave event until the mouse button is released.
       int inRenderer = (this->Renderer && this->Renderer->IsInViewport(x, y));
