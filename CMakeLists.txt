@@ -6,8 +6,12 @@ IF(COMMAND CMAKE_POLICY)
 ENDIF(COMMAND CMAKE_POLICY)
 
 SET(LIB_NAME vtk${PROJECT_NAME})
-SET(LIB_SRCS vtkSurfaceCursor.cxx)
 SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
+SET(LIB_SRCS
+  vtkSurfaceCursor.cxx
+  vtkSurfaceCursorAction.cxx
+  vtkPushPlaneAction.cxx
+)
 
 # The remainder of this file can usually be left alone
 

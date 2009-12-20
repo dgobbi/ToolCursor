@@ -47,6 +47,9 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
+#include "vtkSurfaceCursorAction.h"
+#include "vtkPushPlaneAction.h"
+
 #include "vtkImplicitModeller.h"
 #include "vtkContourFilter.h"
 #include "vtkStripper.h"
@@ -55,7 +58,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.18 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.19 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -118,6 +121,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Mapper->SetLookupTable(this->LookupTable);
   this->Mapper->UseLookupTableScalarRangeOn();
   this->Shapes = vtkDataSetCollection::New();
+  this->Actions = vtkCollection::New();
   this->Picker = vtkVolumePicker::New();
 
   this->LookupTable->SetRampToLinear();
@@ -140,12 +144,21 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->MakeDefaultShapes();
   this->SetShape(0);
 
+  // Make all the actions.  Should be done in its own subroutine.
+  vtkSurfaceCursorAction *actionObject;
+  actionObject = vtkSurfaceCursorAction::New();
+  this->AddAction(actionObject);
+  actionObject->Delete();
+  actionObject = vtkPushPlaneAction::New();
+  this->AddAction(actionObject);
+  actionObject->Delete();
+
   this->Command = vtkSurfaceCursorCommand::New(this);
 }
 
 //----------------------------------------------------------------------------
 vtkSurfaceCursor::~vtkSurfaceCursor()
-{  
+{
   this->SetRenderer(0);
 
   if (this->Command)
@@ -159,6 +172,10 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
   if (this->Shapes)
     {
     this->Shapes->Delete();
+    }
+  if (this->Actions)
+    {
+    this->Actions->Delete();
     }
   if (this->Mapper)
     {
@@ -802,29 +819,19 @@ void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 {
+  this->SetDisplayPosition(x, y);
 
   if (this->Action)
     {
-    cerr << "Perform action " << this->Action << "\n";
-    }
+    vtkSurfaceCursorAction *actionObject =
+      static_cast<vtkSurfaceCursorAction *>(
+        this->Actions->GetItemAsObject(this->Action));
 
-  switch (this->Action)
-    {
-    case VTK_SCURSOR_PUSH:
+    if (actionObject)
       {
+      actionObject->DoAction();
       }
-      break;
-    case VTK_SCURSOR_ROTATE:
-      {
-      }
-      break;
-    case VTK_SCURSOR_SPIN:
-      {
-      }
-      break;
-    }
-
-  this->SetDisplayPosition(x, y);
+   }
 }
 
 //----------------------------------------------------------------------------
@@ -891,8 +898,15 @@ void vtkSurfaceCursor::SetAction(int action)
 
   if (this->Action)
     {
-    // Terminate the previous action.
-    cerr << "End action " << this->Action << "\n";
+    vtkSurfaceCursorAction *actionObject =
+      static_cast<vtkSurfaceCursorAction *>(
+        this->Actions->GetItemAsObject(this->Action));
+
+    if (actionObject)
+      {
+      actionObject->StopAction();
+      actionObject->SetSurfaceCursor(0);
+      }
     }
 
   this->Action = action;
@@ -900,11 +914,26 @@ void vtkSurfaceCursor::SetAction(int action)
 
   if (action)
     {
-    // Initiate the new action.
-    cerr << "Start action " << this->Action << "\n";
+    vtkSurfaceCursorAction *actionObject =
+      static_cast<vtkSurfaceCursorAction *>(
+        this->Actions->GetItemAsObject(this->Action));
+
+    if (actionObject)
+      {
+      actionObject->SetSurfaceCursor(this);
+      actionObject->StartAction();
+      }
     }
 }
 
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::AddAction(vtkSurfaceCursorAction *action)
+{
+  this->Actions->AddItem(action);
+  
+  return (this->Actions->GetNumberOfItems() - 1);
+}
+ 
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::SetMode(int mode)
 {

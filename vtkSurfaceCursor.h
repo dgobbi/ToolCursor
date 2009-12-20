@@ -32,13 +32,16 @@ class vtkPolyData;
 class vtkDataSet;
 class vtkDataSetMapper;
 class vtkDataSetCollection;
+class vtkCollection;
 class vtkPicker;
 class vtkVolumePicker;
 class vtkCommand;
 
+class vtkSurfaceCursorAction;
+
 // Cursor actions.
-#define VTK_SCURSOR_ROTATE        1
-#define VTK_SCURSOR_PUSH          2
+#define VTK_SCURSOR_PUSH          1
+#define VTK_SCURSOR_ROTATE        2
 #define VTK_SCURSOR_SPIN          3
 
 // Event modifiers, which usually control the mode.
@@ -219,6 +222,11 @@ public:
   int GetAction() { return this->Action; };
 
   // Description:
+  // Add an action.  The id for the action will be returned.  Once an
+  // action is added, it cannot be removed.
+  int AddAction(vtkSurfaceCursorAction *action);
+
+  // Description:
   // Set whether the mouse is in the renderer.  This controls cursor
   // visibility.  If you use BindToInteractor(), this method is called
   // automatically when required.
@@ -254,6 +262,7 @@ protected:
   double Scale;
   vtkMatrix4x4 *Matrix;
   vtkDataSetCollection *Shapes;
+  vtkCollection *Actions;
   vtkDataSetMapper *Mapper;
   vtkLookupTable *LookupTable;
   vtkActor *Actor;
