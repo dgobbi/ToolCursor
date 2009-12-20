@@ -59,6 +59,19 @@ protected:
   double LastDisplayPosition[2];
   double DisplayPosition[2];
 
+  // Description:
+  // Convert from world coords to display coords.
+  void WorldToDisplay(const double world[3], double &x, double &y, double &z);
+
+  // Description:
+  // Convert from display coords to world coords.
+  void DisplayToWorld(double x, double y, double z, double world[3]);
+
+  // Description:
+  // Given an (x,y,z) display coord, provide the corresponding world-space
+  // point and the vector along the view ray for that point.
+  void GetViewRay(double x, double y, double z, double p[3], double v[3]);
+
 private:
   vtkSurfaceCursorAction(const vtkSurfaceCursorAction&);  //Not implemented
   void operator=(const vtkSurfaceCursorAction&);  //Not implemented

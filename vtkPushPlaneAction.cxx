@@ -17,8 +17,6 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkSurfaceCursor.h"
-#include "vtkRenderer.h"
-#include "vtkCamera.h"
 #include "vtkVolumePicker.h"
 #include "vtkProp3DCollection.h"
 #include "vtkImageActor.h"
@@ -27,8 +25,11 @@
 #include "vtkPlane.h"
 #include "vtkTransform.h"
 #include "vtkImageData.h"
+#include "vtkCamera.h"
+#include "vtkRenderer.h"
+#include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -40,6 +41,15 @@ vtkPushPlaneAction::vtkPushPlaneAction()
   this->VolumeMapper = 0;
   this->Mapper = 0;
   this->PlaneId = -1;
+  this->PerpendicularPlane = 0;
+
+  this->StartNormal[0] = 0.0;
+  this->StartNormal[1] = 0.0;
+  this->StartNormal[2] = 1.0;
+
+  this->StartOrigin[0] = 0.0;
+  this->StartOrigin[1] = 0.0;
+  this->StartOrigin[2] = 0.0;
 }
 
 //----------------------------------------------------------------------------
@@ -61,6 +71,32 @@ void vtkPushPlaneAction::StartAction()
 
   // Get all the necessary information about the picked prop.
   this->GetPropInformation();
+
+  // Check whether the normal is perpendicular to the view plane.
+  // If it is, then we can't use the usual interaction calculations.
+  this->PerpendicularPlane = 0;
+  double normal[3];
+  this->GetStartNormal(normal);
+
+  vtkCamera *camera = this->SurfaceCursor->GetRenderer()->GetActiveCamera();
+  double position[3], focus[3];
+  camera->GetPosition(position);
+  camera->GetFocalPoint(focus);
+
+  double v[3];
+  v[0] = focus[0] - position[0]; 
+  v[1] = focus[1] - position[1]; 
+  v[2] = focus[2] - position[2]; 
+
+  vtkMath::Normalize(v);
+  vtkMath::Normalize(normal);
+
+  // This gives the sin() of the angle between the vectors.
+  vtkMath::Cross(normal, v, v);
+  if (vtkMath::Dot(v, v) < 0.2)
+    {
+    this->PerpendicularPlane = 1;
+    }
 } 
 
 //----------------------------------------------------------------------------
@@ -79,25 +115,82 @@ void vtkPushPlaneAction::DoAction()
     return;
     }
 
-  vtkRenderer *renderer = this->SurfaceCursor->GetRenderer();
-  vtkCamera *camera = renderer->GetActiveCamera();
-
-  double origin[3];
+  // Get and normalize the plane normal.
   double normal[3];
-  this->GetOrigin(origin);
-  this->GetNormal(normal);
+  this->GetStartNormal(normal);
+  vtkMath::Normalize(normal);
 
-  double cx = this->DisplayPosition[0];
-  double cy = this->DisplayPosition[1];
+  // Get the depth coordinate from the original pick.
+  double ox, oy, oz;
+  this->WorldToDisplay(this->StartPosition, ox, oy, oz);
 
-  double px = this->LastDisplayPosition[0];
-  double py = this->LastDisplayPosition[1];
+  // Get the initial display position.
+  ox = this->StartDisplayPosition[0];
+  oy = this->StartDisplayPosition[1];
 
-  double t = px - cx;
+  // Get the current display position. 
+  double x = this->DisplayPosition[0];
+  double y = this->DisplayPosition[1];
 
-  origin[0] = origin[0] + t*normal[0];
-  origin[1] = origin[1] + t*normal[1];
-  origin[2] = origin[2] + t*normal[2];
+  // If plane is perpendicular, we only use the "x" motion.
+  if (this->PerpendicularPlane) { y = oy; };
+
+  // Get world point for the start position.
+  double p1[3];
+  this->DisplayToWorld(ox, oy, oz, p1);
+
+  // Get the view ray for the current position, using old depth.
+  double p2[3], viewRay[3];
+  this->GetViewRay(x, y, oz, p2, viewRay);
+
+  // The push distance, which is what we aim to calculate.
+  double distance = 0.0;
+
+  // Special action if the plane is perpendicular to view normal.
+  if (this->PerpendicularPlane)
+    {
+    // Calculate distance moved in world coordinates.
+    distance = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
+    if (x - ox < 0)
+      {
+      distance = -distance;
+      }
+
+    // Check whether the normal is towards or away from the camera.
+    if (vtkMath::Dot(viewRay, normal) < 0)
+      {
+      distance = -distance;
+      }
+    }
+  else
+    {
+    // Get the vector between origin world point and current world point.
+    double u[3];
+    u[0] = p2[0] - p1[0];
+    u[1] = p2[1] - p1[1];
+    u[2] = p2[2] - p1[2];
+
+    // Finally, I thought up a perfectly intuitive "push" action method.
+    // The trick here is as follows: we need to find the position along
+    // the plane normal (starting at the original pick position) that is
+    // closest to the view-ray line at the current mouse position.  Not
+    // sure if VTK has a math routine for this, so do calculations here:
+    double a = vtkMath::Dot(normal, normal);
+    double b = vtkMath::Dot(normal, viewRay);
+    double c = vtkMath::Dot(viewRay, viewRay);
+    double d = vtkMath::Dot(normal, u);
+    double e = vtkMath::Dot(viewRay, u);
+
+    distance = (c*d - b*e)/(a*c - b*b);
+    }
+
+  // Moving relative to the original position provides a more stable 
+  // interaction that moving relative to the last position.
+  double origin[3];
+  this->GetStartOrigin(origin);
+  origin[0] = origin[0] + distance*normal[0];
+  origin[1] = origin[1] + distance*normal[1];
+  origin[2] = origin[2] + distance*normal[2];
 
   this->SetOrigin(origin);
 }
@@ -145,7 +238,7 @@ void vtkPushPlaneAction::GetPropInformation()
 
   if (this->PlaneId >= 0)
     {
-    this->GetPlaneOriginAndNormal(this->Origin, this->Normal);
+    this->GetPlaneOriginAndNormal(this->StartOrigin, this->StartNormal);
     }
 }
 
@@ -197,16 +290,16 @@ void vtkPushPlaneAction::GetPlaneOriginAndNormal(double origin[3],
 //----------------------------------------------------------------------------
 void vtkPushPlaneAction::SetOrigin(const double o[3])
 {
-  double origin[3];
-
-  this->Origin[0] = origin[0] = o[0];
-  this->Origin[1] = origin[1] = o[1];
-  this->Origin[2] = origin[2] = o[2];
-
   if (this->PlaneId < 0)
     {
     return;
     }
+
+  // Respect constness: make a copy that we can modify.
+  double origin[3];
+  origin[0] = o[0];
+  origin[1] = o[1];
+  origin[2] = o[2];
 
   if (this->Mapper)
     {
@@ -288,17 +381,28 @@ void vtkPushPlaneAction::SetOrigin(const double o[3])
 }   
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::SetNormal(const double normal[3])
+void vtkPushPlaneAction::SetNormal(const double n[3])
 {
-  this->Normal[0] = normal[0];
-  this->Normal[1] = normal[1];
-  this->Normal[2] = normal[2];
-
   if (this->PlaneId < 0)
     {
     return;
     }
 
-  // Do nothing for now.  Will need to implement for plane rotation.
+  // Respect constness: make a copy rather than using ugly const cast.
+  double normal[3];
+  normal[0] = n[0];
+  normal[1] = n[1];
+  normal[2] = n[2];
+
+  // Setting the normal is only valid for the mapper clipping planes.
+  if (this->Mapper)
+    {
+    vtkPlane *plane =
+      this->Mapper->GetClippingPlanes()->GetItem(this->PlaneId);
+
+    // Sanity checks needed!
+
+    plane->SetNormal(normal);
+    }
 }
 
