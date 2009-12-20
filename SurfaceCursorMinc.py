@@ -25,8 +25,8 @@ iren.SetRenderWindow(renWin)
 
 #---------------------------------------------------------
 # read the volume
-reader1 = vtk.vtkMINCImageReader()
-reader1.SetFileName(filename)
+reader = vtk.vtkMINCImageReader()
+reader.SetFileName(filename)
 #reader = vtk.vtkImageReader2()
 #reader.SetDataExtent(0,63,0,63,0,92)
 #reader.SetFileNameSliceOffset(1)
@@ -35,19 +35,37 @@ reader1.SetFileName(filename)
 #reader.SetFilePrefix(str(VTK_DATA_ROOT) + "/Data/headsq/quarter")
 #reader.SetDataSpacing(3.2,3.2,1.5)
 
-reader = vtk.vtkImageShiftScale()
-reader.SetInput(reader1.GetOutput())
-reader.SetOutputScalarTypeToUnsignedShort()
+#---------------------------------------------------------
+# prep the volume for rendering at 128x128x128
+
+shiftScale = vtk.vtkImageShiftScale()
+shiftScale.SetInput(reader.GetOutput())
+shiftScale.SetOutputScalarTypeToUnsignedShort()
+
+shiftScale.GetOutput().UpdateInformation()
+origin = shiftScale.GetOutput().GetOrigin()
+spacing = shiftScale.GetOutput().GetSpacing()
+extent = shiftScale.GetOutput().GetWholeExtent()
+spacing = (spacing[0]*(extent[1] - extent[0])/127.0,
+           spacing[1]*(extent[3] - extent[2])/127.0,
+           spacing[2]*(extent[5] - extent[4])/127.0)
+
+reslice = vtk.vtkImageReslice()
+reslice.SetInput(shiftScale.GetOutput())
+reslice.SetOutputExtent(0, 127, 0, 127, 0, 127)
+reslice.SetOutputOrigin(origin)
+reslice.SetOutputSpacing(spacing)
+reslice.SetInterpolationModeToCubic()
 
 #---------------------------------------------------------
 # set up the volume rendering
 
 volumeMapper = vtk.vtkVolumeTextureMapper3D()
-volumeMapper.SetInput(reader.GetOutput())
+volumeMapper.SetInput(reslice.GetOutput())
 #volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
 #volumeMapper.SetVolumeRayCastFunction(volumeFunction)
 volumeMapper.CroppingOn()
-# (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
+# original bounds: (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
 volumeMapper.SetCroppingRegionPlanes((0.0, 90.0, -126.0, 0.0, -72.0, 0.0))
 volumeMapper.SetCroppingRegionFlagsToFence()
 
