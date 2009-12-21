@@ -190,4 +190,7 @@ cursor.SetRenderer(ren)
 cursor.SetScale(1)
 cursor.BindInteractor(iren)
 
+# Add an observer for when the title bar "Close Window" is pressed. 
+iren.AddObserver("ExitEvent", lambda o,e="": o.TerminateApp())
+
 iren.Start()
