@@ -183,13 +183,8 @@ renWin.Render()
 
 #ren.SetBackground(0.5, 0.5, 0.5)
 ren.ResetCameraClippingRange()
-#---------------------------------------------------------
-# the picker
-picker = vtk.vtkSurfacePicker()
-picker.SetTolerance(1e-6)
-picker.SetVolumeOpacityIsovalue(0.1)
-picker.AddLocator(skinLocator)
 
+#---------------------------------------------------------
 cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
