@@ -184,19 +184,6 @@ public:
   vtkGetMacro(PointNormalAtCamera, int);
 
   // Description:
-  // Bind an interactor.  This will add observers for all mouse and keyboard
-  // events that the cursor needs.  All bound events are observed via the
-  // HandleEvent() method.  An alternative to binding an Interactor is to
-  // call the MoveToDisplayPosition(), SetModifier(), and SetMouseInRenderer()
-  // methods directly.
-  virtual void BindInteractor(vtkRenderWindowInteractor *iren);
-
-  // Description:
-  // The central event handler for the cursor.  All interactor events go
-  // through this method. 
-  virtual void HandleEvent(vtkObject *object, unsigned long event, void *data);
-
-  // Description:
   // Move the cursor to a specific position, usually in response to the
   // mouse motion.  This is not a passive method like SetDisplayPosition().
   // Depending on the Action ivar, the motion will go to the appropriate
@@ -234,6 +221,21 @@ public:
   int GetMouseInRenderer() { return this->MouseInRenderer; };
 
   // Description:
+  // Get whether the cursor is currently visible.  If not, then the
+  // surface cursor should be made visible.
+  int GetVisibility();
+
+  // Description:
+  // If GetRequestingFocus() is true, then the cursor is over a hot
+  // spot and should be given event focus.
+  int GetRequestingFocus();
+
+  // Description:
+  // This is an internal method that is automatically called at the
+  // begining of every render.
+  virtual void OnRender();
+
+  // Description:
   // We override this method to modify the actor, otherwise the
   // RenderWindow won't know that it needs to render.
   virtual void Modified();
@@ -268,7 +270,7 @@ protected:
   vtkActor *Actor;
   vtkVolumePicker *Picker;
   vtkRenderer *Renderer;
-  vtkCommand *Command;
+  vtkCommand *RenderCommand;
 
   virtual int ComputeMode(int modifier);
   virtual int ComputeShape(int mode, int pickFlags);

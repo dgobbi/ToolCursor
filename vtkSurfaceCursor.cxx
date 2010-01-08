@@ -17,9 +17,6 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkRenderer.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
-#include "vtkInteractorStyle.h"
 #include "vtkCamera.h"
 #include "vtkActor.h"
 #include "vtkVolume.h"
@@ -58,30 +55,30 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.19 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.20 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
-class vtkSurfaceCursorCommand : public vtkCommand
+class vtkSurfaceCursorRenderCommand : public vtkCommand
 {
 public:
-  static vtkSurfaceCursorCommand *New(vtkSurfaceCursor *cursor) {
-    return new vtkSurfaceCursorCommand(cursor); };
+  static vtkSurfaceCursorRenderCommand *New(vtkSurfaceCursor *cursor) {
+    return new vtkSurfaceCursorRenderCommand(cursor); };
 
-  virtual void Execute(vtkObject *object, unsigned long event, void *data) {
-    this->Cursor->HandleEvent(object, event, data); };
+  virtual void Execute(vtkObject *object, unsigned long, void *) {
+    this->Cursor->OnRender(); };
 
 protected:
-  vtkSurfaceCursorCommand(vtkSurfaceCursor *cursor) {
+  vtkSurfaceCursorRenderCommand(vtkSurfaceCursor *cursor) {
     this->Cursor = cursor; };
 
   vtkSurfaceCursor* Cursor;
 
 private:
-  static vtkSurfaceCursorCommand *New(); // Not implemented.
-  vtkSurfaceCursorCommand(); // Not implemented.
-  vtkSurfaceCursorCommand(const vtkSurfaceCursorCommand&);  // Not implemented.
-  void operator=(const vtkSurfaceCursorCommand&);  // Not implemented.
+  static vtkSurfaceCursorRenderCommand *New(); // Not implemented.
+  vtkSurfaceCursorRenderCommand(); // Not implemented.
+  vtkSurfaceCursorRenderCommand(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
+  void operator=(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
 };
 
 //----------------------------------------------------------------------------
@@ -153,7 +150,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->AddAction(actionObject);
   actionObject->Delete();
 
-  this->Command = vtkSurfaceCursorCommand::New(this);
+  this->RenderCommand = vtkSurfaceCursorRenderCommand::New(this);
 }
 
 //----------------------------------------------------------------------------
@@ -161,9 +158,9 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
 {
   this->SetRenderer(0);
 
-  if (this->Command)
+  if (this->RenderCommand)
     {
-    this->Command->Delete();
+    this->RenderCommand->Delete();
     }
   if (this->Matrix)
     {
@@ -211,7 +208,7 @@ void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
 
   if (this->Renderer)
     {
-    this->Renderer->RemoveObserver(this->Command);
+    this->Renderer->RemoveObserver(this->RenderCommand);
     this->Renderer->RemoveActor(this->Actor);
     this->Renderer->Delete();
     this->Renderer = 0;
@@ -223,7 +220,7 @@ void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
     this->Renderer->Register(this);
     this->Renderer->AddActor(this->Actor);
     this->Renderer->AddObserver(vtkCommand::StartEvent,
-                                this->Command, -1);
+                                this->RenderCommand, -1);
     }
 
   this->Modified();
@@ -356,15 +353,23 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::ComputeMode(int modifier)
 {
+  // The PickCropping/Clipping shouldn't be hard-coded like this.
+
   if ( (modifier & VTK_SCURSOR_SHIFT) )
     {
+    this->Picker->PickCroppingPlanesOn();
+    this->Picker->PickClippingPlanesOff();
     return 1;
     }
   else if ( (modifier & VTK_SCURSOR_CONTROL) )
     {
+    this->Picker->PickClippingPlanesOn();
+    this->Picker->PickCroppingPlanesOff();
     return 2;
     }
 
+  this->Picker->PickClippingPlanesOff();
+  this->Picker->PickCroppingPlanesOff();
   return 0;
 }
 
@@ -384,11 +389,11 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
         }
       else if ((pickFlags & VTK_SCURSOR_PROP3D))
         {
-        shape = VTK_SCURSOR_MOVER;
+        shape = VTK_SCURSOR_CONE;
         }
       else
         {
-        shape = VTK_SCURSOR_CROSSHAIRS;
+        shape = VTK_SCURSOR_POINTER;
         }
       }
       break;
@@ -397,11 +402,15 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
       {
       if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
         {
+        shape = VTK_SCURSOR_PUSHER;
+        }
+      else if ((pickFlags & VTK_SCURSOR_CLIP_PLANE))
+        {
         shape = VTK_SCURSOR_ROCKER;
         }
       else if ((pickFlags & VTK_SCURSOR_PROP3D))
         {
-        shape = VTK_SCURSOR_SPINNER;
+        shape = VTK_SCURSOR_MOVER;
         }
       }
       break;
@@ -417,7 +426,7 @@ int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
       else if ((pickFlags & VTK_SCURSOR_VOLUME) ||
                (pickFlags & VTK_SCURSOR_ACTOR))
         {
-        shape = VTK_SCURSOR_CONE;
+        shape = VTK_SCURSOR_SPINNER;
         }
       }
       break;
@@ -611,209 +620,13 @@ void vtkSurfaceCursor::Modified()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::BindInteractor(vtkRenderWindowInteractor *iren)
+void vtkSurfaceCursor::OnRender()
 {
-  iren->AddObserver(vtkCommand::EnterEvent, this->Command);
-  iren->AddObserver(vtkCommand::LeaveEvent, this->Command);
-  iren->AddObserver(vtkCommand::KeyPressEvent, this->Command);
-  iren->AddObserver(vtkCommand::KeyReleaseEvent, this->Command);
-  iren->AddObserver(vtkCommand::MouseMoveEvent, this->Command);
-  iren->AddObserver(vtkCommand::LeftButtonPressEvent, this->Command);
-  iren->AddObserver(vtkCommand::RightButtonPressEvent, this->Command);
-  iren->AddObserver(vtkCommand::MiddleButtonPressEvent, this->Command);
-  iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, this->Command);
-  iren->AddObserver(vtkCommand::RightButtonReleaseEvent, this->Command);
-  iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, this->Command);
-
-  vtkRenderWindow *renwin = iren->GetRenderWindow();
-  if (renwin)
-    {
-    renwin->AddObserver(vtkCommand::StartEvent, this->Command);
-    renwin->AddObserver(vtkCommand::EndEvent, this->Command);
-    }
-  else
-    {
-    vtkErrorMacro("Connect the RenderWindow to the Interactor before calling"
-                  " BindInteractor()");
-    }
-}
-
-//----------------------------------------------------------------------------
-void vtkSurfaceCursor::HandleEvent(vtkObject *object, unsigned long event,
-                                   void *)
-{
-  // Capture the start of the RenderWindow and Renderer renders.
-  if (event == vtkCommand::StartEvent)
-    {
-    if (object->IsA("vtkRenderWindow"))
-      {
-      // Set the DisplayPosition when the RenderWindow renders.  We will
-      // only be hooked into RenderWindow::StartEvent if BindInteractor()
-      // was called with a valid interactor.
-      vtkRenderWindowInteractor *iren =
-        static_cast<vtkRenderWindow *>(object)->GetInteractor();
-
-      if (iren)
-        {
-        int x, y;
-        iren->GetEventPosition(x, y);
-        this->SetDisplayPosition(x, y);
-        }
-      }
-    else if (object == this->Renderer)
-      {
-      // Compute the position when the Renderer renders, since it needs to
-      // update all of the props in the scene.
-      this->ComputePosition();
-      // Don't show cursor if nothing is underneath of it.
-      this->Actor->SetVisibility((this->PickFlags != 0));
-      }
-    // Must return to avoid the Render at the end of HandleEvent.
-    return;
-    }
-  else if (event == vtkCommand::EndEvent)
-    {
-    // At end of RenderWindow render, check whether cursor is visible
-    vtkRenderWindow *renwin = vtkRenderWindow::SafeDownCast(object);
-    if (renwin && this->MouseInRenderer)
-      {
-      // Hide system cursor if 3D cursor is visible.
-      if (this->Actor->GetVisibility())
-        {
-        renwin->HideCursor();
-        }
-      else
-        {
-        renwin->ShowCursor();
-        }
-
-      // If something interesting is under the cursor, then disable the
-      // InteractorStyle so that we can process the events.
-      vtkRenderWindowInteractor *iren =
-        static_cast<vtkRenderWindow *>(object)->GetInteractor();
-      vtkInteractorStyle *istyle;
-
-      if (iren && (istyle = vtkInteractorStyle::SafeDownCast(
-                              iren->GetInteractorStyle())))
-        {
-        // The "item of interest" is hard-coded for now.
-        int itemOfInterest = ((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) ||
-                              (this->PickFlags & VTK_SCURSOR_CROP_PLANE));
-
-        if (istyle->GetInteractor() && itemOfInterest && !istyle->GetState())
-          {
-          // The first line forces it to release focus
-          istyle->OnLeftButtonUp();
-          istyle->SetInteractor(0);
-          }
-        else if (!istyle->GetInteractor() && !itemOfInterest && !this->Action)
-          {
-          istyle->SetInteractor(iren);
-          }
-        }
-      }
-    // Must return to avoid the Render at the end of HandleEvent.
-    return;
-    }
-
-  // If the object is an interactor, then handle interaction events.
-  vtkRenderWindowInteractor *iren =
-    vtkRenderWindowInteractor::SafeDownCast(object);
-
-  if (!iren)
-    {
-    return;
-    } 
-
-  // Check whether there is an active interactor style
-  vtkInteractorObserver *istyle = iren->GetInteractorStyle();
-  int ignoreButtons = (istyle && istyle->GetInteractor());
-
-  // The interactor events are used to do just three things:
-  // 1) set this->MouseInRenderer to control cursor visibility
-  // 2) set this->Modifier for modifier keys and mouse buttons
-  // 3) call MoveToDisplayPosition(x,y) when the mouse moves
-
-  switch (event)
-    {
-    case vtkCommand::EnterEvent:
-      {
-      this->SetMouseInRenderer(1);
-      }
-      break;
-    case vtkCommand::LeaveEvent:
-      {
-      this->SetMouseInRenderer(0);
-      }
-      break;
-    case vtkCommand::KeyPressEvent:
-      {
-      int modifierBits = this->ModifierFromKeySym(iren->GetKeySym());
-      if (modifierBits)
-        {
-        this->SetModifier(this->Modifier | modifierBits);
-        }
-      }
-      break;
-    case vtkCommand::KeyReleaseEvent:
-      {
-      int modifierBits = this->ModifierFromKeySym(iren->GetKeySym());
-      if (modifierBits)
-        {
-        this->SetModifier(this->Modifier & ~modifierBits);
-        }
-      }
-      break;
-    case vtkCommand::MouseMoveEvent:
-      {
-      int x, y;
-      iren->GetEventPosition(x, y);
-      // The Enter/Leave events aren't enough, because mouse drags don't
-      // post the Leave event until the mouse button is released.
-      int inRenderer = (this->Renderer && this->Renderer->IsInViewport(x, y));
-      if (inRenderer != this->MouseInRenderer)
-        {
-        this->SetMouseInRenderer(inRenderer);
-        }
-      this->MoveToDisplayPosition(x, y);
-      }
-      break;
-    case vtkCommand::LeftButtonPressEvent:
-      {
-      if (ignoreButtons) { return; }
-      this->SetModifier(this->Modifier | VTK_SCURSOR_B1);
-      }
-      break;
-    case vtkCommand::RightButtonPressEvent:
-      {
-      if (ignoreButtons) { return; }
-      this->SetModifier(this->Modifier | VTK_SCURSOR_B2);
-      }
-      break;
-    case vtkCommand::MiddleButtonPressEvent:
-      {
-      if (ignoreButtons) { return; }
-      this->SetModifier(this->Modifier | VTK_SCURSOR_B3);
-      }
-      break;
-    case vtkCommand::LeftButtonReleaseEvent:
-      {
-      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B1);
-      }
-      break;
-    case vtkCommand::RightButtonReleaseEvent:
-      {
-      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B2);
-      }
-      break;
-    case vtkCommand::MiddleButtonReleaseEvent:
-      {
-      this->SetModifier(this->Modifier & ~VTK_SCURSOR_B3);
-      }
-      break;
-    }
-
-  iren->Render();
+  // Compute the position when the Renderer renders, since it needs to
+  // update all of the props in the scene.
+  this->ComputePosition();
+  // Don't show cursor if nothing is underneath of it.
+  this->Actor->SetVisibility((this->PickFlags != 0));
 }
 
 //----------------------------------------------------------------------------
@@ -832,6 +645,20 @@ void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
       actionObject->DoAction();
       }
    }
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::GetRequestingFocus()
+{
+  // Right now the cursor is hard-coded to take focus for clipping planes
+  return ((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) ||
+          (this->PickFlags & VTK_SCURSOR_CROP_PLANE));
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::GetVisibility()
+{
+  return this->Actor->GetVisibility();
 }
 
 //----------------------------------------------------------------------------

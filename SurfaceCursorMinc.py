@@ -188,9 +188,13 @@ ren.ResetCameraClippingRange()
 cursor = vtk.vtkSurfaceCursor()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
-cursor.BindInteractor(iren)
+
+observer = vtk.vtkSurfaceCursorInteractorObserver()
+observer.SetSurfaceCursor(cursor)
+observer.SetInteractor(iren)
+observer.SetEnabled(1)
 
 # Add an observer for when the title bar "Close Window" is pressed. 
-iren.AddObserver("ExitEvent", lambda o,e="": o.TerminateApp())
+iren.AddObserver("ExitEvent", lambda o,e: o.TerminateApp())
 
 iren.Start()
