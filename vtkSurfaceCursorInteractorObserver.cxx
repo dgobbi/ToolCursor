@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -107,6 +107,12 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
     renwin->AddObserver(vtkCommand::EndEvent, command);
     iren->AddObserver(vtkCommand::LeaveEvent, command);
     iren->AddObserver(vtkCommand::MouseMoveEvent, command);
+    iren->AddObserver(vtkCommand::LeftButtonPressEvent, command);
+    iren->AddObserver(vtkCommand::RightButtonPressEvent, command);
+    iren->AddObserver(vtkCommand::MiddleButtonPressEvent, command);
+    iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, command);
+    iren->AddObserver(vtkCommand::RightButtonReleaseEvent, command);
+    iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, command);
     iren->AddObserver(vtkCommand::KeyPressEvent, command);
     iren->AddObserver(vtkCommand::KeyReleaseEvent, command);
 
@@ -162,10 +168,22 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       }
    }
 
-  // Look for events from the interactor
-  else if (iren && vtkRenderWindowInteractor::SafeDownCast(object) == iren)
+  // All remaining events will be from the interactor
+  if (!iren || iren != vtkRenderWindowInteractor::SafeDownCast(object))
     {
-    if (event == vtkCommand::MouseMoveEvent)
+    return;
+    } 
+
+
+  switch (event)
+    {
+    case vtkCommand::MouseMoveEvent:
+    case vtkCommand::LeftButtonPressEvent:
+    case vtkCommand::RightButtonPressEvent:
+    case vtkCommand::MiddleButtonPressEvent:
+    case vtkCommand::LeftButtonReleaseEvent:
+    case vtkCommand::RightButtonReleaseEvent:
+    case vtkCommand::MiddleButtonReleaseEvent:
       {
       // Need to check if mouse is in the renderer, even if some other
       // observer has focus, so do it here as a passive operation.
@@ -174,22 +192,20 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       int x, y;
       iren->GetEventPosition(x, y);
       int inRenderer = (renderer && renderer->IsInViewport(x, y));
-      if (inRenderer != cursor->GetMouseInRenderer())
-        {
-        cursor->SetMouseInRenderer(inRenderer);
-        }
+      cursor->SetMouseInRenderer(inRenderer);
       }
-    else if (event == vtkCommand::LeaveEvent)
+      break;
+
+    case vtkCommand::LeaveEvent:
       {
       // Mouse move events might cease after mouse leaves the window,
       // leaving EventPosition with the last in-window value
 
-      if (cursor->GetMouseInRenderer())
-        {
-        cursor->SetMouseInRenderer(0);
-        }
+      cursor->SetMouseInRenderer(0);
       }
-    else if (event == vtkCommand::KeyPressEvent)
+      break;
+
+    case vtkCommand::KeyPressEvent:
       {
       // We need to know the exact moment when modifier keys change
       int modifierBits = self->ModifierFromKeySym(iren->GetKeySym());
@@ -198,7 +214,9 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
         cursor->SetModifier(cursor->GetModifier() | modifierBits);
         }
       }
-    else if (event == vtkCommand::KeyReleaseEvent)
+      break;
+
+    case vtkCommand::KeyReleaseEvent:
       {
       int modifierBits = self->ModifierFromKeySym(iren->GetKeySym());
       if (modifierBits)
@@ -206,6 +224,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
         cursor->SetModifier(cursor->GetModifier() & ~modifierBits);
         }
       }
+      break;
     }
 }
 
@@ -229,7 +248,8 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
   // InteractorStyle is currently doing an action.
   vtkInteractorStyle *istyle =
     vtkInteractorStyle::SafeDownCast(iren->GetInteractorStyle());
-  int allowTakeFocus = (istyle && istyle->GetState() == VTKIS_NONE);
+  int allowTakeFocus = (istyle && istyle->GetState() == VTKIS_NONE
+                        && cursor->GetMouseInRenderer());
 
   // The interactor events are used to do just three things:
   // 1) call cursor->SetMouseInRenderer() to control cursor visibility,
@@ -247,6 +267,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       cursor->MoveToDisplayPosition(x, y);
       }
       break;
+
     case vtkCommand::LeftButtonPressEvent:
     case vtkCommand::RightButtonPressEvent:
     case vtkCommand::MiddleButtonPressEvent:
@@ -265,6 +286,13 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
         button = VTK_SCURSOR_B3;
         }
 
+      // Need to do ComputePosition to force a pick so that the cursor
+      // knows if any focus-worthy object is under the mouse
+      int x, y;
+      iren->GetEventPosition(x, y);
+      cursor->MoveToDisplayPosition(x, y);
+      cursor->ComputePosition();
+
       if (allowTakeFocus && cursor->GetRequestingFocus())
         {
         self->GrabFocus(self->EventCallbackCommand,
@@ -272,14 +300,12 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
         // Make sure that no other observers see the event
         self->EventCallbackCommand->SetAbortFlag(1);
 
-        int x, y;
-        iren->GetEventPosition(x, y);
-        cursor->SetDisplayPosition(x, y);
         cursor->SetModifier(cursor->GetModifier() & ~button);
         cursor->SetModifier(cursor->GetModifier() | button);
         }
       }
       break;
+
     case vtkCommand::LeftButtonReleaseEvent:
     case vtkCommand::RightButtonReleaseEvent:
     case vtkCommand::MiddleButtonReleaseEvent:
@@ -309,13 +335,13 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       cursor->SetModifier(cursor->GetModifier() & ~button);
       }
       break;
+
     case vtkCommand::LeaveEvent:
     case vtkCommand::KeyPressEvent:
     case vtkCommand::KeyReleaseEvent:
       // Just render for these events, they were handled as passive events
       break;
-    default:
-      return;
+
     }
 
   iren->Render();

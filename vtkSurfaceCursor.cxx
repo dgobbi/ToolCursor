@@ -55,7 +55,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.21 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.22 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -748,7 +748,6 @@ void vtkSurfaceCursor::SetAction(int action)
 
     if (actionObject)
       {
-      this->ComputePosition();
       actionObject->SetSurfaceCursor(this);
       actionObject->StartAction();
       }
