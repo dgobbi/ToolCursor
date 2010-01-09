@@ -55,7 +55,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.20 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.21 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -626,7 +626,8 @@ void vtkSurfaceCursor::OnRender()
   // update all of the props in the scene.
   this->ComputePosition();
   // Don't show cursor if nothing is underneath of it.
-  this->Actor->SetVisibility((this->PickFlags != 0));
+  int visibility = (this->MouseInRenderer != 0 && this->PickFlags != 0);
+  this->Actor->SetVisibility(visibility);
 }
 
 //----------------------------------------------------------------------------
@@ -747,6 +748,7 @@ void vtkSurfaceCursor::SetAction(int action)
 
     if (actionObject)
       {
+      this->ComputePosition();
       actionObject->SetSurfaceCursor(this);
       actionObject->StartAction();
       }

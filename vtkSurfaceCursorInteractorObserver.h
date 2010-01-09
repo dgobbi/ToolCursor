@@ -45,10 +45,8 @@ public:
 
   // Description:
   // Set the cursor that this object observes events for.
-  void SetSurfaceCursor(vtkSurfaceCursor *cursor) {
-     this->SurfaceCursor = cursor; };
-  vtkSurfaceCursor *GetSurfaceCursor() {
-     return this->SurfaceCursor; };
+  void SetSurfaceCursor(vtkSurfaceCursor *cursor);
+  vtkSurfaceCursor *GetSurfaceCursor() { return this->SurfaceCursor; };
 
   // Description:
   // Get vtkSurfaceCursor "modifier" bits from a VTK keysym.
@@ -58,10 +56,17 @@ protected:
   vtkSurfaceCursorInteractorObserver();
   ~vtkSurfaceCursorInteractorObserver();
 
+  static void ProcessPassiveEvents(vtkObject* object,
+                                   unsigned long event,
+                                   void* clientdata,
+                                   void* calldata);
+
   static void ProcessEvents(vtkObject* object,
                             unsigned long event,
                             void* clientdata,
                             void* calldata);
+
+  vtkCallbackCommand *PassiveEventCallbackCommand;
 
   vtkSurfaceCursor *SurfaceCursor;
 
