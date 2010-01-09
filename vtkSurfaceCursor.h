@@ -38,6 +38,7 @@ class vtkVolumePicker;
 class vtkCommand;
 
 class vtkSurfaceCursorAction;
+class vtkSurfaceCursorShapes;
 
 // Cursor actions.
 #define VTK_SCURSOR_PUSH          1
@@ -152,11 +153,6 @@ public:
   int GetShape() { return this->Shape; };
 
   // Description:
-  // Add a cursor shape.  The id for that shape will be returned.  Once
-  // added, a shape cannot be removed.
-  int AddShape(vtkDataSet *cursor);
-
-  // Description:
   // Set the scale factor for the cursor, usually to make it larger.
   vtkSetMacro(Scale, double);
   vtkGetMacro(Scale, double);
@@ -263,7 +259,7 @@ protected:
   int MouseInRenderer;
   double Scale;
   vtkMatrix4x4 *Matrix;
-  vtkDataSetCollection *Shapes;
+  vtkSurfaceCursorShapes *Shapes;
   vtkCollection *Actions;
   vtkDataSetMapper *Mapper;
   vtkLookupTable *LookupTable;
@@ -276,29 +272,15 @@ protected:
   virtual int ComputeShape(int mode, int pickFlags);
   virtual int ComputeAction(int mode, int pickFlags, int button);
 
-  virtual void MakeDefaultShapes();
-  static vtkDataSet *MakePointerShape();
-  static vtkDataSet *MakeCrosshairsShape();
-  static vtkDataSet *MakeCrossShape(int splitCross);
-  static vtkDataSet *MakeSphereShape(int splitSphere);
-  static vtkDataSet *MakeConeShape(int doubleCone);
-  static vtkDataSet *MakeMoverShape(int warped);
-  static vtkDataSet *MakePusherShape();
-  static vtkDataSet *MakeSpinnerShape();
-  static vtkPolyData *MakeWarpedArrow(double warpX, double warpY,
-                                      double warpZ, double warpScale);
-
   static int ComputePickFlags(vtkVolumePicker *picker);
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
                             const double vector[3], vtkMatrix4x4 *matrix); 
   static void ComputeVectorFromNormal(const double normal[3], double vector[3],
                                       vtkDataSetMapper *cursorMapper,
-                                      vtkRenderer *renderer);
+                                      vtkRenderer *renderer, int cursorFlags);
 
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
-
-  static int ModifierFromKeySym(const char *keysym);
 
 private:
   vtkSurfaceCursor(const vtkSurfaceCursor&);  //Not implemented
