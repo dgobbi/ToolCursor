@@ -12,10 +12,12 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkActionCursorShapes - Cursor shapes for different kinds of interaction.
+// .NAME vtkActionCursorShapes - Cursor shapes for interaction.
 // .SECTION Description
 // This class is a collection of action shapes for use with the
-// vtkSurfaceCursor.
+// vtkSurfaceCursor.  The shapes available are "Mover", "Rocker",
+// "Pusher", and "Spinner".  All cursors are constructed from the
+// same 3D arrow shape and have a two-tone color scheme.
 
 #ifndef __vtkActionCursorShapes_h
 #define __vtkActionCursorShapes_h
@@ -41,15 +43,12 @@ protected:
   ~vtkActionCursorShapes();
 
   void MakeShapes();
-  static vtkDataSet *MakePointerShape();
-  static vtkDataSet *MakeCrosshairsShape();
-  static vtkDataSet *MakeCrossShape(int splitCross);
-  static vtkDataSet *MakeSphereShape(int splitSphere);
-  static vtkDataSet *MakeConeShape(int doubleCone);
-  static vtkDataSet *MakeMoverShape(int warped);
-  static vtkDataSet *MakePusherShape();
-  static vtkDataSet *MakeSpinnerShape();
-  static vtkPolyData *MakeWarpedArrow(double warpX, double warpY,
+  static vtkDataSet *MakeMoverShape(vtkPolyData *arrow, int warped);
+  static vtkDataSet *MakePusherShape(vtkPolyData *arrow);
+  static vtkDataSet *MakeSpinnerShape(vtkPolyData *arrow);
+  static vtkPolyData *MakeArrow();
+  static vtkPolyData *MakeWarpedArrow(vtkPolyData *arrow,
+                                      double warpX, double warpY,
                                       double warpZ, double warpScale);
 
 private:

@@ -9,11 +9,13 @@ SET(LIB_NAME vtk${PROJECT_NAME})
 SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
 SET(LIB_SRCS
   vtkActionCursorShapes.cxx
+  vtkGeometricCursorShapes.cxx
   vtkPushPlaneAction.cxx
   vtkSurfaceCursor.cxx
   vtkSurfaceCursorAction.cxx
   vtkSurfaceCursorInteractorObserver.cxx
   vtkSurfaceCursorShapes.cxx
+  vtkSystemCursorShapes.cxx
 )
 
 # The remainder of this file can usually be left alone

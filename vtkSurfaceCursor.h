@@ -41,11 +41,6 @@ class vtkCommand;
 class vtkSurfaceCursorAction;
 class vtkSurfaceCursorShapes;
 
-// Cursor actions.
-#define VTK_SCURSOR_PUSH          1
-#define VTK_SCURSOR_ROTATE        2
-#define VTK_SCURSOR_SPIN          3
-
 // Modifier keys and mouse buttons.
 #define VTK_SCURSOR_SHIFT        0x01
 #define VTK_SCURSOR_CAPS         0x02
@@ -64,22 +59,6 @@ class vtkSurfaceCursorShapes;
 #define VTK_SCURSOR_PLANE        0x3000
 #define VTK_SCURSOR_CLIP_PLANE   0x1000
 #define VTK_SCURSOR_CROP_PLANE   0x2000
-
-// Cursor shapes. Copies of basic system cursors
-#define VTK_SCURSOR_POINTER      0
-#define VTK_SCURSOR_CROSSHAIRS   1
-// Cursor shapes. Geometrical shapes.
-#define VTK_SCURSOR_CROSS        2
-#define VTK_SCURSOR_CROSS_SPLIT  3
-#define VTK_SCURSOR_CONE         4
-#define VTK_SCURSOR_CONE_DUAL    5
-#define VTK_SCURSOR_SPHERE       6
-#define VTK_SCURSOR_SPHERE_SPLIT 7
-// Cursor shapes. Action cursors.
-#define VTK_SCURSOR_MOVER        8
-#define VTK_SCURSOR_ROCKER       9
-#define VTK_SCURSOR_PUSHER       10
-#define VTK_SCURSOR_SPINNER      11
 
 class VTK_EXPORT vtkSurfaceCursor : public vtkObject
 {

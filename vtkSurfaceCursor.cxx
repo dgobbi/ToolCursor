@@ -40,10 +40,11 @@
 
 #include "vtkSurfaceCursorShapes.h"
 #include "vtkActionCursorShapes.h"
+#include "vtkGeometricCursorShapes.h"
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.24 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.25 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -244,6 +245,7 @@ void vtkSurfaceCursor::PrintSelf(ostream& os, vtkIndent indent)
 void vtkSurfaceCursor::CreateDefaultBindings()
 {
   vtkSurfaceCursorShapes *actionShapes = vtkActionCursorShapes::New();
+  vtkSurfaceCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
   vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
 
   int action, shape, state, modifier, pickInfo;
@@ -266,11 +268,12 @@ void vtkSurfaceCursor::CreateDefaultBindings()
   // Binding for any Prop3D under the cursor
   pickInfo = VTK_SCURSOR_PROP3D;
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Cone");
+  shape = this->AddShape(geometricShapes, "Cone");
   this->BindShape(shape, mode, pickInfo, modifier);
   this->FindShape(mode, pickInfo, modifier);
 
   actionShapes->Delete();
+  geometricShapes->Delete();
   pushAction->Delete();
 }
 
