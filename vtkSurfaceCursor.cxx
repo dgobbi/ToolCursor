@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.25 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.26 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -554,6 +554,19 @@ void vtkSurfaceCursor::ComputePosition()
   picker->Pick(x, y, 0, this->Renderer);
   picker->GetPickPosition(this->Position);
   picker->GetPickNormal(this->Normal);
+
+  // Allow the action to constrain the cursor
+  if (this->Action)
+    {
+    vtkSurfaceCursorAction *actionObject =
+      static_cast<vtkSurfaceCursorAction *>(
+        this->Actions->GetItemAsObject(this->Action));
+
+    if (actionObject)
+      {
+      actionObject->ConstrainCursor(this->Position, this->Normal);
+      }
+    }
 
   // Direct the normal towards the camera if PointNormalAtCamera is On
   if (this->PointNormalAtCamera &&

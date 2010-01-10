@@ -22,7 +22,7 @@
 #include "vtkVolumePicker.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorAction, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorAction, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkSurfaceCursorAction);
 
 //----------------------------------------------------------------------------
@@ -76,6 +76,11 @@ void vtkSurfaceCursorAction::DoAction()
   this->LastDisplayPosition[0] = this->DisplayPosition[0];
   this->LastDisplayPosition[1] = this->DisplayPosition[1];
   this->SurfaceCursor->GetDisplayPosition(this->DisplayPosition);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursorAction::ConstrainCursor(double *, double *) 
+{
 }
 
 //----------------------------------------------------------------------------

@@ -29,7 +29,7 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -42,6 +42,14 @@ vtkPushPlaneAction::vtkPushPlaneAction()
   this->Mapper = 0;
   this->PlaneId = -1;
   this->PerpendicularPlane = 0;
+
+  this->Normal[0] = 0.0;
+  this->Normal[1] = 0.0;
+  this->Normal[2] = 1.0;
+
+  this->Origin[0] = 0.0;
+  this->Origin[1] = 0.0;
+  this->Origin[2] = 0.0;
 
   this->StartNormal[0] = 0.0;
   this->StartNormal[1] = 0.0;
@@ -196,6 +204,46 @@ void vtkPushPlaneAction::DoAction()
 }
 
 //----------------------------------------------------------------------------
+void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3]) 
+{
+  // Get and normalize the plane normal.
+  this->GetNormal(normal);
+  vtkMath::Normalize(normal);
+
+  // Get the display position.
+  double x, y, z;
+  this->WorldToDisplay(position, x, y, z);
+
+  // Compute the view ray.
+  double p1[3], p2[3];
+  this->DisplayToWorld(x, y, 0.0, p1);
+  this->DisplayToWorld(x, y, 1.0, p2);
+
+  // Intersect the view ray with the plane.
+  double p[3];
+  double t;
+  if (vtkPlane::IntersectWithLine(p1, p2, normal, this->Origin, t, p))
+    {
+    // Only move the position if it is closer to the camera, to ensure that
+    // the cursor doesn't become hidden under other objects.  Include a
+    // tolerance to ensure the distance is significant, otherwise just
+    // leave the cursor where it is.
+    
+    // Compute the squared distance for the original position
+    double t2 = (vtkMath::Distance2BetweenPoints(p1,position)/
+                 vtkMath::Distance2BetweenPoints(p1,p2));
+
+    // Compare to the square of the distace for the constrained position.
+    if (t*t < t2 - 5e-20)
+      {
+      position[0] = p[0];
+      position[1] = p[1];
+      position[2] = p[2];
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkPushPlaneAction::GetPropInformation()
 {
   // Get all the object needed for the interaction
@@ -238,7 +286,9 @@ void vtkPushPlaneAction::GetPropInformation()
 
   if (this->PlaneId >= 0)
     {
-    this->GetPlaneOriginAndNormal(this->StartOrigin, this->StartNormal);
+    this->GetPlaneOriginAndNormal(this->Origin, this->Normal);
+    this->SetStartOrigin(this->Origin);
+    this->SetStartNormal(this->Normal);
     }
 }
 
@@ -290,6 +340,11 @@ void vtkPushPlaneAction::GetPlaneOriginAndNormal(double origin[3],
 //----------------------------------------------------------------------------
 void vtkPushPlaneAction::SetOrigin(const double o[3])
 {
+  // Store the origin that was set
+  this->Origin[0] = o[0];
+  this->Origin[1] = o[1];
+  this->Origin[2] = o[2];
+
   if (this->PlaneId < 0)
     {
     return;
@@ -383,6 +438,11 @@ void vtkPushPlaneAction::SetOrigin(const double o[3])
 //----------------------------------------------------------------------------
 void vtkPushPlaneAction::SetNormal(const double n[3])
 {
+  // Store the normal that was set
+  this->Normal[0] = n[0];
+  this->Normal[1] = n[1];
+  this->Normal[2] = n[2];
+
   if (this->PlaneId < 0)
     {
     return;
