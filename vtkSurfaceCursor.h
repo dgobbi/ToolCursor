@@ -35,6 +35,7 @@ class vtkDataSetCollection;
 class vtkCollection;
 class vtkPicker;
 class vtkVolumePicker;
+class vtkIntArray;
 class vtkCommand;
 
 class vtkSurfaceCursorAction;
@@ -45,7 +46,7 @@ class vtkSurfaceCursorShapes;
 #define VTK_SCURSOR_ROTATE        2
 #define VTK_SCURSOR_SPIN          3
 
-// Event modifiers, which usually control the mode.
+// Modifier keys and mouse buttons.
 #define VTK_SCURSOR_SHIFT        0x01
 #define VTK_SCURSOR_CAPS         0x02
 #define VTK_SCURSOR_CONTROL      0x04
@@ -60,6 +61,7 @@ class vtkSurfaceCursorShapes;
 #define VTK_SCURSOR_ACTOR        0x0100
 #define VTK_SCURSOR_VOLUME       0x0200
 #define VTK_SCURSOR_IMAGE_ACTOR  0x0400
+#define VTK_SCURSOR_PLANE        0x3000
 #define VTK_SCURSOR_CLIP_PLANE   0x1000
 #define VTK_SCURSOR_CROP_PLANE   0x2000
 
@@ -137,20 +139,13 @@ public:
   int GetPickFlags() { return this->PickFlags; };
 
   // Description:
-  // Set the current mode for the cursor.  The mode is usually computed
-  // from the Modifier ivar by the ComputeMode() method, i.e. the mode will
-  // usually change in response to modifier keys like "Shift" and "Control".
-  // If you don't use SetModifier() or BindInteractor(), then you can set
-  // the mode manually with this method.
-  void SetMode(int mode);
+  // Set the current mode for the cursor.  This allows you to easily
+  // switch between different sets of action bindings for the cursor.
+  // Each mode can have its own set of bindings.  This method can be
+  // overridden in subclasses if you want to do anything special when
+  // the mode changes.
+  virtual void SetMode(int mode);
   int GetMode() { return this->Mode; };
-
-  // Description:
-  // Set the cursor shaped.  If you use BindInteractor() or SetModifier()
-  // then the shape will be computed from the Mode and the PickFlags.  If
-  // you don't use these methods, then you can set the shape manually.
-  void SetShape(int shape);
-  int GetShape() { return this->Shape; };
 
   // Description:
   // Set the scale factor for the cursor, usually to make it larger.
@@ -187,27 +182,36 @@ public:
   virtual void MoveToDisplayPosition(double x, double y);
 
   // Description:
-  // Set or get the modifier bitfield.  This will set the Mode and the
-  // cursor Shape, and if the modifier bits indicate that a mouse button
-  // has been pressed, it will also set the Action.  If you want to set
-  // the Action manually (i.e. if you don't like the default bindings)
-  // then you should not call this method.
+  // Set or get the modifier bitfield.  This is how the GUI toolkit
+  // communicates changes in the modifier keys or the mouse buttons.
   virtual void SetModifier(int modifier);  
   int GetModifier() { return this->Modifier; };
-
-  // Description:
-  // Set the current action.  If you use BindInteractor() or SetModifier(),
-  // then this will be set automatically in response to button events.  If
-  // you don't use either of these methods, then you can set Action
-  // manually.  The value of Action controls what happens when
-  // MoveToDisplayPosition() is called.
-  virtual void SetAction(int action);
-  int GetAction() { return this->Action; };
 
   // Description:
   // Add an action.  The id for the action will be returned.  Once an
   // action is added, it cannot be removed.
   int AddAction(vtkSurfaceCursorAction *action);
+
+  // Description:
+  // Add a cursor shape.  The id for the shape will be returned.  Once a
+  // shape has been added, it cannot be removed.
+  int AddShape(vtkSurfaceCursorShapes *shapes, const char *name);
+
+  // Description:
+  // Bind the conditions under which the specified action will take place.
+  // The "mode" is the cursor mode that the binding will apply to.
+  // The "pickInfo" is the kind of object that must be under the cursor.
+  // The "modifier" is the combination of modifier keys and the mouse
+  // buttons that must be held down for the action to occur.
+  void BindAction(int action, int mode, int pickFlags, int modifier);
+
+  // Description:
+  // Bind the conditions under which the specified shape will be used.
+  // The "mode" is the cursor mode that the binding will apply to.
+  // The "pickInfo" is the kind of object that must be under the cursor.
+  // The "modifier" is the combination of modifier keys and mouse
+  // buttons that must be held down for the shape to be shown.
+  void BindShape(int shape, int mode, int pickFlags, int modifier);
 
   // Description:
   // Set whether the mouse is in the renderer.  This controls cursor
@@ -224,7 +228,7 @@ public:
   // Description:
   // If GetRequestingFocus() is true, then the cursor is over a hot
   // spot and should be given event focus.
-  int GetRequestingFocus();
+  int GetRequestingFocus() { return this->RequestingFocus; };
 
   // Description:
   // This is an internal method that is automatically called at the
@@ -250,9 +254,10 @@ protected:
   double Color[3];
 
   int PointNormalAtCamera;
-  int Shape;
+  int RequestingFocus;
   int Mode;
   int PickFlags;
+  int Shape;
   int Action;
   int ActionButton;
   int Modifier;
@@ -260,7 +265,9 @@ protected:
   double Scale;
   vtkMatrix4x4 *Matrix;
   vtkSurfaceCursorShapes *Shapes;
+  vtkIntArray *ShapeBindings;
   vtkCollection *Actions;
+  vtkIntArray *ActionBindings;
   vtkDataSetMapper *Mapper;
   vtkLookupTable *LookupTable;
   vtkActor *Actor;
@@ -268,10 +275,28 @@ protected:
   vtkRenderer *Renderer;
   vtkCommand *RenderCommand;
 
-  virtual int ComputeMode(int modifier);
-  virtual int ComputeShape(int mode, int pickFlags);
-  virtual int ComputeAction(int mode, int pickFlags, int button);
+  // Description:
+  // Set the current action.  This is protected because the action depends
+  // on the current state.
+  virtual void SetAction(int action);
+  int GetAction() { return this->Action; };
 
+  // Description:
+  // Set the cursor shape.  This is protected because the shape depends on
+  // the state.
+  void SetShape(int shape);
+  int GetShape() { return this->Shape; };
+
+  // Description:
+  // Create the default bindings.
+  virtual void CreateDefaultBindings();
+
+  int FindShape(int mode, int pickFlags, int modifier);
+  int FindAction(int mode, int pickFlags, int modifier);
+  static void AddBinding(vtkIntArray *array, int item, int mode,
+                         int pickFlags, int modifier);
+  static int ResolveBinding(vtkIntArray *array, int mode, int pickFlags,
+                            int modifier);
   static int ComputePickFlags(vtkVolumePicker *picker);
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],

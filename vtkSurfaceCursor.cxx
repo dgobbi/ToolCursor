@@ -43,7 +43,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.23 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.24 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -69,6 +69,45 @@ private:
   void operator=(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
 };
 
+static void PrintModifier(int modifier)
+{
+  cerr << "( ";
+  if (modifier & VTK_SCURSOR_SHIFT) { cerr << "SHIFT "; }
+  if (modifier & VTK_SCURSOR_CAPS) { cerr << "CAPS "; }
+  if (modifier & VTK_SCURSOR_CONTROL) { cerr << "CONTROL "; }
+  if (modifier & VTK_SCURSOR_META) { cerr << "META "; }
+  if (modifier & VTK_SCURSOR_ALT) { cerr << "ALT "; }
+  if (modifier & VTK_SCURSOR_B1) { cerr << "B1 "; }
+  if (modifier & VTK_SCURSOR_B2) { cerr << "B2 "; }
+  if (modifier & VTK_SCURSOR_B3) { cerr << "B3 "; }
+  cerr << ")";
+}
+
+static void PrintFlags(int flags)
+{
+  cerr << "( ";
+  if ((flags & VTK_SCURSOR_PROP3D) == VTK_SCURSOR_PROP3D)
+    {
+    cerr << "PROP3DS ";
+    }
+  else
+    {
+    if (flags & VTK_SCURSOR_ACTOR) { cerr << "ACTOR "; }
+    if (flags & VTK_SCURSOR_VOLUME) { cerr << "VOLUME "; }
+    if (flags & VTK_SCURSOR_IMAGE_ACTOR) { cerr << "IMAGE_ACTOR "; }
+    }
+  if ((flags & VTK_SCURSOR_CLIP_PLANE) && (flags & VTK_SCURSOR_CROP_PLANE))
+    {
+    cerr << "PLANES ";
+    }
+  else
+    {
+    if (flags & VTK_SCURSOR_CLIP_PLANE) { cerr << "CLIP_PLANE "; }
+    if (flags & VTK_SCURSOR_CROP_PLANE) { cerr << "CROP_PLANE "; }
+    }
+  cerr << ")";
+}
+
 //----------------------------------------------------------------------------
 vtkSurfaceCursor::vtkSurfaceCursor()
 {
@@ -90,6 +129,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Renderer = 0;
 
   this->PointNormalAtCamera = 1;
+  this->RequestingFocus = 0;
   this->Modifier = 0;
   this->Mode = 0;
   this->PickFlags = 0;
@@ -105,8 +145,14 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->LookupTable = vtkLookupTable::New();
   this->Mapper->SetLookupTable(this->LookupTable);
   this->Mapper->UseLookupTableScalarRangeOn();
-  //this->Shapes = vtkSurfaceCursorShapes::New();
+  this->Shapes = vtkSurfaceCursorShapes::New();
   this->Actions = vtkCollection::New();
+  this->ShapeBindings = vtkIntArray::New();
+  this->ShapeBindings->SetName("ShapeBindings");
+  this->ShapeBindings->SetNumberOfComponents(4);
+  this->ActionBindings = vtkIntArray::New();
+  this->ActionBindings->SetName("ActionBindings");
+  this->ActionBindings->SetNumberOfComponents(4);
   this->Picker = vtkVolumePicker::New();
 
   this->LookupTable->SetRampToLinear();
@@ -126,17 +172,17 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   vtkProperty *property = this->Actor->GetProperty();
   property->BackfaceCullingOn();
 
-  this->Shapes = vtkActionCursorShapes::New();
-  this->SetShape(0);
+  // Insert a null action, so that actions start at 1
+  vtkSurfaceCursorAction *action = vtkSurfaceCursorAction::New();
+  this->Actions->AddItem(action);
+  action->Delete();
 
-  // Make all the actions.  Should be done in its own subroutine.
-  vtkSurfaceCursorAction *actionObject;
-  actionObject = vtkSurfaceCursorAction::New();
-  this->AddAction(actionObject);
-  actionObject->Delete();
-  actionObject = vtkPushPlaneAction::New();
-  this->AddAction(actionObject);
-  actionObject->Delete();
+  // Insert a blank shape, so that shapes start at 1
+  vtkDataSet *data = vtkPolyData::New();
+  this->Shapes->AddShape("", data, 0);
+  data->Delete();
+
+  this->CreateDefaultBindings();
 
   this->RenderCommand = vtkSurfaceCursorRenderCommand::New(this);
 }
@@ -162,6 +208,14 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
     {
     this->Actions->Delete();
     }
+  if (this->ShapeBindings)
+    {
+    this->ShapeBindings->Delete();
+    }
+  if (this->ActionBindings)
+    {
+    this->ActionBindings->Delete();
+    }
   if (this->Mapper)
     {
     this->Mapper->Delete();
@@ -184,6 +238,66 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
 void vtkSurfaceCursor::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::CreateDefaultBindings()
+{
+  vtkSurfaceCursorShapes *actionShapes = vtkActionCursorShapes::New();
+  vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
+
+  int action, shape, state, modifier, pickInfo;
+  int mode = 0;  
+
+  // Binding for clip/crop planes with no modifier
+  pickInfo = (VTK_SCURSOR_PROP3D |
+              VTK_SCURSOR_CLIP_PLANE |
+              VTK_SCURSOR_CROP_PLANE);
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Pusher");
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->FindShape(mode, pickInfo, modifier);
+
+  // Binding for clip/crop planes when B1 is dragged
+  modifier = (modifier | VTK_SCURSOR_B1);
+  action = this->AddAction(pushAction);
+  this->BindAction(action, mode, pickInfo, modifier);
+
+  // Binding for any Prop3D under the cursor
+  pickInfo = VTK_SCURSOR_PROP3D;
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Cone");
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->FindShape(mode, pickInfo, modifier);
+
+  actionShapes->Delete();
+  pushAction->Delete();
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::BindShape(int shape, int mode,
+                                 int pickFlags, int modifier)
+{
+  this->AddBinding(this->ShapeBindings, shape, mode, pickFlags, modifier);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::BindAction(int action, int mode,
+                                  int pickFlags, int modifier)
+{
+  this->AddBinding(this->ActionBindings, action, mode, pickFlags, modifier);
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
+{
+  return this->ResolveBinding(this->ShapeBindings, mode, pickFlags, modifier);
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
+{
+  return this->ResolveBinding(this->ActionBindings, mode, pickFlags, modifier);
 }
 
 //----------------------------------------------------------------------------
@@ -339,134 +453,6 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeMode(int modifier)
-{
-  // The PickCropping/Clipping shouldn't be hard-coded like this.
-
-  if ( (modifier & VTK_SCURSOR_SHIFT) )
-    {
-    this->Picker->PickCroppingPlanesOn();
-    this->Picker->PickClippingPlanesOff();
-    return 1;
-    }
-  else if ( (modifier & VTK_SCURSOR_CONTROL) )
-    {
-    this->Picker->PickClippingPlanesOn();
-    this->Picker->PickCroppingPlanesOff();
-    return 2;
-    }
-
-  this->Picker->PickClippingPlanesOff();
-  this->Picker->PickCroppingPlanesOff();
-  return 0;
-}
-
-//----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeShape(int mode, int pickFlags)
-{
-  int shape = VTK_SCURSOR_POINTER;
-
-  // Setting the cursor shape from the pickFlags is very crude for now
-  switch (mode)
-    {
-    case 0:
-      {
-      if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
-        {
-        shape = VTK_SCURSOR_PUSHER;
-        }
-      else if ((pickFlags & VTK_SCURSOR_PROP3D))
-        {
-        shape = VTK_SCURSOR_CONE;
-        }
-      else
-        {
-        shape = VTK_SCURSOR_POINTER;
-        }
-      }
-      break;
-
-    case 1:
-      {
-      if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
-        {
-        shape = VTK_SCURSOR_PUSHER;
-        }
-      else if ((pickFlags & VTK_SCURSOR_CLIP_PLANE))
-        {
-        shape = VTK_SCURSOR_ROCKER;
-        }
-      else if ((pickFlags & VTK_SCURSOR_PROP3D))
-        {
-        shape = VTK_SCURSOR_MOVER;
-        }
-      }
-      break;
-
-    case 2:
-      {
-      if ((pickFlags & VTK_SCURSOR_IMAGE_ACTOR) ||
-          ((pickFlags & VTK_SCURSOR_VOLUME) &&
-           (pickFlags & (VTK_SCURSOR_CROP_PLANE | VTK_SCURSOR_CLIP_PLANE))))
-        {
-        shape = VTK_SCURSOR_CROSS_SPLIT;
-        }
-      else if ((pickFlags & VTK_SCURSOR_VOLUME) ||
-               (pickFlags & VTK_SCURSOR_ACTOR))
-        {
-        shape = VTK_SCURSOR_SPINNER;
-        }
-      }
-      break;
-    }
-
-  return shape;
-}
-
-//----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputeAction(int mode, int pickFlags, int button)
-{
-  // One button only.
-  if (button != VTK_SCURSOR_B1)
-    {
-    return 0;
-    }
-
-  int action = 0;
-
-  switch (mode)
-    {
-    case 0:
-      {
-      if ((pickFlags & (VTK_SCURSOR_CLIP_PLANE | VTK_SCURSOR_CROP_PLANE)))
-        {
-        action = VTK_SCURSOR_PUSH;
-        }
-      else if ((pickFlags & VTK_SCURSOR_PROP3D))
-        {
-        action = VTK_SCURSOR_ROTATE;
-        }
-      }
-      break;
-
-    case 1:
-      {
-      if ((pickFlags & VTK_SCURSOR_CROP_PLANE))
-        {
-        action = VTK_SCURSOR_PUSH;
-        }
-      else if ((pickFlags & VTK_SCURSOR_PROP3D))
-        {
-        action = VTK_SCURSOR_SPIN;
-        }
-      }
-      break;
-    }
-
-  return action;
-}
-
-//----------------------------------------------------------------------------
 int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
 {
   const double planeTol = 1e-6;
@@ -577,14 +563,26 @@ void vtkSurfaceCursor::ComputePosition()
     this->Normal[2] = -this->Normal[2];
     }
 
-  // Compute the "state" from the picked information.  The "state" needs to
-  // be split into two ints: there should be a "pick info" bitfield that
-  // describes what's under the cursor, and another "state" that describes the
-  // ongoing interaction and which is locked until the action is completed. 
-  this->PickFlags = this->ComputePickFlags(this->Picker);
+  // Check to see if the PickFlags have changed
+  int pickFlags = this->ComputePickFlags(this->Picker);
+  if (!this->Action && pickFlags != this->PickFlags)
+    {
+    // Compute the cursor shape from the state.  
+    this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
 
-  // Compute the cursor shape from the state.  
-  this->SetShape(this->ComputeShape(this->Mode, this->PickFlags));
+    // See if we need focus for potential button actions
+    if (this->FindAction(this->Mode, pickFlags, this->Modifier |
+                         VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
+      {
+      this->RequestingFocus = 1;
+      }
+    else
+      {
+      this->RequestingFocus = 0;
+      }
+    }
+
+  this->PickFlags = pickFlags;
 
   // Compute an "up" vector for the cursor.
   this->ComputeVectorFromNormal(this->Normal, this->Vector,
@@ -638,14 +636,6 @@ void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::GetRequestingFocus()
-{
-  // Right now the cursor is hard-coded to take focus for clipping planes
-  return ((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) ||
-          (this->PickFlags & VTK_SCURSOR_CROP_PLANE));
-}
-
-//----------------------------------------------------------------------------
 int vtkSurfaceCursor::GetVisibility()
 {
   return this->Actor->GetVisibility();
@@ -670,10 +660,14 @@ void vtkSurfaceCursor::SetModifier(int modifier)
     {
     return;
     }
-    
-  // Map the modifier to the Mode.
-  this->SetMode(this->ComputeMode(modifier));
 
+  if (!this->Action)
+    {
+    // Compute the cursor shape from the state.  
+    this->SetShape(this->FindShape(this->Mode, this->PickFlags,
+                                   modifier));
+    }
+   
   // Map the modifier to the Action.
   // Do an XOR to find out what bits have changed.
   int bitsChanged = (this->Modifier ^ modifier);
@@ -695,9 +689,27 @@ void vtkSurfaceCursor::SetModifier(int modifier)
       if ((bitsSet & VTK_SCURSOR_B1)) { button = VTK_SCURSOR_B1; }
       else if ((bitsSet & VTK_SCURSOR_B2)) { button = VTK_SCURSOR_B2; }
       else if ((bitsSet & VTK_SCURSOR_B3)) { button = VTK_SCURSOR_B3; }
-      this->SetAction(this->ComputeAction(this->Mode, this->PickFlags,
-                                          button));
+      this->SetAction(this->FindAction(this->Mode, this->PickFlags,
+                                       modifier));
       this->ActionButton = button;
+      }
+    }
+ 
+  if (!this->Action)
+    {
+    // Compute the cursor shape from the state.  
+    this->SetShape(this->FindShape(this->Mode, this->PickFlags,
+                                   modifier));
+
+    // See if we need focus for potential button actions
+    if (this->FindAction(this->Mode, this->PickFlags, modifier |
+                         VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
+      {
+      this->RequestingFocus = 1;
+      }
+    else
+      {
+      this->RequestingFocus = 0;
       }
     }
 
@@ -743,6 +755,24 @@ void vtkSurfaceCursor::SetAction(int action)
     }
 }
 
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::AddShape(vtkSurfaceCursorShapes *shapes,
+                               const char *name)
+{
+  int i = shapes->GetShapeIndex(name);
+  if (i < 0)
+    {
+    vtkErrorMacro("The specified shape \"" << name << "\" is not in "
+                   << shapes->GetClassName());
+    return -1;
+    }
+
+  this->Shapes->AddShape(name, shapes->GetShapeData(i),
+                         shapes->GetShapeFlags(i));
+  
+  return (this->Shapes->GetNumberOfShapes() - 1);
+}
+ 
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::AddAction(vtkSurfaceCursorAction *action)
 {
@@ -884,4 +914,145 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
   vector[1] = u[1]/norm;
   vector[2] = u[2]/norm;
 }
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
+                                  int pickFlags, int modifier)
+{
+  // The bindings are sorted by mode and by the number of modifier bits.
+  // Exact matches replace the previous entry.
+
+  //cerr << "AddBinding " << array->GetName() << " ";
+  //PrintFlags(pickFlags);
+  //cerr << " ";
+  //PrintModifier(modifier);
+  //cerr << " " << item << "\n";
+
+  int propType = (pickFlags & VTK_SCURSOR_PROP3D);
+  int planeType = (pickFlags & VTK_SCURSOR_PLANE);
+
+  int tuple[4];
+  int n = array->GetNumberOfTuples();
+  int i;
+  for (i = 0; i < n; i++)
+    {
+    //array->GetTupleValue(i, tuple);
+    //cerr << "item " << i << " of " << n << ": " << tuple[0] << " ";
+    //PrintFlags(tuple[1]);
+    //cerr << " ";
+    //PrintModifier(tuple[2]);
+    //cerr << "\n";
+
+    if (tuple[0] == mode)
+      {
+      if (((tuple[1] & VTK_SCURSOR_PROP3D) == 0 ||
+           (propType != 0 && (tuple[1] & propType) == propType)) &&
+          ((tuple[1] & VTK_SCURSOR_PLANE) == 0 ||
+           (planeType != 0 && (tuple[1] & planeType) == planeType)))
+        {
+        if ((tuple[2] & modifier) == tuple[2])
+          {
+          // We have a match.  If it is exact, replace  
+          if (tuple[1] == pickFlags && tuple[2] == modifier)
+            {
+            tuple[3] = item;
+            array->SetTupleValue(i, tuple);
+            return;
+            }
+
+          }
+        }
+      }
+    else if (tuple[0] > mode)
+      {
+      break;
+      }
+   }
+
+  //cerr << "inserting ";
+  //cerr << item << " (" << i << " of " << (n+1) << "): " << mode << " ";
+  //PrintFlags(pickFlags);
+  //cerr << " ";
+  //PrintModifier(modifier);
+  //cerr << "\n";
+
+  // Extend array by one value.  Actually, this is just a dummy tuple,
+  // because SetNumberOfTuples(n+1) allocates the array with new memory. 
+  array->InsertNextTupleValue(tuple);
+
+  //cerr << "n = " << n << " i = " << i << "\n";
+  // Shuffle values up by one
+  for (int j = n; j > i; j--)
+    {
+    array->GetTupleValue(j-1, tuple);
+    array->SetTupleValue(j, tuple);
+    }
+ 
+  // Set the tuple at the desired index
+  tuple[0] = mode;
+  tuple[1] = pickFlags;
+  tuple[2] = modifier;
+  tuple[3] = item;
+
+  array->SetTupleValue(i, tuple);
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int mode,
+                                     int pickFlags, int modifier)
+{
+  // The following rules are used to resolve a binding:
+  //
+  // 1) the mode must match the binding exactly
+  //
+  // 2) all bits of each of the PROP3D and PLANE sections of the pick
+  //    flags must have a matching bit in the binding, unless that section
+  //    of the binding is empty.
+  //
+  // 3) the modifier bits must include all bits in the binding.
+
+  //cerr << "ResolveBinding " << array->GetName() << " ";
+  //PrintFlags(pickFlags);
+  //cerr << " ";
+  //PrintModifier(modifier);
+  //cerr << "\n";
+
+  int propType = (pickFlags & VTK_SCURSOR_PROP3D);
+  int planeType = (pickFlags & VTK_SCURSOR_PLANE);
+
+  int tuple[4];
+  int n = array->GetNumberOfTuples();
+  for (int i = 0; i < n; i++)
+    {
+    array->GetTupleValue(i, tuple);
+
+    //cerr << "item " << i << " of " << n << ": " << tuple[0] << " ";
+    //PrintFlags(tuple[1]);
+    //cerr << " ";
+    //PrintModifier(tuple[2]);
+    //cerr << "\n";
+
+    if (tuple[0] == mode)
+      {
+      if (((tuple[1] & VTK_SCURSOR_PROP3D) == 0 ||
+           (propType != 0 && (tuple[1] & propType) == propType)) &&
+          ((tuple[1] & VTK_SCURSOR_PLANE) == 0 ||
+           (planeType != 0 && (tuple[1] & planeType) == planeType)))
+        {
+        if ((tuple[2] & modifier) == tuple[2])
+          {
+          //cerr << "resolved " << tuple[3] << "\n";
+          return tuple[3];
+          }
+        }
+      }
+    else if (tuple[0] > mode)
+      {
+      break;
+      }
+    }
+
+  //cerr << "not resolved\n";
+  return 0;
+}   
 
