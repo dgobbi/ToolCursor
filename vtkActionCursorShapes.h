@@ -15,7 +15,7 @@
 // .NAME vtkActionCursorShapes - Cursor shapes for interaction.
 // .SECTION Description
 // This class is a collection of action shapes for use with the
-// vtkSurfaceCursor.  The shapes available are "Mover", "Rocker",
+// vtkSurfaceCursor.  The shapes available are "Mover", "Rotator",
 // "Pusher", and "Spinner".  All cursors are constructed from the
 // same 3D arrow shape and have a two-tone color scheme.
 

@@ -73,6 +73,10 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Create the default bindings.
+  virtual void BindDefaultActions();
+
+  // Description:
   // Set the Renderer for this cursor to be active in.
   void SetRenderer(vtkRenderer *renderer);
   vtkRenderer *GetRenderer() { return this->Renderer; };
@@ -265,10 +269,6 @@ protected:
   // the state.
   void SetShape(int shape);
   int GetShape() { return this->Shape; };
-
-  // Description:
-  // Create the default bindings.
-  virtual void CreateDefaultBindings();
 
   int FindShape(int mode, int pickFlags, int modifier);
   int FindAction(int mode, int pickFlags, int modifier);

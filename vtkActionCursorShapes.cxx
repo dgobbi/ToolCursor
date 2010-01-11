@@ -34,7 +34,7 @@
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
 
-vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -66,7 +66,7 @@ void vtkActionCursorShapes::MakeShapes()
   data->Delete();
 
   data = this->MakeMoverShape(arrow, 1);
-  this->AddShape("Rocker", data, 0);
+  this->AddShape("Rotator", data, 0);
   data->Delete();
 
   data = this->MakePusherShape(arrow);

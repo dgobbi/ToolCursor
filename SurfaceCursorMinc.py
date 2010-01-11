@@ -186,6 +186,7 @@ ren.ResetCameraClippingRange()
 
 #---------------------------------------------------------
 cursor = vtk.vtkSurfaceCursor()
+cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 

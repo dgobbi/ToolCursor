@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.26 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.27 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -183,8 +183,6 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Shapes->AddShape("", data, 0);
   data->Delete();
 
-  this->CreateDefaultBindings();
-
   this->RenderCommand = vtkSurfaceCursorRenderCommand::New(this);
 }
 
@@ -242,35 +240,56 @@ void vtkSurfaceCursor::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::CreateDefaultBindings()
+void vtkSurfaceCursor::BindDefaultActions()
 {
   vtkSurfaceCursorShapes *actionShapes = vtkActionCursorShapes::New();
   vtkSurfaceCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
   vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
 
-  int action, shape, state, modifier, pickInfo;
-  int mode = 0;  
+  int action, shape, mode, modifier, pickInfo;
 
-  // Binding for clip/crop planes with no modifier
+  // ============ All Bindings for Mode 0 =============
+  mode = 0;
+
+  // ------------ Bindings for Prop3Ds with Clip/Crop Planes -------------
   pickInfo = (VTK_SCURSOR_PROP3D |
               VTK_SCURSOR_CLIP_PLANE |
               VTK_SCURSOR_CROP_PLANE);
+
+  // Binding for "SplitCross" cursor
+  modifier = 0;
+  shape = this->AddShape(geometricShapes, "SplitCross");
+  this->BindShape(shape, mode, pickInfo, modifier);
+
+  // Binding for "PushPlane" with "Pusher" cursor
   modifier = 0;
   shape = this->AddShape(actionShapes, "Pusher");
-  this->BindShape(shape, mode, pickInfo, modifier);
-  this->FindShape(mode, pickInfo, modifier);
-
-  // Binding for clip/crop planes when B1 is dragged
-  modifier = (modifier | VTK_SCURSOR_B1);
   action = this->AddAction(pushAction);
-  this->BindAction(action, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
-  // Binding for any Prop3D under the cursor
+  // ------------ Default Prop3D Bindings------------- 
   pickInfo = VTK_SCURSOR_PROP3D;
+
+  // Binding for "Rotator" cursor (the InteractorStyle handles rotation)
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Rotator");
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
+  // Binding for "Cone" cursor
   modifier = 0;
   shape = this->AddShape(geometricShapes, "Cone");
   this->BindShape(shape, mode, pickInfo, modifier);
-  this->FindShape(mode, pickInfo, modifier);
+
+  // Binding for "Mover" cursor (the InteractorStyle does the moving)
+  modifier = VTK_SCURSOR_SHIFT;
+  shape = this->AddShape(actionShapes, "Mover");
+  this->BindShape(shape, mode, pickInfo, modifier);
+
+  // Binding for "Spinner" cursor (the InteractorStyle does the spinning)
+  modifier = VTK_SCURSOR_CONTROL;
+  shape = this->AddShape(actionShapes, "Spinner");
+  this->BindShape(shape, mode, pickInfo, modifier);
 
   actionShapes->Delete();
   geometricShapes->Delete();
@@ -294,13 +313,33 @@ void vtkSurfaceCursor::BindAction(int action, int mode,
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
 {
-  return this->ResolveBinding(this->ShapeBindings, mode, pickFlags, modifier);
+  int i = this->ResolveBinding(this->ShapeBindings,
+                               mode, pickFlags, modifier);
+  if (i < 0)
+    {
+    return 0;
+    }
+
+  int tuple[4];
+  this->ShapeBindings->GetTupleValue(i, tuple);
+
+  return tuple[3];
 }
 
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
 {
-  return this->ResolveBinding(this->ActionBindings, mode, pickFlags, modifier);
+  int i = this->ResolveBinding(this->ActionBindings,
+                               mode, pickFlags, modifier);
+  if (i < 0)
+    {
+    return 0;
+    }
+
+  int tuple[4];
+  this->ActionBindings->GetTupleValue(i, tuple);
+
+  return tuple[3];
 }
 
 //----------------------------------------------------------------------------
@@ -944,46 +983,31 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
   //PrintModifier(modifier);
   //cerr << " " << item << "\n";
 
-  int propType = (pickFlags & VTK_SCURSOR_PROP3D);
-  int planeType = (pickFlags & VTK_SCURSOR_PLANE);
+  int i = vtkSurfaceCursor::ResolveBinding(array, mode, pickFlags, modifier);
+  int n = array->GetNumberOfTuples();
 
   int tuple[4];
-  int n = array->GetNumberOfTuples();
-  int i;
-  for (i = 0; i < n; i++)
+  tuple[0] = 0;
+  tuple[1] = 0;
+  tuple[2] = 0;
+  tuple[3] = 0;
+
+  if (i >= 0)
     {
-    //array->GetTupleValue(i, tuple);
-    //cerr << "item " << i << " of " << n << ": " << tuple[0] << " ";
-    //PrintFlags(tuple[1]);
-    //cerr << " ";
-    //PrintModifier(tuple[2]);
-    //cerr << "\n";
-
-    if (tuple[0] == mode)
+    // If it's an exact match, then replace
+    array->GetTupleValue(i, tuple);
+    if (tuple[0] == mode && tuple[1] == pickFlags && tuple[2] == modifier)
       {
-      if (((tuple[1] & VTK_SCURSOR_PROP3D) == 0 ||
-           (propType != 0 && (tuple[1] & propType) == propType)) &&
-          ((tuple[1] & VTK_SCURSOR_PLANE) == 0 ||
-           (planeType != 0 && (tuple[1] & planeType) == planeType)))
-        {
-        if ((tuple[2] & modifier) == tuple[2])
-          {
-          // We have a match.  If it is exact, replace  
-          if (tuple[1] == pickFlags && tuple[2] == modifier)
-            {
-            tuple[3] = item;
-            array->SetTupleValue(i, tuple);
-            return;
-            }
-
-          }
-        }
+      tuple[3] = item;
+      array->SetTupleValue(i, tuple);
+      return;
       }
-    else if (tuple[0] > mode)
-      {
-      break;
-      }
-   }
+    }
+  else
+    {
+    // If it wasn't resolved, then we append to the end of the list
+    i = n;
+    }
 
   //cerr << "inserting ";
   //cerr << item << " (" << i << " of " << (n+1) << "): " << mode << " ";
@@ -993,7 +1017,7 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
   //cerr << "\n";
 
   // Extend array by one value.  Actually, this is just a dummy tuple,
-  // because SetNumberOfTuples(n+1) allocates the array with new memory. 
+  // it's just the easiest way of increasing the size of the array.
   array->InsertNextTupleValue(tuple);
 
   //cerr << "n = " << n << " i = " << i << "\n";
@@ -1058,7 +1082,7 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int mode,
         if ((tuple[2] & modifier) == tuple[2])
           {
           //cerr << "resolved " << tuple[3] << "\n";
-          return tuple[3];
+          return i;
           }
         }
       }
@@ -1069,6 +1093,6 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int mode,
     }
 
   //cerr << "not resolved\n";
-  return 0;
+  return -1;
 }   
 
