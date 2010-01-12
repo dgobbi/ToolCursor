@@ -86,7 +86,7 @@ public:
 
   // Description:
   // Set the current (x,y) display location for the cursor.
-  vtkSetVector2Macro(DisplayPosition, double);
+  void SetDisplayPosition(double x, double y);
   vtkGetVector2Macro(DisplayPosition, double);
 
   // Description:
@@ -211,11 +211,12 @@ public:
   void BindShape(int shape, int mode, int pickFlags, int modifier);
 
   // Description:
-  // Set whether the mouse is in the renderer.  This controls cursor
-  // visibility.  If you use BindToInteractor(), this method is called
-  // automatically when required.
-  virtual void SetMouseInRenderer(int inside);
-  int GetMouseInRenderer() { return this->MouseInRenderer; };
+  // Set whether the mouse is in the renderer's viewport.  This controls
+  // cursor visibility.  It is automatically set by SetDisplayPosition()
+  // and MoveToDisplayPosition(), but it must be set manually when the
+  // mouse moves out of the window.
+  virtual void SetIsInViewport(int inside);
+  int GetIsInViewport() { return this->IsInViewport; };
 
   // Description:
   // Get whether the cursor is currently visible.  If not, then the
@@ -263,7 +264,7 @@ protected:
   int Action;
   int ActionButton;
   int Modifier;
-  int MouseInRenderer;
+  int IsInViewport;
   double Scale;
   vtkMatrix4x4 *Matrix;
   vtkSurfaceCursorShapes *Shapes;

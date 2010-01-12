@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.29 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.30 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -695,8 +695,30 @@ void vtkSurfaceCursor::OnRender()
   // update all of the props in the scene.
   this->ComputePosition();
   // Don't show cursor if nothing is underneath of it.
-  int visibility = (this->MouseInRenderer != 0 && this->PickFlags != 0);
+  int visibility = (this->IsInViewport != 0 && this->PickFlags != 0);
   this->Actor->SetVisibility(visibility);
+}
+
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::SetDisplayPosition(double x, double y)
+{
+  vtkRenderer *renderer = this->Renderer;
+  int inRenderer = 0;
+
+  if (renderer && renderer->IsInViewport(x, y));
+    {
+    inRenderer = 1;
+    }
+
+  if (this->DisplayPosition[0] != x || this->DisplayPosition[1] != y ||
+      this->IsInViewport != inRenderer)
+    {
+    this->IsInViewport = inRenderer;
+    this->DisplayPosition[0] = x;
+    this->DisplayPosition[1] = y;
+
+    this->Modified();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -724,14 +746,14 @@ int vtkSurfaceCursor::GetVisibility()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetMouseInRenderer(int inside)
+void vtkSurfaceCursor::SetIsInViewport(int inside)
 {
-  if (this->MouseInRenderer == inside)
+  if (this->IsInViewport == inside)
     {
     return;
     }
     
-  this->MouseInRenderer = inside;
+  this->IsInViewport = inside;
   this->Modified();
 }
 

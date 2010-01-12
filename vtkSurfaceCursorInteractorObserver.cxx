@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -89,13 +89,13 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
     this->Enabled = 1;
 
     // The interactor events are used to do five main things:
-    // 1) call cursor->SetMouseInRenderer(bool) for mouse in/out of renderer
+    // 1) call cursor->SetIsInViewport(bool) for mouse in/out of renderer
     // 2) call cursor->SetModifierBits(bits, mask) for modifiers
     // 3) call cursor->MoveToDisplayPosition(x,y) when the mouse moves
     // 4) call cursor->PressButton(button) when a button is pressed
     // 5) call cursor->ReleaseButton(button) when a button is released
     //  
-    // The SetMouseInRenderer() and SetModifierBits() are done in passive
+    // The SetIsInViewport() and SetModifierBits() are done in passive
     // interactor observers.  The MoveToDisplayPosition(), PressButton(),
     // and ReleaseButton() and done in regular observers.
 
@@ -235,11 +235,9 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
 
       // Need to check if mouse is in the renderer, even if some other
       // observer has focus, so do it here as a passive operation.
-      vtkRenderer *renderer = cursor->GetRenderer();
       int x, y;
       iren->GetEventPosition(x, y);
-      int inRenderer = (renderer && renderer->IsInViewport(x, y));
-      cursor->SetMouseInRenderer(inRenderer);
+      cursor->SetDisplayPosition(x, y);
       }
       break;
 
@@ -247,7 +245,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       {
       // Mouse move events might cease after mouse leaves the window,
       // leaving EventPosition with the last in-window value
-      cursor->SetMouseInRenderer(0);
+      cursor->SetIsInViewport(0);
       }
       break;
 
@@ -291,7 +289,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
   vtkInteractorStyle *istyle =
     vtkInteractorStyle::SafeDownCast(iren->GetInteractorStyle());
   int allowTakeFocus = (istyle && istyle->GetState() == VTKIS_NONE
-                        && cursor->GetMouseInRenderer());
+                        && cursor->GetIsInViewport());
 
   switch (event)
     {
