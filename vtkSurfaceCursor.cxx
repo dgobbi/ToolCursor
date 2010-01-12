@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.30 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.31 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -69,45 +69,6 @@ private:
   vtkSurfaceCursorRenderCommand(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
   void operator=(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
 };
-
-static void PrintModifier(int modifier)
-{
-  cerr << "( ";
-  if (modifier & VTK_SCURSOR_SHIFT) { cerr << "SHIFT "; }
-  if (modifier & VTK_SCURSOR_CAPS) { cerr << "CAPS "; }
-  if (modifier & VTK_SCURSOR_CONTROL) { cerr << "CONTROL "; }
-  if (modifier & VTK_SCURSOR_META) { cerr << "META "; }
-  if (modifier & VTK_SCURSOR_ALT) { cerr << "ALT "; }
-  if (modifier & VTK_SCURSOR_B1) { cerr << "B1 "; }
-  if (modifier & VTK_SCURSOR_B2) { cerr << "B2 "; }
-  if (modifier & VTK_SCURSOR_B3) { cerr << "B3 "; }
-  cerr << ")";
-}
-
-static void PrintFlags(int flags)
-{
-  cerr << "( ";
-  if ((flags & VTK_SCURSOR_PROP3D) == VTK_SCURSOR_PROP3D)
-    {
-    cerr << "PROP3DS ";
-    }
-  else
-    {
-    if (flags & VTK_SCURSOR_ACTOR) { cerr << "ACTOR "; }
-    if (flags & VTK_SCURSOR_VOLUME) { cerr << "VOLUME "; }
-    if (flags & VTK_SCURSOR_IMAGE_ACTOR) { cerr << "IMAGE_ACTOR "; }
-    }
-  if ((flags & VTK_SCURSOR_CLIP_PLANE) && (flags & VTK_SCURSOR_CROP_PLANE))
-    {
-    cerr << "PLANES ";
-    }
-  else
-    {
-    if (flags & VTK_SCURSOR_CLIP_PLANE) { cerr << "CLIP_PLANE "; }
-    if (flags & VTK_SCURSOR_CROP_PLANE) { cerr << "CROP_PLANE "; }
-    }
-  cerr << ")";
-}
 
 //----------------------------------------------------------------------------
 vtkSurfaceCursor::vtkSurfaceCursor()
@@ -1036,6 +997,13 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
 }
 
 //----------------------------------------------------------------------------
+// A couple useful diagnostic routines
+/*
+static void PrintModifier(int modifier);
+static void PrintFlags(int flags);
+*/
+
+//----------------------------------------------------------------------------
 void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
                                   int pickFlags, int modifier)
 {
@@ -1162,3 +1130,43 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
   return -1;
 }   
 
+/*
+static void PrintModifier(int modifier)
+{
+  cerr << "( ";
+  if (modifier & VTK_SCURSOR_SHIFT) { cerr << "SHIFT "; }
+  if (modifier & VTK_SCURSOR_CAPS) { cerr << "CAPS "; }
+  if (modifier & VTK_SCURSOR_CONTROL) { cerr << "CONTROL "; }
+  if (modifier & VTK_SCURSOR_META) { cerr << "META "; }
+  if (modifier & VTK_SCURSOR_ALT) { cerr << "ALT "; }
+  if (modifier & VTK_SCURSOR_B1) { cerr << "B1 "; }
+  if (modifier & VTK_SCURSOR_B2) { cerr << "B2 "; }
+  if (modifier & VTK_SCURSOR_B3) { cerr << "B3 "; }
+  cerr << ")";
+}
+
+static void PrintFlags(int flags)
+{
+  cerr << "( ";
+  if ((flags & VTK_SCURSOR_PROP3D) == VTK_SCURSOR_PROP3D)
+    {
+    cerr << "PROP3DS ";
+    }
+  else
+    {
+    if (flags & VTK_SCURSOR_ACTOR) { cerr << "ACTOR "; }
+    if (flags & VTK_SCURSOR_VOLUME) { cerr << "VOLUME "; }
+    if (flags & VTK_SCURSOR_IMAGE_ACTOR) { cerr << "IMAGE_ACTOR "; }
+    }
+  if ((flags & VTK_SCURSOR_CLIP_PLANE) && (flags & VTK_SCURSOR_CROP_PLANE))
+    {
+    cerr << "PLANES ";
+    }
+  else
+    {
+    if (flags & VTK_SCURSOR_CLIP_PLANE) { cerr << "CLIP_PLANE "; }
+    if (flags & VTK_SCURSOR_CROP_PLANE) { cerr << "CROP_PLANE "; }
+    }
+  cerr << ")";
+}
+*/
