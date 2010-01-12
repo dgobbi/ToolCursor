@@ -42,14 +42,17 @@ class vtkSurfaceCursorAction;
 class vtkSurfaceCursorShapes;
 
 // Modifier keys and mouse buttons.
-#define VTK_SCURSOR_SHIFT        0x01
-#define VTK_SCURSOR_CAPS         0x02
-#define VTK_SCURSOR_CONTROL      0x04
-#define VTK_SCURSOR_META         0x08
-#define VTK_SCURSOR_ALT          0x16
-#define VTK_SCURSOR_B1          0x100
-#define VTK_SCURSOR_B2          0x200
-#define VTK_SCURSOR_B3          0x400
+#define VTK_SCURSOR_SHIFT        0x0001
+#define VTK_SCURSOR_CAPS         0x0002
+#define VTK_SCURSOR_CONTROL      0x0004
+#define VTK_SCURSOR_META         0x0008
+#define VTK_SCURSOR_ALT          0x0010
+#define VTK_SCURSOR_BUTTON_MASK  0x1F00
+#define VTK_SCURSOR_B1           0x0100
+#define VTK_SCURSOR_B2           0x0200
+#define VTK_SCURSOR_B3           0x0400
+#define VTK_SCURSOR_B4           0x0800
+#define VTK_SCURSOR_B5           0x1000
 
 // Pick flags, these describe what is under the cursor.
 #define VTK_SCURSOR_PROP3D       0x0F00
@@ -167,8 +170,19 @@ public:
   // Description:
   // Set or get the modifier bitfield.  This is how the GUI toolkit
   // communicates changes in the modifier keys or the mouse buttons.
-  virtual void SetModifier(int modifier);  
-  int GetModifier() { return this->Modifier; };
+  // You must supply a mask that contains the modifier bits that you
+  // want to change.
+  void SetModifierBits(int modifier, int mask);
+
+  // Description:
+  // Call this method to indicate that a mouse button has been pressed.
+  // It will return 1 if the button press initiated an action, and 0 if not.
+  int PressButton(int button);
+
+  // Description:
+  // Call this method to indicate that a mouse button has been released.
+  // It will return 1 if the button release concluded an action, and 0 if not.
+  int ReleaseButton(int button);
 
   // Description:
   // Add an action.  The id for the action will be returned.  Once an
@@ -209,9 +223,10 @@ public:
   int GetVisibility();
 
   // Description:
-  // If GetRequestingFocus() is true, then the cursor is over a hot
-  // spot and should be given event focus.
-  int GetRequestingFocus() { return this->RequestingFocus; };
+  // If GetActionButtons() is nonzero, then it gives the mouse bit
+  // flags for the buttons that have actions defined for the current
+  // mode, position, and modifiers.
+  int GetActionButtons() { return this->ActionButtons; };
 
   // Description:
   // This is an internal method that is automatically called at the
@@ -222,6 +237,10 @@ public:
   // We override this method to modify the actor, otherwise the
   // RenderWindow won't know that it needs to render.
   virtual void Modified();
+
+  // Description:
+  // Get the button modifier bitmask corresponding to the mouse button.
+  static int ButtonBit(int button);
 
 protected:
   vtkSurfaceCursor();
@@ -237,7 +256,7 @@ protected:
   double Color[3];
 
   int PointNormalAtCamera;
-  int RequestingFocus;
+  int ActionButtons;
   int Mode;
   int PickFlags;
   int Shape;
@@ -259,6 +278,12 @@ protected:
   vtkCommand *RenderCommand;
 
   // Description:
+  // Set the modifier bits.  This is protected because SetModifierBits() 
+  // is the method that should be used to set the modifier.
+  virtual void SetModifier(int modifier);  
+  int GetModifier() { return this->Modifier; };
+
+  // Description:
   // Set the current action.  This is protected because the action depends
   // on the current state.
   virtual void SetAction(int action);
@@ -272,10 +297,11 @@ protected:
 
   int FindShape(int mode, int pickFlags, int modifier);
   int FindAction(int mode, int pickFlags, int modifier);
+  int FindActionButtons(int mode, int pickFlags, int modifier);
   static void AddBinding(vtkIntArray *array, int item, int mode,
                          int pickFlags, int modifier);
-  static int ResolveBinding(vtkIntArray *array, int mode, int pickFlags,
-                            int modifier);
+  static int ResolveBinding(vtkIntArray *array, int start,
+                            int mode, int pickFlags, int modifier);
   static int ComputePickFlags(vtkVolumePicker *picker);
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
@@ -290,5 +316,10 @@ private:
   vtkSurfaceCursor(const vtkSurfaceCursor&);  //Not implemented
   void operator=(const vtkSurfaceCursor&);  //Not implemented
 };
+
+inline void vtkSurfaceCursor::SetModifierBits(int modifier, int mask)
+{
+  this->SetModifier((this->GetModifier() & ~mask) | (modifier & mask));
+}
 
 #endif

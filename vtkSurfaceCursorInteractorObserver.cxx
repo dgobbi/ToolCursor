@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -87,6 +87,17 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
   if (enable && !this->Enabled)
     {
     this->Enabled = 1;
+
+    // The interactor events are used to do five main things:
+    // 1) call cursor->SetMouseInRenderer(bool) for mouse in/out of renderer
+    // 2) call cursor->SetModifierBits(bits, mask) for modifiers
+    // 3) call cursor->MoveToDisplayPosition(x,y) when the mouse moves
+    // 4) call cursor->PressButton(button) when a button is pressed
+    // 5) call cursor->ReleaseButton(button) when a button is released
+    //  
+    // The SetMouseInRenderer() and SetModifierBits() are done in passive
+    // interactor observers.  The MoveToDisplayPosition(), PressButton(),
+    // and ReleaseButton() and done in regular observers.
 
     vtkCommand *command = this->EventCallbackCommand;
     float priority = this->Priority;
@@ -174,7 +185,6 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
     return;
     } 
 
-
   switch (event)
     {
     case vtkCommand::MouseMoveEvent:
@@ -185,9 +195,46 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
     case vtkCommand::RightButtonReleaseEvent:
     case vtkCommand::MiddleButtonReleaseEvent:
       {
+      // First look for modifier keys
+      int modifierMask = (VTK_SCURSOR_SHIFT | VTK_SCURSOR_CONTROL);
+      int modifier = 0;
+      if (iren->GetShiftKey()) { modifier |= VTK_SCURSOR_SHIFT; }
+      if (iren->GetControlKey()) { modifier |= VTK_SCURSOR_CONTROL; }
+
+      // Next look for the button, and whether it was pressed or released
+      if (event == vtkCommand::vtkCommand::LeftButtonPressEvent)
+        {
+        modifierMask |= VTK_SCURSOR_B1;
+        modifier |= VTK_SCURSOR_B1;
+        }
+      else if (event == vtkCommand::vtkCommand::RightButtonPressEvent)
+        {
+        modifierMask = VTK_SCURSOR_B2;
+        modifier = VTK_SCURSOR_B2;
+        }
+      else if (event == vtkCommand::vtkCommand::MiddleButtonPressEvent)
+        {
+        modifierMask = VTK_SCURSOR_B3;
+        modifier = VTK_SCURSOR_B3;
+        }
+      else if (event == vtkCommand::vtkCommand::LeftButtonReleaseEvent)
+        {
+        modifierMask |= VTK_SCURSOR_B1;
+        }
+      else if (event == vtkCommand::vtkCommand::RightButtonReleaseEvent)
+        {
+        modifierMask = VTK_SCURSOR_B2;
+        }
+      else if (event == vtkCommand::vtkCommand::MiddleButtonReleaseEvent)
+        {
+        modifierMask = VTK_SCURSOR_B3;
+        }
+
+      // Set the modifier with the button and key information
+      cursor->SetModifierBits(modifier, modifierMask);
+
       // Need to check if mouse is in the renderer, even if some other
       // observer has focus, so do it here as a passive operation.
-
       vtkRenderer *renderer = cursor->GetRenderer();
       int x, y;
       iren->GetEventPosition(x, y);
@@ -200,7 +247,6 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       {
       // Mouse move events might cease after mouse leaves the window,
       // leaving EventPosition with the last in-window value
-
       cursor->SetMouseInRenderer(0);
       }
       break;
@@ -208,21 +254,17 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
     case vtkCommand::KeyPressEvent:
       {
       // We need to know the exact moment when modifier keys change
-      int modifierBits = self->ModifierFromKeySym(iren->GetKeySym());
-      if (modifierBits)
-        {
-        cursor->SetModifier(cursor->GetModifier() | modifierBits);
-        }
+      int modifierMask = self->ModifierFromKeySym(iren->GetKeySym());
+      int modifier = modifierMask; 
+      cursor->SetModifierBits(modifier, modifierMask);
       }
       break;
 
     case vtkCommand::KeyReleaseEvent:
       {
-      int modifierBits = self->ModifierFromKeySym(iren->GetKeySym());
-      if (modifierBits)
-        {
-        cursor->SetModifier(cursor->GetModifier() & ~modifierBits);
-        }
+      int modifierMask = self->ModifierFromKeySym(iren->GetKeySym());
+      int modifier = 0; 
+      cursor->SetModifierBits(modifier, modifierMask);
       }
       break;
     }
@@ -251,13 +293,6 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
   int allowTakeFocus = (istyle && istyle->GetState() == VTKIS_NONE
                         && cursor->GetMouseInRenderer());
 
-  // The interactor events are used to do just three things:
-  // 1) call cursor->SetMouseInRenderer() to control cursor visibility,
-  //    see ProcessPassiveEvents
-  // 2) call cursor->SetModifier() for modifier keys and mouse buttons,
-  //    see ProcessPassiveEvents for keys
-  // 3) call cursor->MoveToDisplayPosition(x,y) when the mouse moves
-
   switch (event)
     {
     case vtkCommand::MouseMoveEvent:
@@ -275,15 +310,15 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       int button = 0;
       if (event == vtkCommand::LeftButtonPressEvent)
         {
-        button = VTK_SCURSOR_B1;
+        button = 1;
         }
       else if (event == vtkCommand::RightButtonPressEvent)
         {
-        button = VTK_SCURSOR_B2;
+        button = 2;
         }
       else if (event == vtkCommand::MiddleButtonPressEvent)
         {
-        button = VTK_SCURSOR_B3;
+        button = 3;
         }
 
       // Need to do ComputePosition to force a pick so that the cursor
@@ -293,15 +328,16 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       cursor->MoveToDisplayPosition(x, y);
       cursor->ComputePosition();
 
-      if (allowTakeFocus && cursor->GetRequestingFocus())
+      if (allowTakeFocus)
         {
-        self->GrabFocus(self->EventCallbackCommand,
-                        self->EventCallbackCommand);
-        // Make sure that no other observers see the event
-        self->EventCallbackCommand->SetAbortFlag(1);
+        if (cursor->PressButton(button))
+          {
+          self->GrabFocus(self->EventCallbackCommand,
+                          self->EventCallbackCommand);
 
-        cursor->SetModifier(cursor->GetModifier() & ~button);
-        cursor->SetModifier(cursor->GetModifier() | button);
+          // Make sure that no other observers see the event
+          self->EventCallbackCommand->SetAbortFlag(1);
+          }
         }
       }
       break;
@@ -313,26 +349,28 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       int button = 0;
       if (event == vtkCommand::LeftButtonReleaseEvent)
         {
-        button = VTK_SCURSOR_B1;
+        button = 1;
         }
       else if (event == vtkCommand::RightButtonReleaseEvent)
         {
-        button = VTK_SCURSOR_B2;
+        button = 2;
         }
       else if (event == vtkCommand::MiddleButtonReleaseEvent)
         {
-        button = VTK_SCURSOR_B3;
-        }
-
-      if (allowTakeFocus)
-        {
-        self->ReleaseFocus();
+        button = 3;
         }
 
       int x, y;
       iren->GetEventPosition(x, y);
-      cursor->SetDisplayPosition(x, y);
-      cursor->SetModifier(cursor->GetModifier() & ~button);
+      cursor->MoveToDisplayPosition(x, y);
+
+      if (allowTakeFocus)
+        {
+        if (cursor->ReleaseButton(button))
+          {
+          self->ReleaseFocus();
+          }
+        }
       }
       break;
 

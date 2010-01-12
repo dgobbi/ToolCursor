@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.27 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.28 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -130,7 +130,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Renderer = 0;
 
   this->PointNormalAtCamera = 1;
-  this->RequestingFocus = 0;
+  this->ActionButtons = 0;
   this->Modifier = 0;
   this->Mode = 0;
   this->PickFlags = 0;
@@ -285,11 +285,13 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = VTK_SCURSOR_SHIFT;
   shape = this->AddShape(actionShapes, "Mover");
   this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   // Binding for "Spinner" cursor (the InteractorStyle does the spinning)
   modifier = VTK_SCURSOR_CONTROL;
   shape = this->AddShape(actionShapes, "Spinner");
   this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   actionShapes->Delete();
   geometricShapes->Delete();
@@ -313,7 +315,9 @@ void vtkSurfaceCursor::BindAction(int action, int mode,
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
 {
-  int i = this->ResolveBinding(this->ShapeBindings,
+  // Search the shape bindings and return the first match
+
+  int i = this->ResolveBinding(this->ShapeBindings, 0,
                                mode, pickFlags, modifier);
   if (i < 0)
     {
@@ -329,7 +333,9 @@ int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
 //----------------------------------------------------------------------------
 int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
 {
-  int i = this->ResolveBinding(this->ActionBindings,
+  // Search the action bindings and return the first match
+
+  int i = this->ResolveBinding(this->ActionBindings, 0,
                                mode, pickFlags, modifier);
   if (i < 0)
     {
@@ -340,6 +346,32 @@ int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
   this->ActionBindings->GetTupleValue(i, tuple);
 
   return tuple[3];
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::FindActionButtons(int mode, int pickFlags, int modifier)
+{
+  // Find all matching actions and return a bitmask of the mouse buttons
+  // for those actions.
+
+  int modifierMask = 0;
+  modifier |= VTK_SCURSOR_BUTTON_MASK;
+
+  int tuple[4];
+  int j = 0;
+  for (;;)
+    {
+    int i = this->ResolveBinding(this->ActionBindings, j,
+                                 mode, pickFlags, modifier);
+    if (i < 0) { break; }
+
+    this->ActionBindings->GetTupleValue(i, tuple);
+    modifierMask |= tuple[2];
+
+    j = i + 1;
+    }
+
+  return (modifierMask & VTK_SCURSOR_BUTTON_MASK);
 }
 
 //----------------------------------------------------------------------------
@@ -620,21 +652,16 @@ void vtkSurfaceCursor::ComputePosition()
 
   // Check to see if the PickFlags have changed
   int pickFlags = this->ComputePickFlags(this->Picker);
-  if (!this->Action && pickFlags != this->PickFlags)
+  if (pickFlags != this->PickFlags &&
+      (this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 &&
+      !this->Action)
     {
     // Compute the cursor shape from the state.  
     this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
 
     // See if we need focus for potential button actions
-    if (this->FindAction(this->Mode, pickFlags, this->Modifier |
-                         VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
-      {
-      this->RequestingFocus = 1;
-      }
-    else
-      {
-      this->RequestingFocus = 0;
-      }
+    this->ActionButtons = this->FindActionButtons(this->Mode, pickFlags,
+                                                 this->Modifier);
     }
 
   this->PickFlags = pickFlags;
@@ -709,6 +736,57 @@ void vtkSurfaceCursor::SetMouseInRenderer(int inside)
 }
 
 //----------------------------------------------------------------------------
+int vtkSurfaceCursor::ButtonBit(int button)
+{
+  static int buttonmap[6] = { 0, VTK_SCURSOR_B1, VTK_SCURSOR_B2,
+    VTK_SCURSOR_B3, VTK_SCURSOR_B4, VTK_SCURSOR_B5 };
+
+  if (button <= 0 || button > 5)
+    {
+    return 0;
+    }
+
+  return buttonmap[button];
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::PressButton(int button)
+{
+  int buttonBit = this->ButtonBit(button);
+
+  this->SetModifier(this->Modifier | buttonBit);
+
+  if (buttonBit && !this->Action)
+    {
+    this->SetAction(this->FindAction(this->Mode, this->PickFlags,
+                                     this->Modifier));
+    this->ActionButton = button;
+    }
+
+  return (this->Action != 0);
+}
+
+//----------------------------------------------------------------------------
+int vtkSurfaceCursor::ReleaseButton(int button)
+{
+  int buttonBit = this->ButtonBit(button);
+  int concluded = 0;
+
+  if (this->Action && button == this->ActionButton)
+    {
+    this->SetAction(0);
+    this->ActionButton = 0;
+    concluded = 1;
+    }
+
+  // Force SetModifier to see a change
+  this->Modifier = (this->Modifier | buttonBit);
+  this->SetModifier(this->Modifier & ~buttonBit);
+
+  return concluded;
+}
+
+//----------------------------------------------------------------------------
 void vtkSurfaceCursor::SetModifier(int modifier)
 {
   if (this->Modifier == modifier)
@@ -716,56 +794,16 @@ void vtkSurfaceCursor::SetModifier(int modifier)
     return;
     }
 
-  if (!this->Action)
+  if ( ((this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 ||
+        (modifier & VTK_SCURSOR_BUTTON_MASK) == 0) &&
+       !this->Action)
     {
     // Compute the cursor shape from the state.  
-    this->SetShape(this->FindShape(this->Mode, this->PickFlags,
-                                   modifier));
-    }
-   
-  // Map the modifier to the Action.
-  // Do an XOR to find out what bits have changed.
-  int bitsChanged = (this->Modifier ^ modifier);
-  // Check for mouse button changes.
-  if (bitsChanged & (VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
-    {
-    int bitsSet = (bitsChanged & modifier);
-    int bitsCleared = (bitsChanged & ~modifier);
-
-    // Check whether the active action button was released.
-    if (this->Action && (bitsCleared & this->ActionButton))
-      {
-      this->SetAction(0);
-      this->ActionButton = 0;
-      }
-    else if (!this->Action && bitsSet)
-      {
-      int button = 0;
-      if ((bitsSet & VTK_SCURSOR_B1)) { button = VTK_SCURSOR_B1; }
-      else if ((bitsSet & VTK_SCURSOR_B2)) { button = VTK_SCURSOR_B2; }
-      else if ((bitsSet & VTK_SCURSOR_B3)) { button = VTK_SCURSOR_B3; }
-      this->SetAction(this->FindAction(this->Mode, this->PickFlags,
-                                       modifier));
-      this->ActionButton = button;
-      }
-    }
- 
-  if (!this->Action)
-    {
-    // Compute the cursor shape from the state.  
-    this->SetShape(this->FindShape(this->Mode, this->PickFlags,
-                                   modifier));
+    this->SetShape(this->FindShape(this->Mode, this->PickFlags, modifier));
 
     // See if we need focus for potential button actions
-    if (this->FindAction(this->Mode, this->PickFlags, modifier |
-                         VTK_SCURSOR_B1 | VTK_SCURSOR_B2 | VTK_SCURSOR_B3))
-      {
-      this->RequestingFocus = 1;
-      }
-    else
-      {
-      this->RequestingFocus = 0;
-      }
+    this->ActionButtons = this->FindActionButtons(this->Mode, this->PickFlags,
+                                                  modifier);
     }
 
   this->Modifier = modifier;
@@ -983,7 +1021,8 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
   //PrintModifier(modifier);
   //cerr << " " << item << "\n";
 
-  int i = vtkSurfaceCursor::ResolveBinding(array, mode, pickFlags, modifier);
+  int i = vtkSurfaceCursor::ResolveBinding(array, 0,
+                                           mode, pickFlags, modifier);
   int n = array->GetNumberOfTuples();
 
   int tuple[4];
@@ -1038,8 +1077,8 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int mode,
-                                     int pickFlags, int modifier)
+int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
+                                     int mode, int pickFlags, int modifier)
 {
   // The following rules are used to resolve a binding:
   //
@@ -1062,7 +1101,7 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int mode,
 
   int tuple[4];
   int n = array->GetNumberOfTuples();
-  for (int i = 0; i < n; i++)
+  for (int i = start; i < n; i++)
     {
     array->GetTupleValue(i, tuple);
 
