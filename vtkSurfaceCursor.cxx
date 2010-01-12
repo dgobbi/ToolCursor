@@ -44,7 +44,7 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.28 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.29 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -753,6 +753,7 @@ int vtkSurfaceCursor::ButtonBit(int button)
 int vtkSurfaceCursor::PressButton(int button)
 {
   int buttonBit = this->ButtonBit(button);
+  int started = 0;
 
   this->SetModifier(this->Modifier | buttonBit);
 
@@ -760,10 +761,14 @@ int vtkSurfaceCursor::PressButton(int button)
     {
     this->SetAction(this->FindAction(this->Mode, this->PickFlags,
                                      this->Modifier));
-    this->ActionButton = button;
+    if (this->Action)
+      {
+      this->ActionButton = button;
+      started = 1;
+      }
     }
 
-  return (this->Action != 0);
+  return started;
 }
 
 //----------------------------------------------------------------------------
