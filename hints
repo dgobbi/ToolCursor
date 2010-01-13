@@ -1,2 +1,6 @@
 vtkSurfaceCursor                      GetColor                          307  3
+vtkSurfaceCursorAction                GetDisplayPosition                307  2
+vtkSurfaceCursorAction                GetLastDisplayPosition            307  2
+vtkSurfaceCursorAction                GetStartDisplayPosition           307  2
+vtkSurfaceCursorAction                GetStartPosition                  307  3
 

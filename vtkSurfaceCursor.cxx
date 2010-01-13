@@ -43,8 +43,9 @@
 #include "vtkGeometricCursorShapes.h"
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
+#include "vtkRotateCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.31 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.32 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -206,6 +207,7 @@ void vtkSurfaceCursor::BindDefaultActions()
   vtkSurfaceCursorShapes *actionShapes = vtkActionCursorShapes::New();
   vtkSurfaceCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
   vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
+  vtkSurfaceCursorAction *rotateAction = vtkRotateCameraAction::New();
 
   int action, shape, mode, modifier, pickInfo;
 
@@ -234,8 +236,10 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   // Binding for "Rotator" cursor (the InteractorStyle handles rotation)
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Rotator");
+  shape = this->AddShape(geometricShapes, "Sphere");
+  action = this->AddAction(rotateAction);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   // Binding for "Cone" cursor
   modifier = 0;
@@ -256,6 +260,7 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   actionShapes->Delete();
   geometricShapes->Delete();
+  rotateAction->Delete();
   pushAction->Delete();
 }
 

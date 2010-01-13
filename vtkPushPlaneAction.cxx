@@ -29,7 +29,7 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -86,7 +86,9 @@ void vtkPushPlaneAction::StartAction()
   double normal[3];
   this->GetStartNormal(normal);
 
-  vtkCamera *camera = this->SurfaceCursor->GetRenderer()->GetActiveCamera();
+  vtkCamera *camera =
+    this->GetSurfaceCursor()->GetRenderer()->GetActiveCamera();
+
   double position[3], focus[3];
   camera->GetPosition(position);
   camera->GetFocalPoint(focus);
@@ -130,15 +132,14 @@ void vtkPushPlaneAction::DoAction()
 
   // Get the depth coordinate from the original pick.
   double ox, oy, oz;
-  this->WorldToDisplay(this->StartPosition, ox, oy, oz);
+  this->WorldToDisplay(this->GetStartPosition(), ox, oy, oz);
 
   // Get the initial display position.
-  ox = this->StartDisplayPosition[0];
-  oy = this->StartDisplayPosition[1];
+  this->GetStartDisplayPosition(ox, oy);
 
   // Get the current display position. 
-  double x = this->DisplayPosition[0];
-  double y = this->DisplayPosition[1];
+  double x, y;
+  this->GetDisplayPosition(x, y);
 
   // If plane is perpendicular, we only use the "x" motion.
   if (this->PerpendicularPlane) { y = oy; };
@@ -247,7 +248,7 @@ void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3])
 void vtkPushPlaneAction::GetPropInformation()
 {
   // Get all the object needed for the interaction
-  vtkVolumePicker *picker = this->SurfaceCursor->GetPicker();
+  vtkVolumePicker *picker = this->GetSurfaceCursor()->GetPicker();
 
   vtkProp3DCollection *props = picker->GetProp3Ds();
   vtkCollectionSimpleIterator pit;

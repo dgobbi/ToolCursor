@@ -54,6 +54,32 @@ public:
   // The default action is to do nothing.
   virtual void ConstrainCursor(double position[3], double normal[3]);
 
+  // Description:
+  // Get the current display position.
+  void GetDisplayPosition(double &x, double &y) {
+    x = this->DisplayPosition[0]; y = this->DisplayPosition[1]; };
+  double *GetDisplayPosition() { return this->DisplayPosition; };
+
+  // Description:
+  // Get the previous display position.
+  void GetLastDisplayPosition(double &x, double &y) {
+    x = this->LastDisplayPosition[0]; y = this->LastDisplayPosition[1]; };
+  double *GetLastDisplayPosition() { return this->LastDisplayPosition; };
+
+  // Description:
+  // Get the display position from the start of the action.
+  void GetStartDisplayPosition(double &x, double &y) {
+    x = this->StartDisplayPosition[0]; y = this->StartDisplayPosition[1]; };
+  double *GetStartDisplayPosition() { return this->StartDisplayPosition; };
+
+  // Description:
+  // Get the world coordinates of the cursor at the start of the action.
+  void GetStartPosition(double position[3]) {
+    position[0] = this->StartPosition[0];
+    position[1] = this->StartPosition[1];
+    position[2] = this->StartPosition[2]; };
+  double *GetStartPosition() { return this->StartPosition; };
+
 protected:
   vtkSurfaceCursorAction();
   ~vtkSurfaceCursorAction();
