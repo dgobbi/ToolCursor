@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkRotateCameraAction);
 
 //----------------------------------------------------------------------------
@@ -75,31 +75,66 @@ void vtkRotateCameraAction::DoAction()
 {
   this->Superclass::DoAction();
 
+  // Get the camera
+  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
+  vtkMatrix4x4 *viewMatrix = camera->GetViewTransformMatrix();
+
+  // Get the camera's x, y, and z axes
+  double cvx[3], cvy[3], cvz[3];
+  for (int i = 0; i < 3; i++)
+    {
+    cvx[i] = viewMatrix->GetElement(0, i);
+    cvy[i] = viewMatrix->GetElement(1, i);
+    cvz[i] = viewMatrix->GetElement(2, i);
+    }
+
+  // Get the camera's position
+  double cameraPos[3];
+  camera->GetPosition(cameraPos);
+
+  // Center of rotation (focal point) and rotation sphere radius
+  double f[3];
+  this->GetCenterOfRotation(f);
+  double r = this->GetRadius();
+
+  // Camera distance, squared, and rotation radius, squared
+  double d2 = vtkMath::Distance2BetweenPoints(cameraPos,f);
+  double r2 = r*r;
+
+  // The interaction uses a plane parallel to the focal plane
+  // but far enough in front of the focal plane that it defines
+  // a circle that contains 75% of the visible sphere area.
+  double s2max = 0.75*r2/d2*(d2 - r2);
+
+  // And here is the position of the desired interaction plane.
+  double fg = sqrt(r2 - s2max);
+  double g[3];
+  g[0] = f[0] + fg*cvz[0];
+  g[1] = f[1] + fg*cvz[1];
+  g[2] = f[2] + fg*cvz[2];
+
   // Get the current display position. 
   double x, y;
   this->GetDisplayPosition(x, y);
 
   // Get the view ray and see where it intersects the sphere of rotation.
+  // This involves several steps and solving a quadratic equation.
   double p1[3], p2[3];
   this->DisplayToWorld(x, y, 0.0, p1);
   this->DisplayToWorld(x, y, 1.0, p2);
 
-  // Center of rotation and radius
-  double f[3];
-  this->GetCenterOfRotation(f);
-  double r = this->GetRadius();
+  // Vector along direction of view-ray line
+  double v[3];
+  v[0] = p2[0] - p1[0];
+  v[1] = p2[1] - p1[1];
+  v[2] = p2[2] - p1[2];
 
   // Vector from center of rotation to first line point
   double u[3];
   u[0] = p1[0] - f[0];
   u[1] = p1[1] - f[1];
   u[2] = p1[2] - f[2];
-
-  // Vector along direction of line
-  double v[3];
-  v[0] = p2[0] - p1[0];
-  v[1] = p2[1] - p1[1];
-  v[2] = p2[2] - p1[2];
 
   // Here are the coefficients of the quadratic equation, at^2 + bt + c = 0,
   // which will give us the parametric distance "t" along the view ray line
@@ -108,25 +143,68 @@ void vtkRotateCameraAction::DoAction()
   double c = vtkMath::Dot(u, u) - r*r;
 
   // The value under the square root in the solution to the quadratic
-  double d = b*b - 4*a*c;
+  double discriminant = b*b - 4*a*c;
 
-  double t = 0;
-  if (d > 0)
+  double t = 1.0;
+  if (discriminant > 0)
     {
+    // The discriminant is positive, so there are two real solutions.
     // Take the smaller of the two roots.
-    t = (-b - sqrt(d))/(2*a);
+    t = (-b - sqrt(discriminant))/(2*a);
     }
-  else
+  //else { cerr << "outside 1\n"; }
+
+  // Drop down to intersect with the interaction plane.
+  u[0] = p1[0] - g[0];
+  u[1] = p1[1] - g[1];
+  u[2] = p1[2] - g[2];
+  double tplane = -vtkMath::Dot(u,cvz)/vtkMath::Dot(v,cvz);
+  if (t > tplane)
     {
-    // The position is off the sphere
-    t = -b/(2*a);
+    //cerr << "in the ring 1\n";
+    t = tplane;
     }
 
-  // Finally, compute the intersection point
+  // Compute the intersection point
   double p[3];
   p[0] = p1[0]*(1 - t) + p2[0]*t;
   p[1] = p1[1]*(1 - t) + p2[1]*t;
   p[2] = p1[2]*(1 - t) + p2[2]*t;
+
+  // Displacement from center of interaction plane
+  v[0] = p[0] - g[0];
+  v[1] = p[1] - g[1];
+  v[2] = p[2] - g[2];
+
+  // Camera coords of point, centered at center of rotation
+  double cx = vtkMath::Dot(v, cvx);
+  double cy = vtkMath::Dot(v, cvy);
+  double s2 = cx*cx + cy*cy;
+
+  // If point is outside the circle that defines 75% of the visible sphere
+  //cerr << "s = " << sqrt(s2) << ", smax = " << sqrt(s2max) << "\n"; 
+  if (s2 > s2max)
+    {
+    //if (s2 > r2/d2*(d2 - r2)) { cerr << "outside 2\n"; }
+    //else { cerr << "in the ring 2\n"; }
+    double s = sqrt(s2);
+    double smax = sqrt(s2max);
+
+    double cosphi = cx/s;
+    double sinphi = cy/s;
+
+    double psi = 2*(s - smax)/r + asin(smax/r);
+
+    //cerr << "psi = " << psi << ", phi = " << atan2(sinphi,cosphi) << "\n";
+    double q = r*sin(psi);
+    double sx = q*cosphi;
+    double sy = q*sinphi;
+    double sz = r*cos(psi);
+
+    p[0] = sx*cvx[0] + sy*cvy[0] + sz*cvz[0] + f[0];
+    p[1] = sx*cvx[1] + sy*cvy[1] + sz*cvz[1] + f[1];
+    p[2] = sx*cvx[2] + sy*cvy[2] + sz*cvz[2] + f[2];
+    }
 
   // Get the initial point.
   double p0[3];
@@ -161,10 +239,10 @@ void vtkRotateCameraAction::DoAction()
   u[2] = p0[2] - f[2]; 
 
   double pr[3];
-  double s = vtkMath::Dot(u, n);
-  pr[0] = f[0] + s*n[0];
-  pr[1] = f[1] + s*n[1];
-  pr[2] = f[2] + s*n[2];
+  t = vtkMath::Dot(u, n);
+  pr[0] = f[0] + t*n[0];
+  pr[1] = f[1] + t*n[1];
+  pr[2] = f[2] + t*n[2];
 
   // The point pr and the points p, p0 form our rotation angle
   double v1[3], v2[3];
@@ -203,16 +281,12 @@ void vtkRotateCameraAction::DoAction()
   this->Transform->RotateWXYZ(vtkMath::DegreesFromRadians(-angle), v3);
   this->Transform->Translate(f[0], f[1], f[2]);
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
-  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
-
-  double cameraPos[3], cameraViewUp[3];
   this->Transform->TransformPoint(this->StartCameraPosition, cameraPos);
-  this->Transform->TransformVector(this->StartCameraViewUp, cameraViewUp);
+  this->Transform->TransformVector(this->StartCameraViewUp, cvy);
 
   camera->SetPosition(cameraPos);
   camera->SetFocalPoint(f);
-  camera->SetViewUp(cameraViewUp);
+  camera->SetViewUp(cvy);
 }
 
 //----------------------------------------------------------------------------
