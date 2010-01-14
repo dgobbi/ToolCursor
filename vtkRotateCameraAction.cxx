@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkRotateCameraAction);
 
 //----------------------------------------------------------------------------
@@ -172,14 +172,20 @@ void vtkRotateCameraAction::DoAction()
   p[2] = p1[2]*(1 - t) + p2[2]*t;
 
   // Displacement from center of interaction plane
-  v[0] = p[0] - g[0];
-  v[1] = p[1] - g[1];
-  v[2] = p[2] - g[2];
+  double vi[3];
+  vi[0] = p[0] - g[0];
+  vi[1] = p[1] - g[1];
+  vi[2] = p[2] - g[2];
 
   // Camera coords of point, centered at center of rotation
-  double cx = vtkMath::Dot(v, cvx);
-  double cy = vtkMath::Dot(v, cvy);
+  double cx = vtkMath::Dot(vi, cvx);
+  double cy = vtkMath::Dot(vi, cvy);
   double s2 = cx*cx + cy*cy;
+
+  double w2[3];
+  w2[0] = cvz[0];
+  w2[1] = cvz[1];
+  w2[2] = cvz[2];
 
   // If point is outside the circle that defines 75% of the visible sphere
   //cerr << "s = " << sqrt(s2) << ", smax = " << sqrt(s2max) << "\n"; 
@@ -204,6 +210,10 @@ void vtkRotateCameraAction::DoAction()
     p[0] = sx*cvx[0] + sy*cvy[0] + sz*cvz[0] + f[0];
     p[1] = sx*cvx[1] + sy*cvy[1] + sz*cvz[1] + f[1];
     p[2] = sx*cvx[2] + sy*cvy[2] + sz*cvz[2] + f[2];
+
+    w2[0] = p[0] - f[0];
+    w2[1] = p[1] - f[1];
+    w2[2] = p[2] - f[2];
     }
 
   // Get the initial point.
@@ -229,7 +239,7 @@ void vtkRotateCameraAction::DoAction()
 
   // Cross with the view ray to get the desired rotation axis.
   double n[3];
-  vtkMath::Cross(w, v, n);
+  vtkMath::Cross(w, w2, n);
   vtkMath::Normalize(n);
 
   // The rotation axis, together with the camera focal point, form a line.
@@ -245,10 +255,12 @@ void vtkRotateCameraAction::DoAction()
   pr[2] = f[2] + t*n[2];
 
   // The point pr and the points p, p0 form our rotation angle
-  double v1[3], v2[3];
+  double v1[3];
   v1[0] = p0[0] - pr[0];
   v1[1] = p0[1] - pr[1];
   v1[2] = p0[2] - pr[2];
+
+  double v2[3];
   v2[0] = p[0] - pr[0];
   v2[1] = p[1] - pr[1];
   v2[2] = p[2] - pr[2];
