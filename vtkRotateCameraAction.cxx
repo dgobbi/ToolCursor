@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkRotateCameraAction);
 
 //----------------------------------------------------------------------------
@@ -191,6 +191,22 @@ void vtkRotateCameraAction::DoAction()
   //cerr << "s = " << sqrt(s2) << ", smax = " << sqrt(s2max) << "\n"; 
   if (s2 > s2max)
     {
+    // Get the current display position. 
+    double x, y;
+    this->GetLastDisplayPosition(x, y);
+
+    // Get the view ray and see where it intersects the sphere of rotation.
+    // This involves several steps and solving a quadratic equation.
+    double p1[3], p2[3];
+    this->DisplayToWorld(x, y, 0.0, p1);
+    this->DisplayToWorld(x, y, 1.0, p2);
+
+    // Compute the intersection point
+    double pl[3];
+    pl[0] = p1[0]*(1 - t) + p2[0]*t;
+    pl[1] = p1[1]*(1 - t) + p2[1]*t;
+    pl[2] = p1[2]*(1 - t) + p2[2]*t;
+
     //if (s2 > r2/d2*(d2 - r2)) { cerr << "outside 2\n"; }
     //else { cerr << "in the ring 2\n"; }
     double s = sqrt(s2);
@@ -210,10 +226,6 @@ void vtkRotateCameraAction::DoAction()
     p[0] = sx*cvx[0] + sy*cvy[0] + sz*cvz[0] + f[0];
     p[1] = sx*cvx[1] + sy*cvy[1] + sz*cvz[1] + f[1];
     p[2] = sx*cvx[2] + sy*cvy[2] + sz*cvz[2] + f[2];
-
-    w2[0] = p[0] - f[0];
-    w2[1] = p[1] - f[1];
-    w2[2] = p[2] - f[2];
     }
 
   // Get the initial point.
@@ -230,29 +242,44 @@ void vtkRotateCameraAction::DoAction()
   w[0] = p[0] - p0[0];
   w[1] = p[1] - p0[1];
   w[2] = p[2] - p0[2];
-
-  if (vtkMath::Dot(w, w) < 1e-20)
+  double delta = vtkMath::Norm(w);
+  if (delta/r < 1e-7)
     {
     //cerr << "same point!\n";
     return;
     }
 
-  // Cross with the view ray to get the desired rotation axis.
+  // The line between pr and our center-of-rotation is the line of rotation
+  double pr[3];
+
+  // First, get the direction of the line of rotation
   double n[3];
   vtkMath::Cross(w, w2, n);
-  vtkMath::Normalize(n);
+  double nlen = vtkMath::Norm(n);
 
-  // The rotation axis, together with the camera focal point, form a line.
-  // Find the point on that line that is closest to the two points.
-  u[0] = p0[0] - f[0]; 
-  u[1] = p0[1] - f[1]; 
-  u[2] = p0[2] - f[2]; 
+  if (nlen/delta < 1e-5 || s2 > s2max)
+    {
+    // Can't define a line
+    pr[0] = f[0];
+    pr[1] = f[1];
+    pr[2] = f[2];
+    }
+  else
+    {
+    n[0] = n[0] / nlen;
+    n[1] = n[1] / nlen;
+    n[2] = n[2] / nlen;
 
-  double pr[3];
-  t = vtkMath::Dot(u, n);
-  pr[0] = f[0] + t*n[0];
-  pr[1] = f[1] + t*n[1];
-  pr[2] = f[2] + t*n[2];
+    // Find the point on the line that is closest to the two points.
+    u[0] = p0[0] - f[0];
+    u[1] = p0[1] - f[1];
+    u[2] = p0[2] - f[2];
+
+    t = vtkMath::Dot(u, n);
+    pr[0] = f[0] + t*n[0];
+    pr[1] = f[1] + t*n[1];
+    pr[2] = f[2] + t*n[2];
+    }
 
   // The point pr and the points p, p0 form our rotation angle
   double v1[3];
