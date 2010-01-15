@@ -41,35 +41,27 @@ public:
   virtual void StopAction();
   virtual void DoAction();
 
-  // Description:
-  // This method allows the action to constrain the cursor position.
-  virtual void ConstrainCursor(double position[3], double normal[3]);
-
 protected:
   vtkRotateCameraAction();
   ~vtkRotateCameraAction();
-
-  void SetNormal(double normal[3]) {
-    this->Normal[0] = normal[0];
-    this->Normal[1] = normal[1];
-    this->Normal[2] = normal[2]; };
-
-  void GetNormal(double normal[3]) {
-    normal[0] = this->Normal[0];
-    normal[1] = this->Normal[1];
-    normal[2] = this->Normal[2]; };
 
   void GetCenterOfRotation(double center[3]) {
     center[0] = this->CenterOfRotation[0];
     center[1] = this->CenterOfRotation[1];
     center[2] = this->CenterOfRotation[2]; };
 
+  void GetStickyPosition(double pos[3]) {
+    pos[0] = this->StickyPosition[0];
+    pos[1] = this->StickyPosition[1];
+    pos[2] = this->StickyPosition[2]; };
+
   double GetRadius() {
     return this->Radius; };
 
-  double Normal[3];
   double CenterOfRotation[3];
+  double StickyPosition[3];
   double Radius;
+  int Sticky;
 
   double StartCameraPosition[3];
   double StartCameraViewUp[3];
