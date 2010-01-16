@@ -45,7 +45,7 @@
 #include "vtkPushPlaneAction.h"
 #include "vtkRotateCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.33 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.34 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -238,8 +238,8 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = 0;
   shape = this->AddShape(actionShapes, "Rotator");
   action = this->AddAction(rotateAction);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, 0, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, 0, modifier | VTK_SCURSOR_B1);
 
   // Binding for "Cone" cursor
   modifier = 0;

@@ -45,6 +45,8 @@ protected:
   vtkRotateCameraAction();
   ~vtkRotateCameraAction();
 
+  int IsStickyPossible(const double position[3]);
+
   void GetCenterOfRotation(double center[3]) {
     center[0] = this->CenterOfRotation[0];
     center[1] = this->CenterOfRotation[1];
@@ -55,13 +57,12 @@ protected:
     pos[1] = this->StickyPosition[1];
     pos[2] = this->StickyPosition[2]; };
 
-  double GetRadius() {
-    return this->Radius; };
-
   double CenterOfRotation[3];
   double StickyPosition[3];
   double Radius;
+  double MinimumRadius;
   int Sticky;
+  double StickyDirection[2];
 
   double StartCameraPosition[3];
   double StartCameraViewUp[3];
