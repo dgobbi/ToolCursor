@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.37 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.38 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -686,29 +686,26 @@ void vtkSurfaceCursor::OnRender()
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::SetDisplayPosition(double x, double y)
 {
-  vtkRenderer *renderer = this->Renderer;
-  int inRenderer = 0;
-
-  if (renderer && renderer->IsInViewport(x, y));
+  if (this->DisplayPosition[0] == x && this->DisplayPosition[1] == y)
     {
-    inRenderer = 1;
+    return;
     }
 
-  if (this->DisplayPosition[0] != x || this->DisplayPosition[1] != y ||
-      this->IsInViewport != inRenderer)
-    {
-    this->IsInViewport = inRenderer;
-    this->DisplayPosition[0] = x;
-    this->DisplayPosition[1] = y;
+  this->DisplayPosition[0] = x;
+  this->DisplayPosition[1] = y;
 
-    this->Modified();
-    }
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 {
   this->SetDisplayPosition(x, y);
+
+  if (this->Renderer)
+    {
+    this->SetIsInViewport(this->Renderer->IsInViewport(x, y));
+    }
 
   if (this->Action)
     {

@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -104,6 +104,7 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
 
     iren->AddObserver(vtkCommand::KeyPressEvent, command, priority);
     iren->AddObserver(vtkCommand::KeyReleaseEvent, command, priority);
+    iren->AddObserver(vtkCommand::EnterEvent, command, priority);
     iren->AddObserver(vtkCommand::LeaveEvent, command, priority);
     iren->AddObserver(vtkCommand::MouseMoveEvent, command, priority);
     iren->AddObserver(vtkCommand::LeftButtonPressEvent, command, priority);
@@ -116,6 +117,7 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
     command = this->PassiveEventCallbackCommand;
     renwin->AddObserver(vtkCommand::StartEvent, command);
     renwin->AddObserver(vtkCommand::EndEvent, command);
+    iren->AddObserver(vtkCommand::EnterEvent, command);
     iren->AddObserver(vtkCommand::LeaveEvent, command);
     iren->AddObserver(vtkCommand::MouseMoveEvent, command);
     iren->AddObserver(vtkCommand::LeftButtonPressEvent, command);
@@ -238,6 +240,14 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       int x, y;
       iren->GetEventPosition(x, y);
       cursor->SetDisplayPosition(x, y);
+      }
+      break;
+
+    case vtkCommand::EnterEvent:
+      {
+      // Mouse move events might cease after mouse leaves the window,
+      // leaving EventPosition with the last in-window value
+      cursor->SetIsInViewport(1);
       }
       break;
 
@@ -372,6 +382,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       }
       break;
 
+    //case vtkCommand::EnterEvent: // wait until move occurs before rendering
     case vtkCommand::LeaveEvent:
     case vtkCommand::KeyPressEvent:
     case vtkCommand::KeyReleaseEvent:
