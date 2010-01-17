@@ -19,6 +19,7 @@ SET(LIB_SRCS
   vtkSurfaceCursorInteractorObserver.cxx
   vtkSurfaceCursorShapes.cxx
   vtkSystemCursorShapes.cxx
+  vtkZoomCameraAction.cxx
 )
 
 # The remainder of this file can usually be left alone

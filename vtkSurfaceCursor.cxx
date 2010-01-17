@@ -46,8 +46,9 @@
 #include "vtkPanCameraAction.h"
 #include "vtkRotateCameraAction.h"
 #include "vtkSpinCameraAction.h"
+#include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.36 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.37 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -212,6 +213,7 @@ void vtkSurfaceCursor::BindDefaultActions()
   vtkSurfaceCursorAction *rotateAction = vtkRotateCameraAction::New();
   vtkSurfaceCursorAction *spinAction = vtkSpinCameraAction::New();
   vtkSurfaceCursorAction *panAction = vtkPanCameraAction::New();
+  vtkSurfaceCursorAction *zoomAction = vtkZoomCameraAction::New();
 
   int action, shape, mode, modifier, pickInfo;
 
@@ -265,6 +267,14 @@ void vtkSurfaceCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
+  // Binding for "Zoom" cursor and action
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Mover");
+  action = this->AddAction(zoomAction);
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B2);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B2);
 
   actionShapes->Delete();
   geometricShapes->Delete();
