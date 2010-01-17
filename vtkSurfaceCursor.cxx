@@ -43,10 +43,11 @@
 #include "vtkGeometricCursorShapes.h"
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
+#include "vtkPanCameraAction.h"
 #include "vtkRotateCameraAction.h"
 #include "vtkSpinCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.35 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.36 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -210,6 +211,7 @@ void vtkSurfaceCursor::BindDefaultActions()
   vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
   vtkSurfaceCursorAction *rotateAction = vtkRotateCameraAction::New();
   vtkSurfaceCursorAction *spinAction = vtkSpinCameraAction::New();
+  vtkSurfaceCursorAction *panAction = vtkPanCameraAction::New();
 
   int action, shape, mode, modifier, pickInfo;
 
@@ -248,11 +250,13 @@ void vtkSurfaceCursor::BindDefaultActions()
   shape = this->AddShape(geometricShapes, "Cone");
   this->BindShape(shape, mode, pickInfo, modifier);
 
-  // Binding for "Mover" cursor (the InteractorStyle does the moving)
+  // Binding for "Mover" cursor and action
   modifier = VTK_SCURSOR_SHIFT;
   shape = this->AddShape(actionShapes, "Mover");
+  action = this->AddAction(panAction);
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   // Binding for "Spinner" cursor and action
   modifier = VTK_SCURSOR_CONTROL;

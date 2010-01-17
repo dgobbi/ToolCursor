@@ -10,6 +10,7 @@ SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
 SET(LIB_SRCS
   vtkActionCursorShapes.cxx
   vtkGeometricCursorShapes.cxx
+  vtkPanCameraAction.cxx
   vtkPushPlaneAction.cxx
   vtkRotateCameraAction.cxx
   vtkSpinCameraAction.cxx
