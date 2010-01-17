@@ -12,6 +12,7 @@ SET(LIB_SRCS
   vtkGeometricCursorShapes.cxx
   vtkPushPlaneAction.cxx
   vtkRotateCameraAction.cxx
+  vtkSpinCameraAction.cxx
   vtkSurfaceCursor.cxx
   vtkSurfaceCursorAction.cxx
   vtkSurfaceCursorInteractorObserver.cxx

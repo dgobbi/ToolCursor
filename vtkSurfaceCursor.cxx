@@ -44,8 +44,9 @@
 #include "vtkSurfaceCursorAction.h"
 #include "vtkPushPlaneAction.h"
 #include "vtkRotateCameraAction.h"
+#include "vtkSpinCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.34 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.35 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -208,6 +209,7 @@ void vtkSurfaceCursor::BindDefaultActions()
   vtkSurfaceCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
   vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
   vtkSurfaceCursorAction *rotateAction = vtkRotateCameraAction::New();
+  vtkSurfaceCursorAction *spinAction = vtkSpinCameraAction::New();
 
   int action, shape, mode, modifier, pickInfo;
 
@@ -234,7 +236,7 @@ void vtkSurfaceCursor::BindDefaultActions()
   // ------------ Default Prop3D Bindings------------- 
   pickInfo = VTK_SCURSOR_PROP3D;
 
-  // Binding for "Rotator" cursor (the InteractorStyle handles rotation)
+  // Binding for "Rotator" cursor and action
   modifier = 0;
   shape = this->AddShape(actionShapes, "Rotator");
   action = this->AddAction(rotateAction);
@@ -252,11 +254,13 @@ void vtkSurfaceCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
-  // Binding for "Spinner" cursor (the InteractorStyle does the spinning)
+  // Binding for "Spinner" cursor and action
   modifier = VTK_SCURSOR_CONTROL;
   shape = this->AddShape(actionShapes, "Spinner");
+  action = this->AddAction(spinAction);
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   actionShapes->Delete();
   geometricShapes->Delete();
