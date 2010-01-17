@@ -14,8 +14,9 @@
 =========================================================================*/
 // .NAME vtkZoomCameraAction - Zoom the view by moving the camera in and out.
 // .SECTION Description
-// This class is used to zoom the view.  The camera is moved towards or
-// away from the focal point in order to achieve the zoom.
+// This class is used to zoom the view.  The default way of doing the zoom
+// is by dollying the camera towards or away from the focal point in order
+// to achieve the zoom.
 
 #ifndef __vtkZoomCameraAction_h
 #define __vtkZoomCameraAction_h
@@ -37,6 +38,14 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Set whether to zoom by dollying the camera or by decreasing the
+  // field of view.  This option is ignored if the camera is using
+  // a parallel projection.  The default is to zoom by dollying.
+  vtkSetMacro(ZoomByDolly, int);
+  vtkBooleanMacro(ZoomByDolly, int);
+  int GetZoomByDolly(int) { return this->ZoomByDolly; };
+
+  // Description:
   // These are the methods that are called when the action takes place.
   virtual void StartAction();
   virtual void StopAction();
@@ -46,9 +55,13 @@ protected:
   vtkZoomCameraAction();
   ~vtkZoomCameraAction();
 
+  int ZoomByDolly;
+
   double StartCameraPosition[3];
   double StartClippingRange[2];
   double StartParallelScale;
+  double StartViewAngle;
+
   double ZoomFactor;
 
   vtkTransform *Transform;

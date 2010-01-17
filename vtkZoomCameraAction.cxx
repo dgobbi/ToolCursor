@@ -24,12 +24,14 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkZoomCameraAction);
 
 //----------------------------------------------------------------------------
 vtkZoomCameraAction::vtkZoomCameraAction()
 {
+  this->ZoomByDolly = 1;
+
   this->Transform = vtkTransform::New();
 }
 
@@ -43,6 +45,8 @@ vtkZoomCameraAction::~vtkZoomCameraAction()
 void vtkZoomCameraAction::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+
+  os << indent << "ZoomByDolly: " << (this->ZoomByDolly ? "On\n" : "Off\n");
 }
 
 //----------------------------------------------------------------------------
@@ -56,6 +60,8 @@ void vtkZoomCameraAction::StartAction()
   camera->GetPosition(this->StartCameraPosition);
   camera->GetClippingRange(this->StartClippingRange);
   this->StartParallelScale = camera->GetParallelScale();
+  this->StartViewAngle = camera->GetViewAngle();
+
   this->ZoomFactor = 1.0;
 
   this->Transform->Identity();
@@ -167,28 +173,42 @@ void vtkZoomCameraAction::DoAction()
     }
   else
     {
-    double cameraPos[3];
-    this->Transform->TransformPoint(this->StartCameraPosition, cameraPos);
-    camera->SetPosition(cameraPos);
-
-    double v[3];
-    v[0] = cameraPos[0] - this->StartCameraPosition[0];
-    v[1] = cameraPos[1] - this->StartCameraPosition[1];
-    v[2] = cameraPos[2] - this->StartCameraPosition[2];
-
-    double dist = vtkMath::Dot(v, cvz);
-
-    double d1 = this->StartClippingRange[0] + dist;
-    double d2 = this->StartClippingRange[1] + dist;
-
-    double tol = cursor->GetRenderer()->GetNearClippingPlaneTolerance();
-
-    if (d1 < d2*tol)
+    if (this->ZoomByDolly)
       {
-      d1 = d2*tol;
-      }
+      double cameraPos[3];
+      this->Transform->TransformPoint(this->StartCameraPosition, cameraPos);
 
-    camera->SetClippingRange(d1, d2);
+      camera->SetPosition(cameraPos);
+
+      double v[3];
+      v[0] = cameraPos[0] - this->StartCameraPosition[0];
+      v[1] = cameraPos[1] - this->StartCameraPosition[1];
+      v[2] = cameraPos[2] - this->StartCameraPosition[2];
+
+      double dist = vtkMath::Dot(v, cvz);
+
+      double d1 = this->StartClippingRange[0] + dist;
+      double d2 = this->StartClippingRange[1] + dist;
+
+      double tol = cursor->GetRenderer()->GetNearClippingPlaneTolerance();
+
+      if (d1 < d2*tol)
+        {
+        d1 = d2*tol;
+        }
+
+      camera->SetClippingRange(d1, d2);
+      }
+    else
+      {
+      // Zoom by changing the view angle
+
+      double h = 2*tan(0.5*vtkMath::RadiansFromDegrees(this->StartViewAngle));
+      h /= this->ZoomFactor;
+      double viewAngle = 2*vtkMath::DegreesFromRadians(atan(0.5*h));
+
+      camera->SetViewAngle(viewAngle);
+      }
     }
 }
 
