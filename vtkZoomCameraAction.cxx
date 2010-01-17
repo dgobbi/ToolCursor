@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkZoomCameraAction);
 
 //----------------------------------------------------------------------------
@@ -119,13 +119,41 @@ void vtkZoomCameraAction::DoAction()
   g[1] = f[1] + df*cvz[1];
   g[2] = f[2] + df*cvz[2];
 
-  // Magnification factor
-  double mag = sqrt(vtkMath::Distance2BetweenPoints(g, p)/
-                    vtkMath::Distance2BetweenPoints(g, p0));
+  // Distance from center for the two points
+  double r1 = sqrt(vtkMath::Distance2BetweenPoints(g, p0));
+  double r2 = sqrt(vtkMath::Distance2BetweenPoints(g, p));
 
-  // Get the camera position to determine necessary motion.
+  // Get the camera position
   camera->GetPosition(p);
   double dp = sqrt(vtkMath::Distance2BetweenPoints(p,g));
+
+  // Get viewport height at the current depth
+  double height = 1;
+  if (camera->GetParallelProjection())
+    {
+    height = camera->GetParallelScale();
+    }
+  else
+    {
+    double angle = vtkMath::RadiansFromDegrees(camera->GetViewAngle());
+    height = 2*dp*sin(angle/2);
+    }
+
+  // Constrain the values when they are close to the center, in order to
+  // avoid magifications of zero or infinity
+  double halfpi = 0.5*vtkMath::DoublePi();
+  double r0 = 0.1*height;
+  if (r1 < r0)
+    {
+    r1 = r0*(1.0 - sin((1.0 - r1/r0)*halfpi)/halfpi);
+    }
+  if (r2 < r0)
+    {
+    r2 = r0*(1.0 - sin((1.0 - r2/r0)*halfpi)/halfpi);
+    }
+
+  // Compute magnification and corresponding camera motion
+  double mag = r2/r1;
   double delta = dp - dp/mag;
 
   this->Transform->PostMultiply();
@@ -135,7 +163,7 @@ void vtkZoomCameraAction::DoAction()
 
   if (camera->GetParallelProjection())
     {
-    camera->SetParallelScale(this->StartParallelScale*this->ZoomFactor);
+    camera->SetParallelScale(this->StartParallelScale/this->ZoomFactor);
     }
   else
     {
