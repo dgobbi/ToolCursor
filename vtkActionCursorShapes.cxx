@@ -33,8 +33,9 @@
 #include "vtkReverseSense.h"
 #include "vtkWarpTo.h"
 #include "vtkTransform.h"
+#include "vtkPerspectiveTransform.h"
 
-vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -61,20 +62,24 @@ void vtkActionCursorShapes::MakeShapes()
 
   vtkPolyData *arrow = this->MakeArrow();
 
-  data = this->MakeMoverShape(arrow, 0);
-  this->AddShape("Mover", data, 0);
+  data = this->MakeMoveShape(arrow, 0);
+  this->AddShape("Move", data, 0);
   data->Delete();
 
-  data = this->MakeMoverShape(arrow, 1);
-  this->AddShape("Rotator", data, 0);
+  data = this->MakeMoveShape(arrow, 1);
+  this->AddShape("Rotate", data, 0);
   data->Delete();
 
-  data = this->MakePusherShape(arrow);
-  this->AddShape("Pusher", data, VTK_SCURSOR_FLATX);
+  data = this->MakePushShape(arrow);
+  this->AddShape("Push", data, VTK_SCURSOR_FLATX);
   data->Delete();
 
-  data = this->MakeSpinnerShape(arrow);
-  this->AddShape("Spinner", data, 0);
+  data = this->MakeSpinShape(arrow);
+  this->AddShape("Spin", data, VTK_SCURSOR_RADIALX);
+  data->Delete();
+
+  data = this->MakeZoomShape(arrow);
+  this->AddShape("Zoom", data, VTK_SCURSOR_RADIALX);
   data->Delete();
 
   arrow->Delete();
@@ -162,7 +167,7 @@ vtkPolyData *vtkActionCursorShapes::MakeWarpedArrow(vtkPolyData *arrow,
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkActionCursorShapes::MakeMoverShape(
+vtkDataSet *vtkActionCursorShapes::MakeMoveShape(
   vtkPolyData *arrow, int warped)
 {
   vtkPolyData *leafData = vtkActionCursorShapes::MakeWarpedArrow(
@@ -238,7 +243,7 @@ vtkDataSet *vtkActionCursorShapes::MakeMoverShape(
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkActionCursorShapes::MakePusherShape(vtkPolyData *arrow)
+vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
 {
   vtkPolyData *leafData = vtkActionCursorShapes::MakeWarpedArrow(
     arrow, 10.0, 0.0, 10.0, 0.0);
@@ -344,7 +349,7 @@ vtkDataSet *vtkActionCursorShapes::MakePusherShape(vtkPolyData *arrow)
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkActionCursorShapes::MakeSpinnerShape(vtkPolyData *arrow)
+vtkDataSet *vtkActionCursorShapes::MakeSpinShape(vtkPolyData *arrow)
 {
   vtkPolyData *leafData = vtkActionCursorShapes::MakeWarpedArrow(
     arrow, 10.0, 0.0, -5.0, 1.0);
@@ -414,3 +419,104 @@ vtkDataSet *vtkActionCursorShapes::MakeSpinnerShape(vtkPolyData *arrow)
 
   return data;
 }
+
+//----------------------------------------------------------------------------
+vtkDataSet *vtkActionCursorShapes::MakeZoomShape(vtkPolyData *arrow)
+{
+  vtkPolyData *leafData = vtkActionCursorShapes::MakeWarpedArrow(
+    arrow, 10.0, 0.0, 10.0, 0.0);
+  vtkPoints *leafPoints = leafData->GetPoints();
+  vtkCellArray *leafStrips = leafData->GetStrips();
+  vtkDataArray *leafNormals = leafData->GetPointData()->GetNormals();
+
+  vtkPolyData *data = vtkPolyData::New();
+  vtkPoints *points = vtkPoints::New();
+  vtkDoubleArray *normals = vtkDoubleArray::New();
+  normals->SetNumberOfComponents(3);
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkIntArray *scalars = vtkIntArray::New();
+
+  vtkPerspectiveTransform *transform = vtkPerspectiveTransform::New();
+  transform->PreMultiply();
+  transform->Translate(24, 0, 0);
+
+  static double rotate180[16] = {
+   -1, 0, 0, 0,
+    0,-1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  };
+
+  int color = 1;
+
+  for (int j = 0; j < 2; j++)
+    {
+    vtkIdType nPoints = points->GetNumberOfPoints();
+    transform->TransformPointsNormalsVectors(leafPoints, points,
+                                             leafNormals, normals,
+                                             0, 0);
+    vtkIdType npts;
+    vtkIdType *pts;
+    leafStrips->InitTraversal();
+    while (leafStrips->GetNextCell(npts, pts))
+      {
+      strips->InsertNextCell(npts);
+      for (vtkIdType k = 0; k < npts; k++)
+        {
+        strips->InsertCellPoint(pts[k] + nPoints);
+        }
+      }
+    vtkIdType n = leafPoints->GetNumberOfPoints();
+    for (int ii = 0; ii < n; ii++)
+      {
+      scalars->InsertNextTupleValue(&color);
+      }
+    transform->Concatenate(rotate180);
+    color = !color;
+    }
+
+  static double rotate90[16] = {
+     0,  0,  1,  0,
+     0,  1,  0,  0,
+    -1,  0,  0,  0,
+     0,  0,  0,  1
+  };
+
+  transform->Identity();
+  transform->PostMultiply();
+  transform->SetupCamera(-24, 0, 0,  24, 0, 0,  0, 1, 0);
+  transform->Frustum(-8, 8, -8, 8, 24, 72);
+  transform->Translate(0, 0, -1.0);
+  transform->Scale(12, 12, -16);
+  transform->Concatenate(rotate90);
+
+  vtkPoints *newpoints = vtkPoints::New();
+  vtkDoubleArray *newnormals = vtkDoubleArray::New();
+  newnormals->SetNumberOfComponents(3);
+
+  transform->TransformPointsNormalsVectors(points, newpoints,
+                                           normals, newnormals,
+                                           0, 0);
+
+  points->Delete();
+  normals->Delete();
+  points = newpoints;
+  normals = newnormals;
+
+  transform->Delete();
+
+  leafData->Delete();
+
+  data->SetPoints(points);
+  points->Delete();
+  data->GetPointData()->SetNormals(normals);
+  normals->Delete();
+  data->GetPointData()->SetScalars(scalars);
+  scalars->Delete();
+  data->SetStrips(strips);
+  strips->Delete();
+
+  return data;
+}
+
+

@@ -15,8 +15,8 @@
 // .NAME vtkActionCursorShapes - Cursor shapes for interaction.
 // .SECTION Description
 // This class is a collection of action shapes for use with the
-// vtkSurfaceCursor.  The shapes available are "Mover", "Rotator",
-// "Pusher", and "Spinner".  All cursors are constructed from the
+// vtkSurfaceCursor.  The shapes available are "Move", "Rotate",
+// "Push", and "Spin".  All cursors are constructed from the
 // same 3D arrow shape and have a two-tone color scheme.
 
 #ifndef __vtkActionCursorShapes_h
@@ -43,9 +43,10 @@ protected:
   ~vtkActionCursorShapes();
 
   void MakeShapes();
-  static vtkDataSet *MakeMoverShape(vtkPolyData *arrow, int warped);
-  static vtkDataSet *MakePusherShape(vtkPolyData *arrow);
-  static vtkDataSet *MakeSpinnerShape(vtkPolyData *arrow);
+  static vtkDataSet *MakeMoveShape(vtkPolyData *arrow, int warped);
+  static vtkDataSet *MakePushShape(vtkPolyData *arrow);
+  static vtkDataSet *MakeSpinShape(vtkPolyData *arrow);
+  static vtkDataSet *MakeZoomShape(vtkPolyData *arrow);
   static vtkPolyData *MakeArrow();
   static vtkPolyData *MakeWarpedArrow(vtkPolyData *arrow,
                                       double warpX, double warpY,

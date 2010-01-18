@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkZoomCameraAction);
 
 //----------------------------------------------------------------------------
@@ -210,5 +210,19 @@ void vtkZoomCameraAction::DoAction()
       camera->SetViewAngle(viewAngle);
       }
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkZoomCameraAction::ConstrainCursor(double position[3],
+                                          double normal[3])
+{
+  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
+  vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
+
+  // Force the normal to point towards camera
+  normal[0] = matrix->GetElement(2, 0);
+  normal[1] = matrix->GetElement(2, 1);
+  normal[2] = matrix->GetElement(2, 2);
 }
 

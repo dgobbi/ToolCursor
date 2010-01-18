@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.40 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.41 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -200,14 +200,14 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   // Binding for "Spinner" cursor and action, when user clicks background
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Spinner");
+  shape = this->AddShape(actionShapes, "Spin");
   action = this->AddAction(spinAction);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   // Binding for "Mover" cursor and action
   modifier = VTK_SCURSOR_SHIFT;
-  shape = this->AddShape(actionShapes, "Mover");
+  shape = this->AddShape(actionShapes, "Move");
   action = this->AddAction(panAction);
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
@@ -220,7 +220,7 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   // Binding for "Zoom" cursor and action
   modifier = VTK_SCURSOR_CONTROL;
-  shape = this->AddShape(actionShapes, "Mover");
+  shape = this->AddShape(actionShapes, "Zoom");
   action = this->AddAction(zoomAction);
   this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
@@ -241,7 +241,7 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   // Binding for "Rotator" cursor and action
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Rotator");
+  shape = this->AddShape(actionShapes, "Rotate");
   action = this->AddAction(rotateAction);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
@@ -258,7 +258,7 @@ void vtkSurfaceCursor::BindDefaultActions()
 
   // Binding for "PushPlane" with "Pusher" cursor
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Pusher");
+  shape = this->AddShape(actionShapes, "Push");
   action = this->AddAction(pushAction);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
@@ -642,8 +642,8 @@ void vtkSurfaceCursor::ComputePosition()
   this->PickFlags = pickFlags;
 
   // Compute an "up" vector for the cursor.
-  this->ComputeVectorFromNormal(this->Normal, this->Vector,
-                                this->Mapper, this->Renderer,
+  this->ComputeVectorFromNormal(this->Position, this->Normal, this->Vector,
+                                this->Renderer,
                                 this->Shapes->GetShapeFlags(this->Shape));
 
   // Compute the pose matrix for the cursor
@@ -948,41 +948,86 @@ void vtkSurfaceCursor::ComputeMatrix(const double p[3], const double n[3],
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
+void vtkSurfaceCursor::ComputeVectorFromNormal(const double position[3],
+                                               const double normal[3],
                                                double vector[3],
-                                               vtkDataSetMapper *cursorMapper,
                                                vtkRenderer *renderer,
                                                int cursorFlags)
 {
+  // Mask out all but the relevant flags
+  cursorFlags = (cursorFlags & VTK_SCURSOR_ORIENT);
+
   // Get the camera orientation
   vtkCamera *camera = renderer->GetActiveCamera();
   vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
 
+  // Get a 3x3 matrix with the camera orientation
+  double mat[3][3];
+  for (int i = 0; i < 3; i++)
+    {
+    mat[i][0] = matrix->GetElement(i, 0);
+    mat[i][1] = matrix->GetElement(i, 1);
+    mat[i][2] = matrix->GetElement(i, 2);
+    }
+
+  if (cursorFlags == VTK_SCURSOR_RADIALX ||
+      cursorFlags == VTK_SCURSOR_RADIALY)
+    {
+    // Make "y" point away from camera axis
+    double f[3];
+    camera->GetFocalPoint(f);
+
+    double v[3];
+    v[0] = position[0] - f[0];
+    v[1] = position[1] - f[1];
+    v[2] = position[2] - f[2];
+
+    // Make "x" perpendicular to new "y"
+    vtkMath::Cross(v, mat[2], mat[0]);
+    vtkMath::Normalize(mat[0]);
+
+    // Orthogonalize "y" wrt to camera axis
+    vtkMath::Cross(mat[2], mat[0], mat[1]);
+    vtkMath::Normalize(mat[1]);
+    }
+
   // These ints say how we want to create the vector
   int direction = 1; // We want to align the cursor y vector with...
-  int primary = 1;   // the camera view up vector if possible...
-  int secondary = 2; // or with the view plane normal otherwise.
+  int primary = 1;   // the camera's y vector if possible...
+  int secondary = 2; // or with the camera's z vector otherwise.
 
   // If the data is "flat" and the flat dimension is not the z dimension,
   // then point the flat side at the camera.
-  if ( (cursorFlags & VTK_SCURSOR_FLATX) )
+  if (cursorFlags == VTK_SCURSOR_FLATX)
     {
     direction = 0;
     primary = 2;
     secondary = 1;
     }
-  else if ( (cursorFlags & VTK_SCURSOR_FLATY) )
+  else if (cursorFlags == VTK_SCURSOR_FLATY)
     {
     direction = 1;
     primary = 2;
     secondary = 1;
     }
+  else if (cursorFlags == VTK_SCURSOR_RADIALX)
+    {
+    direction = 0;
+    primary = 1;
+    secondary = 0;
+    }
+  else if (cursorFlags == VTK_SCURSOR_RADIALY)
+    {
+    direction = 1;
+    primary = 1;
+    secondary = 0;
+    }
 
   // Get primary direction from camera, orthogonalize to the normal.
   double u[3];
-  u[0] = matrix->GetElement(primary,0);
-  u[1] = matrix->GetElement(primary,1);
-  u[2] = matrix->GetElement(primary,2);
+  u[0] = mat[primary][0];
+  u[1] = mat[primary][1];
+  u[2] = mat[primary][2];
 
   // dot will be 1.0 if primary and normal are the same
   double dot = vtkMath::Dot(normal, u);
@@ -990,9 +1035,9 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double normal[3],
   if (dot > 0.999)
     {
     // blend the vector with the secondary for stability
-    u[0] += matrix->GetElement(secondary,0) * (dot - 0.999);
-    u[1] += matrix->GetElement(secondary,1) * (dot - 0.999);
-    u[2] += matrix->GetElement(secondary,2) * (dot - 0.999);
+    u[0] += mat[secondary][0] * (dot - 0.999);
+    u[1] += mat[secondary][1] * (dot - 0.999);
+    u[2] += mat[secondary][2] * (dot - 0.999);
     }
 
   vtkMath::Cross(normal, u, u);

@@ -25,11 +25,15 @@
 class vtkSurfaceCursorShapeArray;
 class vtkDataSet;
 
-// Flags for shapes.
+// Flags for shapes.  The first few flags give hints about how
+// the cursor should be oriented.
+#define VTK_SCURSOR_ORIENT   0x0F
 #define VTK_SCURSOR_FLATX    0x01  // cursor is mainly in YZ plane
 #define VTK_SCURSOR_FLATY    0x02  // cursor is mainly in XZ plane
+#define VTK_SCURSOR_RADIALX  0x03  // point "x" away from camera axis
+#define VTK_SCURSOR_RADIALY  0x04  // point "y" away from camera axis
+#define VTK_SCURSOR_IMAGEXY  0x05  // Align cursor with image axes
 #define VTK_SCURSOR_RGB      0x10  // cursor uses RGB scalars
-#define VTK_SCURSOR_NORMLOCK 0x40  // lock orientation during interaction
 
 class VTK_EXPORT vtkSurfaceCursorShapes : public vtkObject
 {
