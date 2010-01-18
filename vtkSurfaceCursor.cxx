@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.39 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.40 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -144,6 +144,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   action->Delete();
 
   // Insert a blank shape, so that shapes start at 1
+  // (shape 0 will display the system cursor)
   vtkDataSet *data = vtkPolyData::New();
   this->Shapes->AddShape("", data, 0);
   data->Delete();
@@ -201,7 +202,6 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = 0;
   shape = this->AddShape(actionShapes, "Spinner");
   action = this->AddAction(spinAction);
-  this->BindShape(shape, mode, pickInfo, modifier);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
@@ -670,7 +670,7 @@ void vtkSurfaceCursor::OnRender()
   // update all of the props in the scene.
   this->ComputePosition();
   // Don't show cursor if nothing is underneath of it.
-  int visibility = (this->IsInViewport != 0 && this->PickFlags != 0);
+  int visibility = (this->IsInViewport != 0 && this->Shape != 0);
   this->Actor->SetVisibility(visibility);
 }
 
@@ -1181,3 +1181,4 @@ static void PrintFlags(int flags)
   cerr << ")";
 }
 */
+
