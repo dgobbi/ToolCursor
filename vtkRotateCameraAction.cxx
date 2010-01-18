@@ -24,7 +24,7 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkRotateCameraAction);
 
 //----------------------------------------------------------------------------
@@ -520,3 +520,56 @@ int vtkRotateCameraAction::IsStickyPossible(const double position[3])
   return 1;
 } 
 
+//----------------------------------------------------------------------------
+void vtkRotateCameraAction::ConstrainCursor(double position[3],
+                                            double normal[3])
+{
+  if (this->Sticky)
+    {
+    return;
+    }
+
+  // When cursor becomes "unstuck", point normal to the center
+
+  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
+
+  double f[3];
+  this->GetCenterOfRotation(f);
+
+  if (camera->GetParallelProjection())
+    {
+    normal[0] = position[0] - f[0];
+    normal[1] = position[1] - f[1];
+    normal[2] = position[2] - f[2];
+    vtkMath::Normalize(normal);
+    }
+  else
+    {
+    double p[3];
+    camera->GetPosition(p);
+ 
+    double u[3];
+    u[0] = position[0] - p[0];
+    u[1] = position[1] - p[1];
+    u[2] = position[2] - p[2];
+    vtkMath::Normalize(u);
+
+    double v[3];
+    v[0] = f[0] - p[0];
+    v[1] = f[1] - p[1];
+    v[2] = f[2] - p[2];
+
+    double t = vtkMath::Dot(u, v);
+
+    double q[3];
+    q[0] = p[0] + t*u[0];
+    q[1] = p[1] + t*u[1];
+    q[2] = p[2] + t*u[2];
+
+    normal[0] = q[0] - f[0];
+    normal[1] = q[1] - f[1];
+    normal[2] = q[2] - f[2];
+    vtkMath::Normalize(normal);
+    }
+}

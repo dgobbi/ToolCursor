@@ -41,6 +41,10 @@ public:
   virtual void StopAction();
   virtual void DoAction();
 
+  // Description:
+  // Constrain the position or orientation of the cursor.
+  virtual void ConstrainCursor(double position[3], double normal[3]);
+
 protected:
   vtkRotateCameraAction();
   ~vtkRotateCameraAction();
