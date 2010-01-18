@@ -35,7 +35,7 @@
 #include "vtkTransform.h"
 #include "vtkPerspectiveTransform.h"
 
-vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -75,7 +75,7 @@ void vtkActionCursorShapes::MakeShapes()
   data->Delete();
 
   data = this->MakeSpinShape(arrow);
-  this->AddShape("Spin", data, VTK_SCURSOR_RADIALX);
+  this->AddShape("Spin", data, VTK_SCURSOR_RADIALY);
   data->Delete();
 
   data = this->MakeZoomShape(arrow);
