@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.38 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.39 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -156,46 +156,16 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
 {
   this->SetRenderer(0);
 
-  if (this->RenderCommand)
-    {
-    this->RenderCommand->Delete();
-    }
-  if (this->Matrix)
-    {
-    this->Matrix->Delete();
-    }
-  if (this->Shapes)
-    {
-    this->Shapes->Delete();
-    }
-  if (this->Actions)
-    {
-    this->Actions->Delete();
-    }
-  if (this->ShapeBindings)
-    {
-    this->ShapeBindings->Delete();
-    }
-  if (this->ActionBindings)
-    {
-    this->ActionBindings->Delete();
-    }
-  if (this->Mapper)
-    {
-    this->Mapper->Delete();
-    }
-  if (this->LookupTable)
-    {
-    this->LookupTable->Delete();
-    }
-  if (this->Actor)
-    {
-    this->Actor->Delete();
-    }
-  if (this->Picker)
-    {
-    this->Picker->Delete();
-    }
+  if (this->RenderCommand) { this->RenderCommand->Delete(); }
+  if (this->Matrix) { this->Matrix->Delete(); }
+  if (this->Shapes) { this->Shapes->Delete(); }
+  if (this->Actions) { this->Actions->Delete(); }
+  if (this->ShapeBindings) { this->ShapeBindings->Delete(); }
+  if (this->ActionBindings) { this->ActionBindings->Delete(); }
+  if (this->Mapper) { this->Mapper->Delete(); }
+  if (this->LookupTable) { this->LookupTable->Delete(); }
+  if (this->Actor) { this->Actor->Delete(); }
+  if (this->Picker) { this->Picker->Delete(); }
 }
 
 //----------------------------------------------------------------------------
@@ -220,6 +190,62 @@ void vtkSurfaceCursor::BindDefaultActions()
   // ============ All Bindings for Mode 0 =============
   mode = 0;
 
+  // In terms of the "PickInfo" flags, it is necessary to start at the
+  // default bindings and work up to more specific collections of
+  // PickInfo flags.
+
+  // ------------ Default Bindings ------------- 
+  pickInfo = 0;
+
+  // Binding for "Spinner" cursor and action, when user clicks background
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Spinner");
+  action = this->AddAction(spinAction);
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
+  // Binding for "Mover" cursor and action
+  modifier = VTK_SCURSOR_SHIFT;
+  shape = this->AddShape(actionShapes, "Mover");
+  action = this->AddAction(panAction);
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
+  // Also bind to middle button
+  modifier = 0;
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B3);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B3);
+
+  // Binding for "Zoom" cursor and action
+  modifier = VTK_SCURSOR_CONTROL;
+  shape = this->AddShape(actionShapes, "Mover");
+  action = this->AddAction(zoomAction);
+  this->BindShape(shape, mode, pickInfo, modifier);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
+  // Also bind to right button
+  modifier = 0;
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B2);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B2);
+
+  // ------------ Default Prop3D Bindings------------- 
+  pickInfo = VTK_SCURSOR_PROP3D;
+
+  // Binding for "Cone" cursor
+  modifier = 0;
+  shape = this->AddShape(geometricShapes, "Cone");
+  this->BindShape(shape, mode, pickInfo, modifier);
+
+  // Binding for "Rotator" cursor and action
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Rotator");
+  action = this->AddAction(rotateAction);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+
   // ------------ Bindings for Prop3Ds with Clip/Crop Planes -------------
   pickInfo = (VTK_SCURSOR_PROP3D |
               VTK_SCURSOR_CLIP_PLANE |
@@ -237,49 +263,14 @@ void vtkSurfaceCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
-  // ------------ Default Prop3D Bindings------------- 
-  pickInfo = VTK_SCURSOR_PROP3D;
-
-  // Binding for "Rotator" cursor and action
-  modifier = 0;
-  shape = this->AddShape(actionShapes, "Rotator");
-  action = this->AddAction(rotateAction);
-  this->BindShape(shape, mode, 0, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, 0, modifier | VTK_SCURSOR_B1);
-
-  // Binding for "Cone" cursor
-  modifier = 0;
-  shape = this->AddShape(geometricShapes, "Cone");
-  this->BindShape(shape, mode, pickInfo, modifier);
-
-  // Binding for "Mover" cursor and action
-  modifier = VTK_SCURSOR_SHIFT;
-  shape = this->AddShape(actionShapes, "Mover");
-  action = this->AddAction(panAction);
-  this->BindShape(shape, mode, pickInfo, modifier);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-
-  // Binding for "Spinner" cursor and action
-  modifier = VTK_SCURSOR_CONTROL;
-  shape = this->AddShape(actionShapes, "Spinner");
-  action = this->AddAction(spinAction);
-  this->BindShape(shape, mode, pickInfo, modifier);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-
-  // Binding for "Zoom" cursor and action
-  modifier = 0;
-  shape = this->AddShape(actionShapes, "Mover");
-  action = this->AddAction(zoomAction);
-  this->BindShape(shape, mode, pickInfo, modifier);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B2);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B2);
 
   actionShapes->Delete();
   geometricShapes->Delete();
   rotateAction->Delete();
   pushAction->Delete();
+  spinAction->Delete();
+  panAction->Delete();
+  zoomAction->Delete();
 }
 
 //----------------------------------------------------------------------------
