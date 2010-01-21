@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -204,30 +204,30 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       if (iren->GetControlKey()) { modifier |= VTK_SCURSOR_CONTROL; }
 
       // Next look for the button, and whether it was pressed or released
-      if (event == vtkCommand::vtkCommand::LeftButtonPressEvent)
+      if (event == vtkCommand::LeftButtonPressEvent)
         {
         modifierMask |= VTK_SCURSOR_B1;
         modifier |= VTK_SCURSOR_B1;
         }
-      else if (event == vtkCommand::vtkCommand::RightButtonPressEvent)
+      else if (event == vtkCommand::RightButtonPressEvent)
         {
         modifierMask = VTK_SCURSOR_B2;
         modifier = VTK_SCURSOR_B2;
         }
-      else if (event == vtkCommand::vtkCommand::MiddleButtonPressEvent)
+      else if (event == vtkCommand::MiddleButtonPressEvent)
         {
         modifierMask = VTK_SCURSOR_B3;
         modifier = VTK_SCURSOR_B3;
         }
-      else if (event == vtkCommand::vtkCommand::LeftButtonReleaseEvent)
+      else if (event == vtkCommand::LeftButtonReleaseEvent)
         {
         modifierMask |= VTK_SCURSOR_B1;
         }
-      else if (event == vtkCommand::vtkCommand::RightButtonReleaseEvent)
+      else if (event == vtkCommand::RightButtonReleaseEvent)
         {
         modifierMask = VTK_SCURSOR_B2;
         }
-      else if (event == vtkCommand::vtkCommand::MiddleButtonReleaseEvent)
+      else if (event == vtkCommand::MiddleButtonReleaseEvent)
         {
         modifierMask = VTK_SCURSOR_B3;
         }
