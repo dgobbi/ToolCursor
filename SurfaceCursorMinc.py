@@ -60,14 +60,28 @@ reslice.SetInterpolationModeToCubic()
 #---------------------------------------------------------
 # set up the volume rendering
 
-volumeMapper = vtk.vtkVolumeTextureMapper3D()
-volumeMapper.SetInput(reslice.GetOutput())
-#volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
-#volumeMapper.SetVolumeRayCastFunction(volumeFunction)
-volumeMapper.CroppingOn()
 # original bounds: (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
-volumeMapper.SetCroppingRegionPlanes((0.0, 90.0, -126.0, 0.0, -72.0, 0.0))
+cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
+
+volumeMapper = vtk.vtkVolumeRayCastMapper()
+volumeMapper.SetInput(reslice.GetOutput())
+volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+volumeMapper.SetVolumeRayCastFunction(volumeFunction)
+volumeMapper.CroppingOn()
+volumeMapper.SetCroppingRegionPlanes(cropping)
 volumeMapper.SetCroppingRegionFlagsToFence()
+
+volumeMapper3D = vtk.vtkVolumeTextureMapper3D()
+volumeMapper3D.SetInput(reslice.GetOutput())
+volumeMapper3D.CroppingOn()
+volumeMapper3D.SetCroppingRegionPlanes(cropping)
+volumeMapper3D.SetCroppingRegionFlagsToFence()
+
+volumeMapper2D = vtk.vtkVolumeTextureMapper2D()
+volumeMapper2D.SetInput(reslice.GetOutput())
+volumeMapper2D.CroppingOn()
+volumeMapper2D.SetCroppingRegionPlanes(cropping)
+volumeMapper2D.SetCroppingRegionFlagsToFence()
 
 volumeColor = vtk.vtkColorTransferFunction()
 volumeColor.AddRGBPoint(0,0.0,0.0,0.0)
@@ -99,6 +113,17 @@ volumeProperty.SetSpecular(0.1)
 volume = vtk.vtkVolume()
 volume.SetMapper(volumeMapper)
 volume.SetProperty(volumeProperty)
+
+"""
+volume = vtk.vtkLODProp3D()
+lod2D = volume.AddLOD(volumeMapper2D, volumeProperty, 0.0)
+lod3D = volume.AddLOD(volumeMapper3D, volumeProperty, 0.0)
+lodRC = volume.AddLOD(volumeMapper, volumeProperty, 0.0)
+volume.SetLODLevel(lod2D, 2.0)
+volume.SetLODLevel(lod3D, 1.0)
+volume.SetLODLevel(lodRC, 0.0)
+volume.DisableLOD(lodRC)
+"""
 
 #---------------------------------------------------------
 # Do the surface rendering
