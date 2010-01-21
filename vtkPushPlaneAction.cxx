@@ -20,6 +20,7 @@
 #include "vtkVolumePicker.h"
 #include "vtkProp3DCollection.h"
 #include "vtkImageActor.h"
+#include "vtkLODProp3D.h"
 #include "vtkVolumeMapper.h"
 #include "vtkPlaneCollection.h"
 #include "vtkPlane.h"
@@ -29,7 +30,7 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -38,6 +39,7 @@ vtkPushPlaneAction::vtkPushPlaneAction()
   this->Transform = vtkTransform::New();
 
   this->ImageActor = 0;
+  this->LODProp3D = 0;
   this->VolumeMapper = 0;
   this->Mapper = 0;
   this->PlaneId = -1;
@@ -257,6 +259,7 @@ void vtkPushPlaneAction::GetPropInformation()
 
   this->Transform->SetMatrix(prop->GetMatrix());
   this->ImageActor = vtkImageActor::SafeDownCast(prop);
+  this->LODProp3D = vtkLODProp3D::SafeDownCast(prop);
   this->Mapper = picker->GetMapper();
   this->VolumeMapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
 
@@ -432,6 +435,23 @@ void vtkPushPlaneAction::SetOrigin(const double o[3])
 
       region[this->PlaneId] = x;
       this->VolumeMapper->SetCroppingRegionPlanes(region);
+
+      // Do the same for all other volumes in the LOD
+      if (this->LODProp3D)
+        {
+        int n = this->LODProp3D->GetNumberOfLODs();
+        for (int j = 0; j < n; j++)
+          {
+          vtkAbstractVolumeMapper *aMapper = 0;
+          // LOD Ids start at 1000, I don't know why
+          this->LODProp3D->GetLODMapper(1000+j, &aMapper);
+          vtkVolumeMapper *mapper = vtkVolumeMapper::SafeDownCast(aMapper);
+          if (mapper && mapper != this->VolumeMapper)
+            {
+            mapper->SetCroppingRegionPlanes(region);
+            }
+          }
+        }
       }
     }
 }   

@@ -26,6 +26,7 @@
 class vtkImageActor;
 class vtkVolumeMapper;
 class vtkAbstractMapper3D;
+class vtkLODProp3D;
 class vtkTransform;
 
 class VTK_EXPORT vtkPushPlaneAction : public vtkSurfaceCursorAction
@@ -58,6 +59,7 @@ protected:
   vtkImageActor *ImageActor;
   vtkVolumeMapper *VolumeMapper;
   vtkAbstractMapper3D *Mapper;
+  vtkLODProp3D *LODProp3D;
   int PlaneId;
   int PerpendicularPlane;
   double StartNormal[3];

@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -338,6 +338,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
 
       if (allowTakeFocus)
         {
+        iren->GetRenderWindow()->SetDesiredUpdateRate(100);
         if (cursor->PressButton(button))
           {
           self->GrabFocus(self->EventCallbackCommand,
@@ -379,6 +380,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
           self->ReleaseFocus();
           }
         }
+        iren->GetRenderWindow()->SetDesiredUpdateRate(0.0001);
       }
       break;
 
