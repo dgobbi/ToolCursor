@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.41 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.42 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -539,7 +539,8 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
       }
     }
 
-  if (mapper->IsA("vtkVolumeMapper") && picker->GetCroppingPlaneId() >= 0)
+  if (mapper && mapper->IsA("vtkVolumeMapper") &&
+      picker->GetCroppingPlaneId() >= 0)
     {
     // Also ensure that our Position lies on the cropping plane
     int planeId = picker->GetCroppingPlaneId();
@@ -564,11 +565,11 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
       }
     }
 
-  if (prop->IsA("vtkActor"))
+  if (mapper && mapper->IsA("vtkMapper"))
     {
     pickFlags = (pickFlags | VTK_SCURSOR_ACTOR);
     }
-  else if (prop->IsA("vtkVolume"))
+  else if (mapper && mapper->IsA("vtkAbstractVolumeMapper"))
     {
     pickFlags = (pickFlags | VTK_SCURSOR_VOLUME);
     }
