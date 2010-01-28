@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.42 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.43 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -913,10 +913,22 @@ double vtkSurfaceCursor::ComputeScale(const double position[3],
     }
   else
     {
+    vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
+    // Get a 3x3 matrix with the camera orientation
+    double cvz[3];
+    cvz[0] = matrix->GetElement(2, 0);
+    cvz[1] = matrix->GetElement(2, 1);
+    cvz[2] = matrix->GetElement(2, 2);
+
     double cameraPosition[3];
     camera->GetPosition(cameraPosition);
-    worldHeight = 2*(sqrt(vtkMath::Distance2BetweenPoints(position,
-                                                        cameraPosition))
+
+    double v[3];
+    v[0] = cameraPosition[0] - position[0];
+    v[1] = cameraPosition[1] - position[1];
+    v[2] = cameraPosition[2] - position[2];
+
+    worldHeight = 2*(vtkMath::Dot(v,cvz)
                      * tan(0.5*camera->GetViewAngle()/57.296));
     }
 
