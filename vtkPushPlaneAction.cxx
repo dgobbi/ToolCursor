@@ -30,7 +30,7 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -250,7 +250,8 @@ void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3])
 void vtkPushPlaneAction::GetPropInformation()
 {
   // Get all the information needed for the interaction
-  vtkVolumePicker *picker = this->GetSurfaceCursor()->GetPicker();
+  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkVolumePicker *picker = cursor->GetPicker();
 
   vtkProp3D *prop = picker->GetProp3D();
 
@@ -264,7 +265,7 @@ void vtkPushPlaneAction::GetPropInformation()
   this->PlaneId = -1;
 
   // Is this a VolumeMapper cropping plane or AbstractMapper clipping plane?
-  if (this->VolumeMapper && picker->GetCroppingPlaneId() >= 0)
+  if (this->VolumeMapper && (cursor->GetPickFlags() & VTK_SCURSOR_CROP_PLANE))
     {
     this->Mapper = 0;
     this->PlaneId = picker->GetCroppingPlaneId();
