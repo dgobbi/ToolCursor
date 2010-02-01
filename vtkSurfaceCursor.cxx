@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.44 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.45 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -246,8 +246,8 @@ void vtkSurfaceCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
-  // ------------ Bindings for Prop3Ds with Clip/Crop Planes -------------
-  pickInfo = (VTK_SCURSOR_PROP3D |
+  // ------------ Bindings for Volumes with Clip/Crop Planes -------------
+  pickInfo = (VTK_SCURSOR_VOLUME |
               VTK_SCURSOR_CLIP_PLANE |
               VTK_SCURSOR_CROP_PLANE);
 
@@ -263,6 +263,20 @@ void vtkSurfaceCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
+  // ------------ Bindings for ImageActor -------------
+  pickInfo = VTK_SCURSOR_IMAGE_ACTOR;
+
+  // Binding for "SplitCross" cursor
+  modifier = 0;
+  shape = this->AddShape(geometricShapes, "SplitCross");
+  this->BindShape(shape, mode, pickInfo, modifier);
+
+  // Binding for "PushPlane" with "Pusher" cursor
+  modifier = 0;
+  shape = this->AddShape(actionShapes, "Push");
+  action = this->AddAction(pushAction);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
   actionShapes->Delete();
   geometricShapes->Delete();
