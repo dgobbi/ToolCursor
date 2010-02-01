@@ -30,7 +30,7 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkPushPlaneAction);
 
 //----------------------------------------------------------------------------
@@ -249,13 +249,10 @@ void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3])
 //----------------------------------------------------------------------------
 void vtkPushPlaneAction::GetPropInformation()
 {
-  // Get all the object needed for the interaction
+  // Get all the information needed for the interaction
   vtkVolumePicker *picker = this->GetSurfaceCursor()->GetPicker();
 
-  vtkProp3DCollection *props = picker->GetProp3Ds();
-  vtkCollectionSimpleIterator pit;
-  props->InitTraversal(pit);
-  vtkProp3D *prop = props->GetNextProp3D(pit);
+  vtkProp3D *prop = picker->GetProp3D();
 
   this->Transform->SetMatrix(prop->GetMatrix());
   this->ImageActor = vtkImageActor::SafeDownCast(prop);
