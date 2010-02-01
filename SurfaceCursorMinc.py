@@ -63,8 +63,10 @@ reslice.SetInterpolationModeToCubic()
 # original bounds: (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
 cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
 
-volumeMapper = vtk.vtkFixedPointVolumeRayCastMapper()
+volumeMapper = vtk.vtkVolumeRayCastMapper()
 volumeMapper.SetInput(reslice.GetOutput())
+volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+volumeMapper.SetVolumeRayCastFunction(volumeFunction)
 volumeMapper.CroppingOn()
 volumeMapper.SetCroppingRegionPlanes(cropping)
 volumeMapper.SetCroppingRegionFlagsToFence()
@@ -161,9 +163,28 @@ mapToColors.SetInputConnection(reader.GetOutputPort())
 mapToColors.SetLookupTable(table)
 mapToColors.GetOutput().Update()
 
-imageActor = vtk.vtkImageActor()
-imageActor.SetInput(mapToColors.GetOutput())
-imageActor.SetDisplayExtent(32,32,0,63,0,92)
+extent = mapToColors.GetOutput().GetWholeExtent()
+xslice = int((extent[0] + extent[1])/2)
+yslice = int((extent[2] + extent[3])/2)
+zslice = int((extent[4] + extent[5])/2)
+
+imageActorX = vtk.vtkImageActor()
+imageActorX.SetInput(mapToColors.GetOutput())
+imageActorX.SetDisplayExtent(xslice, xslice,
+                             extent[2], extent[3],
+                             extent[4], extent[5])
+
+imageActorY = vtk.vtkImageActor()
+imageActorY.SetInput(mapToColors.GetOutput())
+imageActorY.SetDisplayExtent(extent[0], extent[1],
+                             yslice, yslice,
+                             extent[4], extent[5])
+
+imageActorZ = vtk.vtkImageActor()
+imageActorZ.SetInput(mapToColors.GetOutput())
+imageActorZ.SetDisplayExtent(extent[0], extent[1],
+                             extent[2], extent[3],
+                             zslice, zslice)
 
 #---------------------------------------------------------
 # make a transform and some clipping planes
@@ -190,7 +211,9 @@ skinMapper.AddClippingPlane(skinClip)
 #---------------------------------------------------------
 ren.AddViewProp(volume)
 #ren.AddViewProp(skin)
-#ren.AddViewProp(imageActor)
+ren.AddViewProp(imageActorX)
+ren.AddViewProp(imageActorY)
+ren.AddViewProp(imageActorZ)
 
 camera = ren.GetActiveCamera()
 camera.SetFocalPoint(c[0],c[1],c[2])
