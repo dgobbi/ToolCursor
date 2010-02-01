@@ -48,7 +48,7 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.43 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.44 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -509,10 +509,7 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
 
   int pickFlags = 0;
 
-  vtkProp3DCollection *props = picker->GetProp3Ds();
-  vtkCollectionSimpleIterator pit;
-  props->InitTraversal(pit);
-  vtkProp3D *prop = props->GetNextProp3D(pit);
+  vtkProp3D *prop = picker->GetProp3D();
   vtkAbstractMapper3D *mapper = picker->GetMapper();
 
   if (!prop)
