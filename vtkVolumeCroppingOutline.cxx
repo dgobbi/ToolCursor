@@ -22,10 +22,12 @@
 #include "vtkPolyData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkUnsignedCharArray.h"
 #include "vtkVolumeMapper.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkVolumeCroppingOutline);
 
 vtkCxxSetObjectMacro(vtkVolumeCroppingOutline,VolumeMapper,vtkVolumeMapper);
@@ -34,6 +36,16 @@ vtkCxxSetObjectMacro(vtkVolumeCroppingOutline,VolumeMapper,vtkVolumeMapper);
 vtkVolumeCroppingOutline::vtkVolumeCroppingOutline ()
 {
   this->VolumeMapper = 0;
+  this->UseColorScalars = 0;
+  this->ActivePlane = -1;
+
+  this->Color[0] = 1.0;
+  this->Color[1] = 0.0;
+  this->Color[2] = 0.0;
+
+  this->ActivePlaneColor[0] = 1.0;
+  this->ActivePlaneColor[1] = 1.0;
+  this->ActivePlaneColor[2] = 0.0;
 
   this->SetNumberOfInputPorts(0);
 }
@@ -62,6 +74,17 @@ void vtkVolumeCroppingOutline::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "(none)\n";
     } 
+
+  os << indent << "UseColorScalars: "
+     << (this->UseColorScalars ? "On\n" : "Off\n" );
+
+  os << indent << "Color: " << this->Color[0] << ", "
+     << this->Color[1] << ", " << this->Color[2] << "\n";
+
+  os << indent << "ActivePlane: " << this->ActivePlane << "\n";
+
+  os << indent << "ActivePlaneColor: " << this->ActivePlaneColor[0] << ", "
+     << this->ActivePlaneColor[1] << ", " << this->ActivePlaneColor[2] << "\n";
 }
 
 //----------------------------------------------------------------------------
@@ -238,6 +261,39 @@ int vtkVolumeCroppingOutline::RequestData(
       }
     }
 
+  // The active plane, which gets the second color
+  int activePlane = this->ActivePlane;
+  if (activePlane > 5) { activePlane = -1; };
+
+  // The colors
+  unsigned char colors[2][3];
+  colors[0][0] = colors[0][1] = colors[0][2] = 255;
+  colors[1][0] = colors[1][1] = colors[1][2] = 255;
+
+  // The scalars to color the lines
+  vtkUnsignedCharArray *scalars = 0;
+  if (this->UseColorScalars)
+    {
+    // Convert the two colors to unsigned char
+    double *dcolors[2];
+    dcolors[0] = this->Color;
+    dcolors[1] = this->ActivePlaneColor;
+
+    for (int i = 0; i < 2; i++)
+      {
+      for (int j = 0; j < 3; j++)
+        {
+        double val = dcolors[i][j];
+        if (val < 0) { val = 0; }
+        if (val > 1) { val = 1; }
+        colors[i][j] = static_cast<unsigned char>(val*255);
+        }
+      }
+
+    scalars = vtkUnsignedCharArray::New();
+    scalars->SetNumberOfComponents(3);
+    }
+
   // The lines
   vtkCellArray *lines = vtkCellArray::New();
 
@@ -305,6 +361,21 @@ int vtkVolumeCroppingOutline::RequestData(
             lines->InsertNextCell(2);
             lines->InsertCellPoint(pointId);
             lines->InsertCellPoint(pointId + pointInc);
+            if (scalars)
+              {
+              unsigned char *color = colors[0];
+              if (activePlane >= 0)
+                {
+                int planeDim = (activePlane >> 1); // same as "/ 2"
+                int planeIdx = 1 + (activePlane & 1); // same as "% 2"
+                if ((planeDim == dim2 && i == planeIdx) ||
+                    (planeDim == dim1 && j == planeIdx))
+                  {
+                  color = colors[1];
+                  }
+                }  
+              scalars->InsertNextTupleValue(color);
+              }
             }
           }
         }
@@ -316,6 +387,12 @@ int vtkVolumeCroppingOutline::RequestData(
 
   output->SetLines(lines);
   lines->Delete();
+
+  output->GetCellData()->SetScalars(scalars);
+  if (scalars)
+    {
+    scalars->Delete();
+    }
 
   return 1;
 }

@@ -39,11 +39,43 @@ public:
   virtual void SetVolumeMapper(vtkVolumeMapper *mapper);
   vtkVolumeMapper *GetVolumeMapper() { return this->VolumeMapper; };
 
+  // Description:
+  // Set whether to add color scalars to the lines.  By default,
+  // the output has no scalars and the color must be set in the
+  // property of the actor.
+  vtkSetMacro(UseColorScalars, int);
+  vtkBooleanMacro(UseColorScalars, int);
+  vtkGetMacro(UseColorScalars, int);
+
+  // Description:
+  // Set the color of the outline.  This has no effect unless ColorOutline
+  // is On.  The default color is red.
+  vtkSetVector3Macro(Color, double);
+  vtkGetVector3Macro(Color, double);
+
+  // Description:
+  // Set the active plane, e.g. to display which plane is currently being
+  // modified by an interaction.  Set this to -1 if there is no active plane.
+  // The default value is -1.
+  vtkSetMacro(ActivePlane, int);
+  vtkGetMacro(ActivePlane, int);
+
+  // Description:
+  // Set the color of the active cropping plane.  This has no effect unless
+  // ColorOutline is On and ActivePlane is non-negative.  Default is yellow. 
+  vtkSetVector3Macro(ActivePlaneColor, double);
+  vtkGetVector3Macro(ActivePlaneColor, double);
+
 protected:
   vtkVolumeCroppingOutline();
   ~vtkVolumeCroppingOutline();
 
   vtkVolumeMapper *VolumeMapper;
+  int UseColorScalars;
+  int ActivePlane;
+  double Color[3];
+  double ActivePlaneColor[3];
+
   int Cropping;
   int CroppingRegionFlags;
   double Bounds[6];
