@@ -19,6 +19,7 @@ SET(LIB_SRCS
   vtkSurfaceCursorInteractorObserver.cxx
   vtkSurfaceCursorShapes.cxx
   vtkSystemCursorShapes.cxx
+  vtkVolumeCroppingOutline.cxx
   vtkZoomCameraAction.cxx
 )
 

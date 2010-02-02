@@ -118,7 +118,18 @@ volume.SetLODLevel(lod2D, 2.0)
 volume.SetLODLevel(lod3D, 1.0)
 volume.SetLODLevel(lodRC, 0.0)
 # disable ray casting
+#volume.DisableLOD(lod3D)
 volume.DisableLOD(lodRC)
+
+cropOutlineSource = vtk.vtkVolumeCroppingOutline()
+cropOutlineSource.SetVolumeMapper(volumeMapper)
+
+cropOutlineMapper = vtk.vtkPolyDataMapper()
+cropOutlineMapper.SetInputConnection(cropOutlineSource.GetOutputPort())
+
+cropOutline = vtk.vtkActor()
+cropOutline.SetMapper(cropOutlineMapper)
+cropOutline.GetProperty().SetColor(1,0,0)
 
 #---------------------------------------------------------
 # Do the surface rendering
@@ -195,10 +206,11 @@ transform.RotateWXYZ(-20,0.0,-0.7,0.7)
 #skin.SetUserTransform(transform)
 #imageActor.SetUserTransform(transform)
 
-c = volume.GetCenter()
+#c = volume.GetCenter()
+c = (0.0, 0.0, 0.0)
 
 volumeClip = vtk.vtkPlane()
-volumeClip.SetNormal(0,1,0)
+volumeClip.SetNormal(1,0,0)
 volumeClip.SetOrigin(c[0],c[1],c[2])
 
 skinClip = vtk.vtkPlane()
@@ -206,14 +218,17 @@ skinClip.SetNormal(0,0,1)
 skinClip.SetOrigin(c[0],c[1],c[2])
 
 #volumeMapper.AddClippingPlane(volumeClip)
+#volumeMapper2D.AddClippingPlane(volumeClip)
+#volumeMapper3D.AddClippingPlane(volumeClip)
 skinMapper.AddClippingPlane(skinClip)
 
 #---------------------------------------------------------
 ren.AddViewProp(volume)
+ren.AddViewProp(cropOutline)
 #ren.AddViewProp(skin)
-ren.AddViewProp(imageActorX)
-ren.AddViewProp(imageActorY)
-ren.AddViewProp(imageActorZ)
+#ren.AddViewProp(imageActorX)
+#ren.AddViewProp(imageActorY)
+#ren.AddViewProp(imageActorZ)
 
 camera = ren.GetActiveCamera()
 camera.SetFocalPoint(c[0],c[1],c[2])
