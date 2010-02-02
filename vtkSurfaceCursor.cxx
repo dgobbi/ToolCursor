@@ -47,8 +47,9 @@
 #include "vtkRotateCameraAction.h"
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
+#include "vtkVolumeCroppingOutline.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.45 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.46 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -150,12 +151,29 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   data->Delete();
 
   this->RenderCommand = vtkSurfaceCursorRenderCommand::New(this);
+
+  // Volume cropping actor items
+  this->VolumeCroppingSource = vtkVolumeCroppingOutline::New();
+  this->VolumeCroppingSource->UseColorScalarsOn();
+  this->VolumeCroppingSource->SetColor(1, 0, 0);
+  this->VolumeCroppingSource->SetActivePlaneColor(0, 1, 0);
+  this->VolumeCroppingMapper = vtkDataSetMapper::New();
+  this->VolumeCroppingMapper->SetInputConnection(
+    this->VolumeCroppingSource->GetOutputPort());
+  this->VolumeCroppingActor = vtkActor::New();
+  this->VolumeCroppingActor->SetMapper(this->VolumeCroppingMapper);
+  this->VolumeCroppingActor->SetPickable(0);
+  this->VolumeCroppingActor->SetVisibility(0);
 }
 
 //----------------------------------------------------------------------------
 vtkSurfaceCursor::~vtkSurfaceCursor()
 {
   this->SetRenderer(0);
+
+  if (this->VolumeCroppingActor) { this->VolumeCroppingActor->Delete(); }
+  if (this->VolumeCroppingMapper) { this->VolumeCroppingMapper->Delete(); }
+  if (this->VolumeCroppingSource) { this->VolumeCroppingSource->Delete(); }
 
   if (this->RenderCommand) { this->RenderCommand->Delete(); }
   if (this->Matrix) { this->Matrix->Delete(); }
@@ -375,6 +393,7 @@ void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
     {
     this->Renderer->RemoveObserver(this->RenderCommand);
     this->Renderer->RemoveActor(this->Actor);
+    this->Renderer->RemoveActor(this->VolumeCroppingActor);
     this->Renderer->Delete();
     this->Renderer = 0;
     }
@@ -384,6 +403,7 @@ void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
     this->Renderer = renderer;
     this->Renderer->Register(this);
     this->Renderer->AddActor(this->Actor);
+    this->Renderer->AddActor(this->VolumeCroppingActor);
     this->Renderer->AddObserver(vtkCommand::StartEvent,
                                 this->RenderCommand, -1);
     }
@@ -684,6 +704,25 @@ void vtkSurfaceCursor::OnRender()
   // Don't show cursor if nothing is underneath of it.
   int visibility = (this->IsInViewport != 0 && this->Shape != 0);
   this->Actor->SetVisibility(visibility);
+
+  if (((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
+       this->Picker->GetCroppingPlaneId() >= 0) ||
+      this->Picker->GetPickCroppingPlanes()) 
+    {
+    vtkVolumeMapper *mapper =
+      vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
+
+    this->VolumeCroppingActor->SetVisibility((mapper != 0));
+    this->VolumeCroppingSource->SetVolumeMapper(mapper);
+    this->VolumeCroppingSource->SetActivePlane(
+      this->Picker->GetCroppingPlaneId());
+    } 
+  else
+    {
+    this->VolumeCroppingActor->SetVisibility(0);
+    this->VolumeCroppingSource->SetVolumeMapper(0);
+    this->VolumeCroppingSource->SetActivePlane(-1);
+    }
 }
 
 //----------------------------------------------------------------------------
