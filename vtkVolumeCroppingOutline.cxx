@@ -27,7 +27,7 @@
 #include "vtkVolumeMapper.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkVolumeCroppingOutline);
 
 vtkCxxSetObjectMacro(vtkVolumeCroppingOutline,VolumeMapper,vtkVolumeMapper);
@@ -37,7 +37,7 @@ vtkVolumeCroppingOutline::vtkVolumeCroppingOutline ()
 {
   this->VolumeMapper = 0;
   this->UseColorScalars = 0;
-  this->ActivePlane = -1;
+  this->ActivePlaneId = -1;
 
   this->Color[0] = 1.0;
   this->Color[1] = 0.0;
@@ -81,7 +81,7 @@ void vtkVolumeCroppingOutline::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Color: " << this->Color[0] << ", "
      << this->Color[1] << ", " << this->Color[2] << "\n";
 
-  os << indent << "ActivePlane: " << this->ActivePlane << "\n";
+  os << indent << "ActivePlaneId: " << this->ActivePlaneId << "\n";
 
   os << indent << "ActivePlaneColor: " << this->ActivePlaneColor[0] << ", "
      << this->ActivePlaneColor[1] << ", " << this->ActivePlaneColor[2] << "\n";
@@ -115,6 +115,8 @@ int vtkVolumeCroppingOutline::ComputeCubePlanes(double planes[3][4])
     planes[i][2] = c;
     planes[i][3] = d;
     }
+
+  return 1;
 }
 
 //----------------------------------------------------------------------------
@@ -163,8 +165,8 @@ int vtkVolumeCroppingOutline::RequestInformation(
 
   if (!this->VolumeMapper)
     {
-    vtkErrorMacro("No VolumeMapper has been set.");
-    return 0;
+    vtkWarningMacro("No VolumeMapper has been set.");
+    return 1;
     }
 
   this->Cropping = this->VolumeMapper->GetCropping();
@@ -175,8 +177,8 @@ int vtkVolumeCroppingOutline::RequestInformation(
 
   if (!data)
     {
-    vtkErrorMacro("The VolumeMapper does not have an input set.");
-    return 0;
+    vtkWarningMacro("The VolumeMapper does not have an input set.");
+    return 1;
     }
 
   // Don't have to update mapper's input, since it was done in
@@ -236,33 +238,41 @@ int vtkVolumeCroppingOutline::RequestData(
 
   double planes[3][4];
 
-  if (!this->ComputeCubePlanes(planes))
+  if (!this->VolumeMapper || !this->VolumeMapper->GetInput() ||
+      !this->ComputeCubePlanes(planes))
     {
+    // If the bounds or the cropping planes are invalid, clear the data
+    output->SetPoints(0);
+    output->SetLines(0);
+    output->GetCellData()->SetScalars(0);
+
+    return 1;
     }
 
-  // Add an offset to the planes here
+  // Compute the tolerance for coincident points
+  double tol = 0;
+  for (int planeDim = 0; planeDim < 3; planeDim++)
+    {
+    double d = planes[planeDim][3] - planes[planeDim][0];
+    tol += d*d;
+    }
+  tol = sqrt(tol)*1e-5;
 
+  // Nudge crop planes over to the bounds if they are within tolerance
+  int tolPtId[3][4];
+  for (int dim = 0; dim < 3; dim++)
+    {
+    tolPtId[dim][0] = 0; tolPtId[dim][1] = 1;
+    tolPtId[dim][2] = 2; tolPtId[dim][3] = 3;
+    if (planes[dim][1] - planes[dim][0] < tol) { tolPtId[dim][1] = 0; }
+    if (planes[dim][3] - planes[dim][2] < tol) { tolPtId[dim][2] = 3; }
+    }
+
+  // The all-important cropping flags
   int flags = this->CroppingRegionFlags;
 
-  // The points
-  vtkPoints *points = vtkPoints::New();
-  points->Allocate(64);
-
-  // Create the array of 64 points
-  int ptId = 0;
-  for (int i = 0; i < 4; i++)
-    {
-    for (int j = 0; j < 4; j++)
-      {
-      for (int k = 0; k < 4; k++)
-        {
-        points->InsertPoint(ptId++, planes[0][k], planes[1][j], planes[2][i]);
-        }
-      }
-    }
-
   // The active plane, which gets the second color
-  int activePlane = this->ActivePlane;
+  int activePlane = this->ActivePlaneId;
   if (activePlane > 5) { activePlane = -1; };
 
   // The colors
@@ -270,7 +280,7 @@ int vtkVolumeCroppingOutline::RequestData(
   colors[0][0] = colors[0][1] = colors[0][2] = 255;
   colors[1][0] = colors[1][1] = colors[1][2] = 255;
 
-  // The scalars to color the lines
+  // Create the scalars used to color the lines
   vtkUnsignedCharArray *scalars = 0;
   if (this->UseColorScalars)
     {
@@ -307,25 +317,44 @@ int vtkVolumeCroppingOutline::RequestData(
     // Indices into the cubes
     int idx[3];
 
-    // Loop over dimensions other than "dim"
+    // Loop over the "dim+2" dimension
     for (int i = 0; i < 4; i++)
       {
       idx[dim2] = i;
 
+      // Loop over the "dim+1" dimension
       for (int j = 0; j < 4; j++)
         {
         idx[dim1] = j;
 
-        // Loop over line segments
+        // Loop over line segments along the "dim" dimension
         for (int k = 0; k < 3; k++)
           {
           idx[dim0] = k;
 
-          // The first point in the segment, and the increment to the next
-          int pointId = idx[2]*16 + idx[1]*4 + idx[0];
-          int pointInc = (1 << (2*dim0));
+          // Make sure that the segment length is not less than tolerance
+          if ((k == 0 && tolPtId[dim0][1] == 0) ||
+              (k == 2 && tolPtId[dim0][2] == 3))
+            {
+            continue;
+            } 
 
-          // Loop through the four cubes adjacent to the line segment
+          // The endpoints of the segment, which are nudged over to the
+          // volume bounds if the cropping planes are within tolerance
+          // of the volume bounds.
+          int pointId0 = (tolPtId[2][idx[2]]*16 +
+                          tolPtId[1][idx[1]]*4 +
+                          tolPtId[0][idx[0]]);
+          idx[dim0] = k + 1;
+          int pointId1 = (tolPtId[2][idx[2]]*16 +
+                          tolPtId[1][idx[1]]*4 +
+                          tolPtId[0][idx[0]]);
+          idx[dim0] = k;
+
+          // Loop through the four cubes adjacent to the line segment,
+          // in order to determine whether the line segment is on an 
+          // edge: only the edge lines will be drawn.  The "bitCheck"
+          // holds a bit for each of these four cubes.
           int bitCheck = 0;
           int cidx[3];
           cidx[dim0] = idx[dim0];
@@ -352,32 +381,125 @@ int vtkVolumeCroppingOutline::RequestData(
 
           // Whether we need a line depends on the the value of bitCheck.
           // Values 0000, 0011, 0110, 1100, 1001, 1111 don't need lines. 
-          // Build a bitfield rather than a lookup table, it's faster.
+          // Build a bitfield to check our bitfield values against, each
+          // set bit in this new bitfield corresponds to a non-edge case. 
           const int noLineValues = ((1 << 0x0) | (1 << 0x3) | (1 << 0x6) |
                                     (1 << 0x9) | (1 << 0xc) | (1 << 0xf)); 
 
+          // If our line segment is an edge, there is lots of work to do.
           if (((noLineValues >> bitCheck) & 1) == 0)
             {
-            lines->InsertNextCell(2);
-            lines->InsertCellPoint(pointId);
-            lines->InsertCellPoint(pointId + pointInc);
-            if (scalars)
+            // Check if the line segment is on our active plane
+            int active = 0;
+            if (activePlane >= 0)
               {
-              unsigned char *color = colors[0];
-              if (activePlane >= 0)
+              int planeDim = (activePlane >> 1); // same as "/ 2"
+              int planeIdx = 1 + (activePlane & 1); // same as "% 2"
+              if ((planeDim == dim2 && i == planeIdx) ||
+                  (planeDim == dim1 && j == planeIdx))
                 {
-                int planeDim = (activePlane >> 1); // same as "/ 2"
-                int planeIdx = 1 + (activePlane & 1); // same as "% 2"
-                if ((planeDim == dim2 && i == planeIdx) ||
-                    (planeDim == dim1 && j == planeIdx))
+                active = 1;
+                }
+              }
+
+            // Check to make sure line segment isn't already there
+            int foundDuplicate = 0;
+            lines->InitTraversal();
+            vtkIdType npts, *pts;
+            for (int cellId = 0; lines->GetNextCell(npts, pts); cellId++)
+              {
+              if (pts[0] == pointId0 && pts[1] == pointId1)
+                {
+                // Change color if current segment is on active plane
+                if (scalars && active)
                   {
-                  color = colors[1];
+                  scalars->SetTupleValue(cellId, colors[active]);
                   }
-                }  
-              scalars->InsertNextTupleValue(color);
+                foundDuplicate = 1;
+                break;
+                }
+              }
+
+            if (!foundDuplicate)
+              {
+              // Insert the line segment
+              lines->InsertNextCell(2);
+              lines->InsertCellPoint(pointId0);
+              lines->InsertCellPoint(pointId1);
+
+              // Color the line segment
+              if (scalars)
+                {
+                scalars->InsertNextTupleValue(colors[active]);
+                }
+              } 
+            }
+
+          } // loop over k
+        } // loop over j
+      } // loop over i
+    } // loop over dim0
+
+  // The points
+  vtkPoints *points = vtkPoints::New();
+
+  // Use a bitfield to store which of the 64 points we need.
+  // Two 32-bit ints are a convenient, portable way to do this.
+  unsigned int pointBits1 = 0;
+  unsigned int pointBits2 = 0;
+
+  lines->InitTraversal();
+  vtkIdType npnts, *pnts;
+  while (lines->GetNextCell(npnts, pnts))
+    {
+    for (int ii = 0; ii < npnts; ii++)
+      {
+      int pointId = pnts[ii];
+      if (pointId < 32) { pointBits1 |= (1 << pointId); }
+      else { pointBits2 |= (1 << (pointId - 32)); }
+      }
+    }
+
+  // Create the array of up to 64 points, and use the pointBits bitfield
+  // to find out which points were used.  It is also necessary to go through
+  // and update the cells with the modified point ids.
+  unsigned int pointBits = pointBits1;
+  int ptId = 0;
+  int newPtId = 0;
+
+  for (int i = 0; i < 4; i++)
+    {
+    // If we're halfway done, switch over to the next 32 bits
+    if (i == 2) { pointBits = pointBits2; }
+ 
+    for (int j = 0; j < 4; j++)
+      {
+      for (int k = 0; k < 4; k++)
+        {
+        // Check to see if this point was actually used
+        if ( (pointBits & 1) )
+          {
+          // Add or subtract tolerance as an offset to help depth check
+          double x = planes[0][k] + tol*(1 - 2*(k < 2));
+          double y = planes[1][j] + tol*(1 - 2*(j < 2));
+          double z = planes[2][i] + tol*(1 - 2*(i < 2));
+
+          points->InsertNextPoint(x, y, z);
+
+          // Go through the cells, substitute old Id for new Id
+          lines->InitTraversal();
+          vtkIdType npts, *pts;
+          while (lines->GetNextCell(npts, pts))
+            {
+            for (int ii = 0; ii < npts; ii++)
+              {
+              if (pts[ii] == ptId) { pts[ii] = newPtId; } 
               }
             }
+          newPtId++;
           }
+        pointBits >>= 1;
+        ptId++;
         }
       }
     }

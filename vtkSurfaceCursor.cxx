@@ -49,7 +49,7 @@
 #include "vtkZoomCameraAction.h"
 #include "vtkVolumeCroppingOutline.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.46 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.47 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -714,14 +714,14 @@ void vtkSurfaceCursor::OnRender()
 
     this->VolumeCroppingActor->SetVisibility((mapper != 0));
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
-    this->VolumeCroppingSource->SetActivePlane(
+    this->VolumeCroppingSource->SetActivePlaneId(
       this->Picker->GetCroppingPlaneId());
     } 
   else
     {
     this->VolumeCroppingActor->SetVisibility(0);
     this->VolumeCroppingSource->SetVolumeMapper(0);
-    this->VolumeCroppingSource->SetActivePlane(-1);
+    this->VolumeCroppingSource->SetActivePlaneId(-1);
     }
 }
 

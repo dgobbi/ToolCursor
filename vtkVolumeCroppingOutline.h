@@ -57,12 +57,12 @@ public:
   // Set the active plane, e.g. to display which plane is currently being
   // modified by an interaction.  Set this to -1 if there is no active plane.
   // The default value is -1.
-  vtkSetMacro(ActivePlane, int);
-  vtkGetMacro(ActivePlane, int);
+  vtkSetMacro(ActivePlaneId, int);
+  vtkGetMacro(ActivePlaneId, int);
 
   // Description:
   // Set the color of the active cropping plane.  This has no effect unless
-  // ColorOutline is On and ActivePlane is non-negative.  Default is yellow. 
+  // ColorOutline is On and ActivePlaneId is non-negative.  Default is yellow. 
   vtkSetVector3Macro(ActivePlaneColor, double);
   vtkGetVector3Macro(ActivePlaneColor, double);
 
@@ -72,7 +72,7 @@ protected:
 
   vtkVolumeMapper *VolumeMapper;
   int UseColorScalars;
-  int ActivePlane;
+  int ActivePlaneId;
   double Color[3];
   double ActivePlaneColor[3];
 
