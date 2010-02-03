@@ -63,25 +63,31 @@ reslice.SetInterpolationModeToCubic()
 # original bounds: (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
 cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
 
+# there are 27 blocks that can be cropped, just like a Rubik's cube
+cropblock = (0,2,2)
+cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0])) 
+cropflags = (0x07ffffff & ~cropblockbit);
+cropflags = 0x0002000
+
 volumeMapper = vtk.vtkVolumeRayCastMapper()
 volumeMapper.SetInput(reslice.GetOutput())
 volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
 volumeMapper.SetVolumeRayCastFunction(volumeFunction)
 volumeMapper.CroppingOn()
 volumeMapper.SetCroppingRegionPlanes(cropping)
-volumeMapper.SetCroppingRegionFlagsToFence()
+volumeMapper.SetCroppingRegionFlags(cropflags)
 
 volumeMapper3D = vtk.vtkVolumeTextureMapper3D()
 volumeMapper3D.SetInput(reslice.GetOutput())
 volumeMapper3D.CroppingOn()
 volumeMapper3D.SetCroppingRegionPlanes(cropping)
-volumeMapper3D.SetCroppingRegionFlagsToFence()
+volumeMapper3D.SetCroppingRegionFlags(cropflags)
 
 volumeMapper2D = vtk.vtkVolumeTextureMapper2D()
 volumeMapper2D.SetInput(reslice.GetOutput())
 volumeMapper2D.CroppingOn()
 volumeMapper2D.SetCroppingRegionPlanes(cropping)
-volumeMapper2D.SetCroppingRegionFlagsToFence()
+volumeMapper2D.SetCroppingRegionFlags(cropflags)
 
 volumeColor = vtk.vtkColorTransferFunction()
 volumeColor.AddRGBPoint(0,0.0,0.0,0.0)
@@ -123,13 +129,14 @@ volume.DisableLOD(lodRC)
 
 cropOutlineSource = vtk.vtkVolumeCroppingOutline()
 cropOutlineSource.SetVolumeMapper(volumeMapper)
+cropOutlineSource.UseColorScalarsOn()
+cropOutlineSource.SetActivePlaneId(0)
 
 cropOutlineMapper = vtk.vtkPolyDataMapper()
 cropOutlineMapper.SetInputConnection(cropOutlineSource.GetOutputPort())
 
 cropOutline = vtk.vtkActor()
 cropOutline.SetMapper(cropOutlineMapper)
-cropOutline.GetProperty().SetColor(1,0,0)
 
 #---------------------------------------------------------
 # Do the surface rendering
@@ -224,7 +231,7 @@ skinMapper.AddClippingPlane(skinClip)
 
 #---------------------------------------------------------
 ren.AddViewProp(volume)
-ren.AddViewProp(cropOutline)
+#ren.AddViewProp(cropOutline)
 #ren.AddViewProp(skin)
 #ren.AddViewProp(imageActorX)
 #ren.AddViewProp(imageActorY)
@@ -245,6 +252,7 @@ cursor = vtk.vtkSurfaceCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
+cursor.GetPicker().PickCroppingPlanesOn()
 
 observer = vtk.vtkSurfaceCursorInteractorObserver()
 observer.SetSurfaceCursor(cursor)
