@@ -49,7 +49,7 @@
 #include "vtkZoomCameraAction.h"
 #include "vtkVolumeCroppingOutline.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.48 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.49 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -216,10 +216,10 @@ void vtkSurfaceCursor::BindDefaultActions()
   // ------------ Default Bindings ------------- 
   pickInfo = 0;
 
-  // Binding for "Spinner" cursor and action, when user clicks background
+  // Binding for "Rotate" cursor and action, when user clicks background
   modifier = 0;
-  shape = this->AddShape(actionShapes, "Spin");
-  action = this->AddAction(spinAction);
+  shape = this->AddShape(actionShapes, "Rotate");
+  action = this->AddAction(rotateAction);
   this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
   this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
 
