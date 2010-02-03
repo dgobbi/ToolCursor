@@ -251,7 +251,6 @@ cursor = vtk.vtkSurfaceCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
-cursor.GetPicker().PickCroppingPlanesOn()
 
 observer = vtk.vtkSurfaceCursorInteractorObserver()
 observer.SetSurfaceCursor(cursor)

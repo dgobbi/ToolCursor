@@ -49,7 +49,7 @@
 #include "vtkZoomCameraAction.h"
 #include "vtkVolumeCroppingOutline.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.47 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.48 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -659,19 +659,23 @@ void vtkSurfaceCursor::ComputePosition()
 
   // Check to see if the PickFlags have changed
   int pickFlags = this->ComputePickFlags(this->Picker);
-  if (pickFlags != this->PickFlags &&
-      (this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 &&
-      !this->Action)
+
+  if ((this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 && !this->Action)
     {
-    // Compute the cursor shape from the state.  
-    this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
+    if (pickFlags != this->PickFlags)
+      {
+      // Compute the cursor shape from the state.  
+      this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
 
-    // See if we need focus for potential button actions
-    this->ActionButtons = this->FindActionButtons(this->Mode, pickFlags,
-                                                 this->Modifier);
+      // See if we need focus for potential button actions
+      this->ActionButtons = this->FindActionButtons(this->Mode, pickFlags,
+                                                    this->Modifier);
+      }
+    this->PickFlags = pickFlags;
+  
+    // Check to see if guide visibility should be changed
+    this->CheckGuideVisibility();
     }
-
-  this->PickFlags = pickFlags;
 
   // Compute an "up" vector for the cursor.
   this->ComputeVectorFromNormal(this->Position, this->Normal, this->Vector,
@@ -704,7 +708,11 @@ void vtkSurfaceCursor::OnRender()
   // Don't show cursor if nothing is underneath of it.
   int visibility = (this->IsInViewport != 0 && this->Shape != 0);
   this->Actor->SetVisibility(visibility);
+}
 
+//----------------------------------------------------------------------------
+void vtkSurfaceCursor::CheckGuideVisibility()
+{
   if (((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
        this->Picker->GetCroppingPlaneId() >= 0) ||
       this->Picker->GetPickCroppingPlanes()) 

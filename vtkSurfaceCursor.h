@@ -301,6 +301,7 @@ protected:
   void SetShape(int shape);
   int GetShape() { return this->Shape; };
 
+  void CheckGuideVisibility();
   int FindShape(int mode, int pickFlags, int modifier);
   int FindAction(int mode, int pickFlags, int modifier);
   int FindActionButtons(int mode, int pickFlags, int modifier);
