@@ -67,7 +67,6 @@ cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
 cropblock = (0,2,2)
 cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0])) 
 cropflags = (0x07ffffff & ~cropblockbit);
-cropflags = 0x0002000
 
 volumeMapper = vtk.vtkVolumeRayCastMapper()
 volumeMapper.SetInput(reslice.GetOutput())
