@@ -26,7 +26,7 @@
 #include "vtkPointData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkGeometricCursorShapes, "$Revision: 1.1 $");
+vtkCxxRevisionMacro(vtkGeometricCursorShapes, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkGeometricCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -184,7 +184,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
   for (int i = 0; i < 2; i++)
     {
     // The sign (i.e. for top or bottom) is stored in s
-    double s = 1 - 2*colorIndex;
+    double s = 1 - 2*i;
 
     // The unit position vector of the point is stored in v
     double v[3];
