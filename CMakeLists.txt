@@ -9,6 +9,7 @@ SET(LIB_NAME vtk${PROJECT_NAME})
 SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
 SET(LIB_SRCS
   vtkActionCursorShapes.cxx
+  vtkFiducialPointsTool.cxx
   vtkGeometricCursorShapes.cxx
   vtkPanCameraAction.cxx
   vtkPushPlaneAction.cxx
