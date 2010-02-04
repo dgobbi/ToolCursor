@@ -19,7 +19,14 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 2:
         img2 = 1
 else:
-    filenames.append("/beck/data/dgobbi/Atamai/atamai/examples/sbrain.mnc")
+    print "Usage: python " + sys.argv[0] + " sbrain.mnc sbrain_stenciled.mnc"
+    print
+    sys.exit(0)
+
+print "Instructions: "
+print " 1) Use 'Tab' to cycle through different views"
+print " 2) Use 'Space' to drop a fidicial"
+print " 3) Use 'Delete/Backspace' to delete last fiducial" 
 
 #---------------------------------------------------------
 # read the volume
