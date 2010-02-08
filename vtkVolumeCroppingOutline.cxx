@@ -27,7 +27,7 @@
 #include "vtkVolumeMapper.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.3 $");
+vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.4 $");
 vtkStandardNewMacro(vtkVolumeCroppingOutline);
 
 vtkCxxSetObjectMacro(vtkVolumeCroppingOutline,VolumeMapper,vtkVolumeMapper);
@@ -88,17 +88,18 @@ void vtkVolumeCroppingOutline::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-int vtkVolumeCroppingOutline::ComputeCubePlanes(double planes[3][4])
+int vtkVolumeCroppingOutline::ComputeCubePlanes(
+  double planes[3][4], double croppingPlanes[6], double bounds[6])
 {
   for (int i = 0; i < 3; i++)
     {
     int j0 = 2*i;
     int j1 = 2*i + 1;
 
-    double a = this->Bounds[j0];
-    double b = this->CroppingRegionPlanes[j0];
-    double c = this->CroppingRegionPlanes[j1];
-    double d = this->Bounds[j1];
+    double a = bounds[j0];
+    double b = croppingPlanes[j0];
+    double c = croppingPlanes[j1];
+    double d = bounds[j1];
 
     if (a > d || b > c)
       {
@@ -130,7 +131,7 @@ int vtkVolumeCroppingOutline::ComputePipelineMTime(
   unsigned long mTime = this->GetMTime();
   if (this->VolumeMapper)
     {
-    int mapperMTime = this->VolumeMapper->GetMTime();
+    unsigned long mapperMTime = this->VolumeMapper->GetMTime();
     if (mapperMTime > mTime)
       {
       mTime = mapperMTime;
@@ -224,7 +225,7 @@ int vtkVolumeCroppingOutline::RequestInformation(
 //----------------------------------------------------------------------------
 int vtkVolumeCroppingOutline::RequestData(
   vtkInformation *vtkNotUsed(request),
-  vtkInformationVector **inputVector,
+  vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
 {
   // get the info object
@@ -239,7 +240,7 @@ int vtkVolumeCroppingOutline::RequestData(
   double planes[3][4];
 
   if (!this->VolumeMapper || !this->VolumeMapper->GetInput() ||
-      !this->ComputeCubePlanes(planes))
+      !this->ComputeCubePlanes(planes,this->CroppingRegionPlanes,this->Bounds))
     {
     // If the bounds or the cropping planes are invalid, clear the data
     output->SetPoints(0);
@@ -260,13 +261,7 @@ int vtkVolumeCroppingOutline::RequestData(
 
   // Nudge crop planes over to the bounds if they are within tolerance
   int tolPtId[3][4];
-  for (int dim = 0; dim < 3; dim++)
-    {
-    tolPtId[dim][0] = 0; tolPtId[dim][1] = 1;
-    tolPtId[dim][2] = 2; tolPtId[dim][3] = 3;
-    if (planes[dim][1] - planes[dim][0] < tol) { tolPtId[dim][1] = 0; }
-    if (planes[dim][3] - planes[dim][2] < tol) { tolPtId[dim][2] = 3; }
-    }
+  this->NudgeCropPlanesToBounds(tolPtId, planes, tol);
 
   // The all-important cropping flags
   int flags = this->CroppingRegionFlags;
@@ -275,38 +270,51 @@ int vtkVolumeCroppingOutline::RequestData(
   int activePlane = this->ActivePlaneId;
   if (activePlane > 5) { activePlane = -1; };
 
-  // The colors
+  // Convert the colors to unsigned char for scalars
   unsigned char colors[2][3];
-  colors[0][0] = colors[0][1] = colors[0][2] = 255;
-  colors[1][0] = colors[1][1] = colors[1][2] = 255;
+  this->CreateColorValues(colors, this->Color, this->ActivePlaneColor);
 
   // Create the scalars used to color the lines
   vtkUnsignedCharArray *scalars = 0;
+
   if (this->UseColorScalars)
     {
-    // Convert the two colors to unsigned char
-    double *dcolors[2];
-    dcolors[0] = this->Color;
-    dcolors[1] = this->ActivePlaneColor;
-
-    for (int i = 0; i < 2; i++)
-      {
-      for (int j = 0; j < 3; j++)
-        {
-        double val = dcolors[i][j];
-        if (val < 0) { val = 0; }
-        if (val > 1) { val = 1; }
-        colors[i][j] = static_cast<unsigned char>(val*255);
-        }
-      }
-
     scalars = vtkUnsignedCharArray::New();
     scalars->SetNumberOfComponents(3);
     }
 
-  // The lines
+  // Generate all the lines for the outline.
   vtkCellArray *lines = vtkCellArray::New();
+  this->GenerateLines(lines, scalars, colors, activePlane, flags, tolPtId);
 
+  // Generate the points that are used by the lines.
+  vtkPoints *points = vtkPoints::New();
+  this->GeneratePoints(points, lines, planes, tol);
+
+  output->SetPoints(points);
+  points->Delete();
+
+  output->SetLines(lines);
+  lines->Delete();
+
+  output->GetCellData()->SetScalars(scalars);
+  if (scalars)
+    {
+    scalars->Delete();
+    }
+
+  return 1;
+}
+
+//----------------------------------------------------------------------------
+void vtkVolumeCroppingOutline::GenerateLines(
+  vtkCellArray *lines,
+  vtkUnsignedCharArray *scalars,
+  unsigned char colors[2][3],
+  int activePlane,
+  int flags,
+  int tolPtId[3][4])
+{
   // Loop over the three dimensions and create the lines
   for (int dim0 = 0; dim0 < 3; dim0++)
     {
@@ -439,10 +447,12 @@ int vtkVolumeCroppingOutline::RequestData(
         } // loop over j
       } // loop over i
     } // loop over dim0
+}
 
-  // The points
-  vtkPoints *points = vtkPoints::New();
-
+//----------------------------------------------------------------------------
+void vtkVolumeCroppingOutline::GeneratePoints(
+  vtkPoints *points, vtkCellArray *lines, double planes[3][4], double tol)
+{
   // Use a bitfield to store which of the 64 points we need.
   // Two 32-bit ints are a convenient, portable way to do this.
   unsigned int pointBits1 = 0;
@@ -503,19 +513,40 @@ int vtkVolumeCroppingOutline::RequestData(
         }
       }
     }
-
-  output->SetPoints(points);
-  points->Delete();
-
-  output->SetLines(lines);
-  lines->Delete();
-
-  output->GetCellData()->SetScalars(scalars);
-  if (scalars)
-    {
-    scalars->Delete();
-    }
-
-  return 1;
 }
+
+//----------------------------------------------------------------------------
+void vtkVolumeCroppingOutline::NudgeCropPlanesToBounds(
+  int tolPtId[3][4], double planes[3][4], double tol)
+{
+  for (int dim = 0; dim < 3; dim++)
+    {
+    tolPtId[dim][0] = 0; tolPtId[dim][1] = 1;
+    tolPtId[dim][2] = 2; tolPtId[dim][3] = 3;
+    if (planes[dim][1] - planes[dim][0] < tol) { tolPtId[dim][1] = 0; }
+    if (planes[dim][3] - planes[dim][2] < tol) { tolPtId[dim][2] = 3; }
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkVolumeCroppingOutline::CreateColorValues(
+  unsigned char colors[2][3], double color1[3], double color2[3])
+{
+  // Convert the two colors to unsigned char
+  double *dcolors[2];
+  dcolors[0] = color1;
+  dcolors[1] = color2;
+
+  for (int i = 0; i < 2; i++)
+    {
+    for (int j = 0; j < 3; j++)
+      {
+      double val = dcolors[i][j];
+      if (val < 0) { val = 0; }
+      if (val > 1) { val = 1; }
+      colors[i][j] = static_cast<unsigned char>(val*255);
+      }
+    }
+}
+
 

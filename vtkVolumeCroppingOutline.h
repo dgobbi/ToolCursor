@@ -48,7 +48,7 @@ public:
   vtkGetMacro(UseColorScalars, int);
 
   // Description:
-  // Set the color of the outline.  This has no effect unless ColorOutline
+  // Set the color of the outline.  This has no effect unless UseColorScalars
   // is On.  The default color is red.
   vtkSetVector3Macro(Color, double);
   vtkGetVector3Macro(Color, double);
@@ -81,7 +81,28 @@ protected:
   double Bounds[6];
   double CroppingRegionPlanes[6];
 
-  int ComputeCubePlanes(double planes[3][4]);
+  static int ComputeCubePlanes(double planes[3][4],
+                               double croppingPlanes[6],
+                               double bounds[6]);
+
+  static void GenerateLines(vtkCellArray *lines,
+                           vtkUnsignedCharArray *scalars,
+                           unsigned char colors[2][3],
+                           int activePlane,
+                           int flags,
+                           int tolPtId[3][4]);
+
+  static void GeneratePoints(vtkPoints *points,
+                             vtkCellArray *lines,
+                             double planes[3][4],
+                             double tol);
+
+  static void NudgeCropPlanesToBounds(int tolPtId[3][4],
+                                      double planes[3][4],
+                                      double tol);
+
+  static void CreateColorValues(unsigned char colors[2][3],
+                                double color1[3], double color2[3]);
 
   virtual int ComputePipelineMTime(vtkInformation* request,
                                    vtkInformationVector** inputVector,
