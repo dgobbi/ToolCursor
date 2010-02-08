@@ -288,7 +288,7 @@ volume.SetCroppingRegion(cropping)
 
 cropOutlineSource = vtk.vtkVolumeCroppingOutline()
 cropOutlineSource.SetVolumeMapper(volume.Mapper)
-cropOutlineSource.UseColorScalarsOn()
+cropOutlineSource.GenerateScalarsOn()
 cropOutlineSource.SetActivePlaneId(0)
 
 cropOutlineMapper = vtk.vtkPolyDataMapper()

@@ -40,15 +40,22 @@ public:
   vtkVolumeMapper *GetVolumeMapper() { return this->VolumeMapper; };
 
   // Description:
-  // Set whether to add color scalars to the lines.  By default,
+  // Set whether to add color scalars to the output.  By default,
   // the output has no scalars and the color must be set in the
   // property of the actor.
-  vtkSetMacro(UseColorScalars, int);
-  vtkBooleanMacro(UseColorScalars, int);
-  vtkGetMacro(UseColorScalars, int);
+  vtkSetMacro(GenerateScalars, int);
+  vtkBooleanMacro(GenerateScalars, int);
+  vtkGetMacro(GenerateScalars, int);
 
   // Description:
-  // Set the color of the outline.  This has no effect unless UseColorScalars
+  // Set whether to generate polygonal faces for the output.  By default,
+  // only lines are generated.
+  vtkSetMacro(GenerateFaces, int);
+  vtkBooleanMacro(GenerateFaces, int);
+  vtkGetMacro(GenerateFaces, int);
+
+  // Description:
+  // Set the color of the outline.  This has no effect unless GenerateScalars
   // is On.  The default color is red.
   vtkSetVector3Macro(Color, double);
   vtkGetVector3Macro(Color, double);
@@ -71,7 +78,8 @@ protected:
   ~vtkVolumeCroppingOutline();
 
   vtkVolumeMapper *VolumeMapper;
-  int UseColorScalars;
+  int GenerateScalars;
+  int GenerateFaces;
   int ActivePlaneId;
   double Color[3];
   double ActivePlaneColor[3];
@@ -85,15 +93,23 @@ protected:
                                double croppingPlanes[6],
                                double bounds[6]);
 
+  static void GeneratePolys(vtkCellArray *polys,
+                            vtkUnsignedCharArray *scalars,
+                            unsigned char colors[2][3],
+                            int activePlane,
+                            int flags,
+                            int tolPtId[3][4]);
+
   static void GenerateLines(vtkCellArray *lines,
-                           vtkUnsignedCharArray *scalars,
-                           unsigned char colors[2][3],
-                           int activePlane,
-                           int flags,
-                           int tolPtId[3][4]);
+                            vtkUnsignedCharArray *scalars,
+                            unsigned char colors[2][3],
+                            int activePlane,
+                            int flags,
+                            int tolPtId[3][4]);
 
   static void GeneratePoints(vtkPoints *points,
                              vtkCellArray *lines,
+                             vtkCellArray *polys,
                              double planes[3][4],
                              double tol);
 

@@ -128,7 +128,7 @@ volume.DisableLOD(lodRC)
 
 cropOutlineSource = vtk.vtkVolumeCroppingOutline()
 cropOutlineSource.SetVolumeMapper(volumeMapper)
-cropOutlineSource.UseColorScalarsOn()
+cropOutlineSource.GenerateScalarsOn()
 cropOutlineSource.SetActivePlaneId(0)
 
 cropOutlineMapper = vtk.vtkPolyDataMapper()
@@ -216,16 +216,16 @@ transform.RotateWXYZ(-20,0.0,-0.7,0.7)
 c = (0.0, 0.0, 0.0)
 
 volumeClip = vtk.vtkPlane()
-volumeClip.SetNormal(1,0,0)
+volumeClip.SetNormal(0.707,0.707,0)
 volumeClip.SetOrigin(c[0],c[1],c[2])
 
 skinClip = vtk.vtkPlane()
 skinClip.SetNormal(0,0,1)
 skinClip.SetOrigin(c[0],c[1],c[2])
 
-#volumeMapper.AddClippingPlane(volumeClip)
-#volumeMapper2D.AddClippingPlane(volumeClip)
-#volumeMapper3D.AddClippingPlane(volumeClip)
+volumeMapper.AddClippingPlane(volumeClip)
+volumeMapper2D.AddClippingPlane(volumeClip)
+volumeMapper3D.AddClippingPlane(volumeClip)
 skinMapper.AddClippingPlane(skinClip)
 
 #---------------------------------------------------------

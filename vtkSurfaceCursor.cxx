@@ -49,7 +49,7 @@
 #include "vtkZoomCameraAction.h"
 #include "vtkVolumeCroppingOutline.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.49 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.50 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
 
   // Volume cropping actor items
   this->VolumeCroppingSource = vtkVolumeCroppingOutline::New();
-  this->VolumeCroppingSource->UseColorScalarsOn();
+  this->VolumeCroppingSource->GenerateScalarsOn();
   this->VolumeCroppingSource->SetColor(1, 0, 0);
   this->VolumeCroppingSource->SetActivePlaneColor(0, 1, 0);
   this->VolumeCroppingMapper = vtkDataSetMapper::New();
