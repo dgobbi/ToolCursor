@@ -41,6 +41,7 @@ class vtkCommand;
 class vtkSurfaceCursorAction;
 class vtkSurfaceCursorShapes;
 class vtkVolumeCroppingOutline;
+class vtkClipOutlineWithPlanes;
 
 // Modifier keys and mouse buttons.
 #define VTK_SCURSOR_SHIFT        0x0001
@@ -282,6 +283,7 @@ protected:
   vtkActor *VolumeCroppingActor;
   vtkDataSetMapper *VolumeCroppingMapper;
   vtkVolumeCroppingOutline *VolumeCroppingSource;
+  vtkClipOutlineWithPlanes *ClipOutlineFilter;
 
   // Description:
   // Set the modifier bits.  This is protected because SetModifierBits() 

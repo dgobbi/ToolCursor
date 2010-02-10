@@ -48,8 +48,9 @@
 #include "vtkSpinCameraAction.h"
 #include "vtkZoomCameraAction.h"
 #include "vtkVolumeCroppingOutline.h"
+#include "vtkClipOutlineWithPlanes.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.50 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.51 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -155,15 +156,26 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   // Volume cropping actor items
   this->VolumeCroppingSource = vtkVolumeCroppingOutline::New();
   this->VolumeCroppingSource->GenerateScalarsOn();
+  this->VolumeCroppingSource->GenerateFacesOn();
   this->VolumeCroppingSource->SetColor(1, 0, 0);
   this->VolumeCroppingSource->SetActivePlaneColor(0, 1, 0);
+
+  this->ClipOutlineFilter = vtkClipOutlineWithPlanes::New();
+  this->ClipOutlineFilter->GenerateScalarsOn();
+  this->ClipOutlineFilter->SetBaseColor(1, 0, 0);
+  this->ClipOutlineFilter->SetActivePlaneColor(0, 1, 0);
+  this->ClipOutlineFilter->SetInputConnection(
+    this->VolumeCroppingSource->GetOutputPort());
+
   this->VolumeCroppingMapper = vtkDataSetMapper::New();
   this->VolumeCroppingMapper->SetInputConnection(
-    this->VolumeCroppingSource->GetOutputPort());
+    this->ClipOutlineFilter->GetOutputPort());
+
   this->VolumeCroppingActor = vtkActor::New();
   this->VolumeCroppingActor->SetMapper(this->VolumeCroppingMapper);
   this->VolumeCroppingActor->SetPickable(0);
   this->VolumeCroppingActor->SetVisibility(0);
+  this->VolumeCroppingActor->GetProperty()->BackfaceCullingOn();
 }
 
 //----------------------------------------------------------------------------
@@ -173,6 +185,7 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
 
   if (this->VolumeCroppingActor) { this->VolumeCroppingActor->Delete(); }
   if (this->VolumeCroppingMapper) { this->VolumeCroppingMapper->Delete(); }
+  if (this->ClipOutlineFilter) { this->ClipOutlineFilter->Delete(); }
   if (this->VolumeCroppingSource) { this->VolumeCroppingSource->Delete(); }
 
   if (this->RenderCommand) { this->RenderCommand->Delete(); }
@@ -713,9 +726,12 @@ void vtkSurfaceCursor::OnRender()
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::CheckGuideVisibility()
 {
-  if (((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
-       this->Picker->GetCroppingPlaneId() >= 0) ||
-      this->Picker->GetPickCroppingPlanes()) 
+  if ((((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
+         this->Picker->GetCroppingPlaneId() >= 0) ||
+         this->Picker->GetPickCroppingPlanes()) ||
+      (((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) &&
+         this->Picker->GetClippingPlaneId() >= 0) ||
+         this->Picker->GetPickClippingPlanes())) 
     {
     vtkVolumeMapper *mapper =
       vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
@@ -724,12 +740,16 @@ void vtkSurfaceCursor::CheckGuideVisibility()
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
     this->VolumeCroppingSource->SetActivePlaneId(
       this->Picker->GetCroppingPlaneId());
+    this->ClipOutlineFilter->SetClippingPlanes(mapper->GetClippingPlanes());
+    this->ClipOutlineFilter->SetActivePlaneId(
+      this->Picker->GetClippingPlaneId());
     } 
   else
     {
     this->VolumeCroppingActor->SetVisibility(0);
     this->VolumeCroppingSource->SetVolumeMapper(0);
     this->VolumeCroppingSource->SetActivePlaneId(-1);
+    this->ClipOutlineFilter->SetActivePlaneId(-1);
     }
 }
 
