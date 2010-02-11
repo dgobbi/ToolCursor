@@ -31,8 +31,13 @@
 #include "vtkMergePoints.h"
 #include "vtkGenericCell.h"
 #include "vtkPolygon.h"
+#include "vtkLine.h"
+#include "vtkMatrix4x4.h"
+#include "vtkDelaunay2D.h"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.1 $");
+#include "vtkstd/vector"
+
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -684,7 +689,9 @@ void vtkClipOutlineWithPlanes::CopyPolygons(
 }
 
 //----------------------------------------------------------------------------
-// A helper class: a bitfield that is always as large as needed
+// A helper class: a bitfield that is always as large as needed.
+// For our purposes this is much more convenient than a bool vector,
+// which would have to be resized and range-checked externally.
 
 class vtkClipOutlineBitArray
 {
@@ -708,6 +715,13 @@ public:
     unsigned int chunk = bitstorage[n];
     return ((chunk >> i) & 1);
   };
+
+  void merge(vtkClipOutlineBitArray &b) {
+    if (b.bitstorage.size() > bitstorage.size()) {
+      bitstorage.resize(b.bitstorage.size()); }
+    for (size_t i = 0; i < b.bitstorage.size(); i++) {
+      bitstorage[i] |= b.bitstorage[i]; }
+  }; 
 
 private:
   vtkstd::vector<unsigned int> bitstorage;
@@ -742,6 +756,9 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
   // Temporary storage for all the new polys
   vtkstd::vector<vtkstd::vector<vtkIdType> > newPolys;
+
+  // ---------------------------------------------------
+  // Here is the code for creating polygons from line segments
 
   // Bitfield for marking lines as used
   vtkClipOutlineBitArray usedLines;
@@ -873,9 +890,69 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   // All polygons must be converted into quads and triangles
   // to guarantee that all polys are convex.
 
+  // ---------------------------------------------------
+  // Check for self-intersection. Split the figure-eights.
+
   for (size_t i = 0; i < numNewPolys; i++)
     {
     size_t n = newPolys[i].size();
+
+    int foundMatch = 0;
+    size_t idx1 = 0;
+    size_t idx2 = 0;
+
+    for (idx1 = 0; idx1 < n; idx1++)
+      {
+      vtkIdType firstId = newPolys[i][idx1];
+
+      for (idx2 = idx1+1; idx2 < n ; idx2++)
+        {
+        vtkIdType secondId = newPolys[i][idx2];
+
+        if (firstId == secondId)
+          {
+          foundMatch = 1;
+          break;
+          }
+        }
+
+      if (foundMatch) { break; }
+      }
+
+    if (foundMatch)
+      {
+      // Split off a new poly
+      size_t m = idx2 - idx1;
+
+      newPolys.resize(++numNewPolys);
+      newPolys[numNewPolys-1].resize(n - m);
+
+      for (size_t j = 0; j < idx1; j++)
+        {
+        newPolys[numNewPolys-1][j] = newPolys[i][j];
+        }
+      for (size_t k = idx2; k < n; k++)
+        {
+        newPolys[numNewPolys-1][k - m] = newPolys[i][k];
+        }
+
+      // The current poly, which is now intersection-free
+      for (size_t l = 0; l < m; l++)
+        {
+        newPolys[i][l] = newPolys[i][l + idx1];
+        }
+      newPolys[i].resize(m);
+      }
+    }
+
+  // ---------------------------------------------------
+  // Correct the sense of the polygons
+
+  for (size_t i = 0; i < numNewPolys; i++)
+    {
+    size_t n = newPolys[i].size();
+
+    if (n < 3) { continue; }
 
     // Compute the normal, reverse polygon if necessary
 
@@ -908,67 +985,325 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
         newPolys[i][n - kk - 1] = tmpId;
         }
       }
+    }
 
-    // Triangularize any polys with more than 4 points
-    if (n > 4)
+  // ---------------------------------------------------
+  // Check for polygons within polygons.  Group the polygons
+  // if they are within each other.  Reverse the sense of 
+  // the interior "hole" polygons.  A hole within a hole
+  // will be reversed twice.
+
+  // Make an array of bitsets.  Start with one poly per bitset,
+  // but consolidate when polys are found inside other polys.
+  vtkstd::vector<vtkClipOutlineBitArray> polyGroups;
+  polyGroups.resize(numNewPolys);
+  for (size_t i = 0; i < numNewPolys; i++)
+    {
+    polyGroups[i].set(i, 1);
+    }
+
+  for (size_t i = 0; i < numNewPolys; i++)
+    {
+    size_t n = newPolys[i].size();
+
+    if (n < 3) { continue; }
+
+    double *pp = new double[3*n];
+    double bounds[6];
+    bounds[0] = bounds[1] = bounds[2] = 0;
+    bounds[3] = bounds[4] = bounds[5] = 0;
+
+    for (size_t k = 0; k < n; k++)
       {
-      vtkPolygon *polygon = vtkPolygon::New();
-      vtkIdList *triangles = vtkIdList::New();
-
-      polygon->Points->SetNumberOfPoints(n);
-      polygon->PointIds->SetNumberOfIds(n);
-
-      for (size_t j = 0; j < n; j++)
+      double *p = &pp[3*k];
+      points->GetPoint(newPolys[i][k], p);
+      if (k == 0)
         {
-        vtkIdType pointId = newPolys[i][j];
-        double point[3];
-        points->GetPoint(pointId, point);
-        polygon->Points->SetPoint(static_cast<vtkIdType>(j), point);
-        polygon->PointIds->SetId(static_cast<vtkIdType>(j), pointId);
+        bounds[0] = p[0]; bounds[1] = p[0];
+        bounds[2] = p[1]; bounds[3] = p[1];
+        bounds[4] = p[2]; bounds[5] = p[2];
+        }
+      else
+        {
+        if (p[0] < bounds[0]) { bounds[0] = p[0]; }
+        if (p[0] > bounds[1]) { bounds[1] = p[0]; }
+        if (p[1] < bounds[2]) { bounds[2] = p[1]; }
+        if (p[1] > bounds[3]) { bounds[3] = p[1]; }
+        if (p[2] < bounds[4]) { bounds[4] = p[2]; }
+        if (p[2] > bounds[5]) { bounds[5] = p[2]; }
+        }
+      }
+
+    // Compute a tolerance based on the poly size
+    double ps[3];
+    ps[0] = bounds[1] - bounds[0];
+    ps[1] = bounds[3] - bounds[2];
+    ps[2] = bounds[5] - bounds[4];
+
+    double tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*1e-3;
+
+    for (size_t j = 0; j < numNewPolys; j++)
+      {
+      size_t m = newPolys[j].size();
+      if (j == i || m < 3) { continue; }
+
+      // Find a vertex of poly "j" that isn't on the edge of poly "i".
+      // This is necessary or the PointInPolygon might return "true"
+      // based only on roundoff error.
+
+      double p[3];
+      int allPointsOnEdges = 1;
+
+      for (size_t jj = 0; jj < m; jj++)
+        {          
+        points->GetPoint(newPolys[j][jj], p);
+
+        int pointOnEdge = 0;
+        double q1[3], q2[3];
+        points->GetPoint(newPolys[i][n-1], q1);
+        for (size_t ii = 0; ii < n; ii++)
+          {
+          points->GetPoint(newPolys[i][ii], q2);
+          double t, dummy[3];
+          // This method returns distance squared
+          if (vtkLine::DistanceToLine(p, q1, q2, t, dummy) < tol2)
+            {
+            pointOnEdge = 1;
+            break;
+            }
+          q1[0] = q2[0]; q1[1] = q2[1]; q1[2] = q2[2];
+          }
+        if (!pointOnEdge)
+          {
+          allPointsOnEdges = 0;
+          break;
+          }
         }
 
-      polygon->Triangulate(triangles);
+      // There should also be a check to see if all the verts match.
+      // If they do, both polys should be removed.
 
+      if (allPointsOnEdges || 
+          vtkPolygon::PointInPolygon(p, n, pp, bounds, normal) == 1)
+        {
+        // Reverse the interior polygon, and mark it as being grouped
+        // with the outer polygon.  Together, grouped polygons can
+        // be used as constraints for a Delaunay triangulation.
+
+        size_t m2 = m/2;
+        for (size_t kk = 0; kk < m2; kk++)
+          {
+          vtkIdType tmpId = newPolys[j][kk];
+          newPolys[j][kk] = newPolys[j][m - kk - 1];
+          newPolys[j][m - kk - 1] = tmpId;
+          }
+
+        // Search through existing polygon groups (stored as bitsets)
+        int foundGroup = 0;
+        size_t firstGroupId = 0;
+
+        for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
+          {
+          if (polyGroups[groupId].get(i) || polyGroups[groupId].get(j))
+            {
+            if (!foundGroup)
+              {
+              foundGroup = 1;
+              firstGroupId = groupId;
+              polyGroups[firstGroupId].set(i, 1);
+              polyGroups[firstGroupId].set(j, 1);
+              }
+            else
+              {
+              polyGroups[firstGroupId].merge(polyGroups[groupId]);
+              polyGroups[groupId] = polyGroups[polyGroups.size()-1];
+              polyGroups.resize(polyGroups.size()-1);
+              groupId--;
+              }
+            } 
+          } 
+        }
+      }
+      delete [] pp;
+    }
+
+  // Now that the inside-outside check has been done, almost
+  // everything is ready for a Delaunay triangulation.
+
+  // The Delaunay requires creating a new set of points that
+  // are transformed to the 2D plane, and that is limited only
+  // to the points that form the polygons to be triangulated.
+  // The clipping plane normal and position will be used to
+  // compute the transform.  A vector that maps the new pointIds
+  // to the original pointIds will be needed in order to
+  // merge the triangulation with our output cell array.
+
+  // Delaunay furthermore requires a data set with a group's
+  // worth of polygons, with all the Ids converted to the new Ids.
+  // This polydata data set will be used for both of the inputs
+  // to Delaunay2D, i.e. the points and the contraints.
+
+  // The output of Delaunay will be the new polys.  The pointIds
+  // must be converted back when they are stored on our polys list.
+
+  // ---------------------------------------------------
+  // Add the polygons to the vtkCellArray.  Triangulate where necessary.
+
+  // Instantiate a Delaunay2D filter and its input polydata
+  vtkPolyData *sourceData = vtkPolyData::New();
+  vtkCellArray *sourcePolys = vtkCellArray::New();
+  vtkCellArray *outputPolys = 0;
+  vtkPoints *sourcePoints = vtkPoints::New();
+
+  vtkDelaunay2D *delaunay = vtkDelaunay2D::New();
+  delaunay->SetInput(sourceData);
+  delaunay->SetSource(sourceData);
+  delaunay->SetProjectionPlaneMode(VTK_DELAUNAY_XY_PLANE);
+
+  // Extra items for ear cut triangulation
+  vtkPolygon *polygon = vtkPolygon::New();
+  vtkIdList *triangles = vtkIdList::New();
+  vtkCellArray *trianglePolys = vtkCellArray::New();
+
+  // Build a matrix to transform points into the xy plane.  The normal
+  // must be the same as the one we used to set the sense of the polys.
+  double matrix[16];
+  vtkMatrix4x4::Identity(matrix);
+  matrix[8] = -normal[0];
+  matrix[9] = -normal[1];
+  matrix[10] = -normal[2];
+  vtkMath::Perpendiculars(&matrix[8], &matrix[0], &matrix[4], 0);
+
+  // The polygons have been grouped prior to triangulation.  A group
+  // of simple polygons is used to represent polygons with holes.
+
+  for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
+    {
+    // Make a map for recovering pointIds after Delaunay has finished
+    vtkstd::vector<vtkIdType> pointMap;
+    vtkIdType newPointId = 0;
+
+    sourcePolys->Initialize();
+    sourcePoints->Initialize();
+    sourceData->Initialize();
+    sourceData->SetPoints(sourcePoints);
+    sourceData->SetPolys(sourcePolys);
+
+    // Go through all polys, check whether they are in the group.
+    for (size_t i = 0; i < numNewPolys; i++)
+      {
+      size_t n = newPolys[i].size();
+
+      // If the poly is not in the group or is a line, then skip it
+      if (polyGroups[groupId].get(i) == 0 || n < 3)
+        {
+        continue;
+        }
+
+      // Create the source polys for a constrained Delaunay
+      sourcePolys->InsertNextCell(n);
+      for (size_t j = 0; j < n; j++)
+        {
+        // Use homogeneous point with Matrix4x4
+        double point[4];
+        point[3] = 1.0;
+
+        vtkIdType pointId = newPolys[i][j];
+        points->GetPoint(pointId, point);
+        vtkMatrix4x4::MultiplyPoint(matrix, point, point);
+
+        sourcePoints->InsertNextPoint(point);
+        sourcePolys->InsertCellPoint(newPointId++);
+
+        // Save the old pointId
+        pointMap.push_back(pointId);
+        }
+      }
+
+    // Just in case there were no good cells
+    if (sourcePolys->GetNumberOfCells() == 0)
+      {
+      continue;
+      }
+
+    if (sourcePolys->GetNumberOfCells() == 1)
+      {
+      if (sourcePolys->GetNumberOfConnectivityEntries() <= 5)
+        {
+        // If the cell is a triangle or quad, don't triangulate
+        outputPolys = sourcePolys;
+        }
+      else
+        {
+        // If it is a single polygon, use ear cut triangulation
+        sourcePolys->GetCell(0, npts, pts);
+
+        polygon->Points->SetNumberOfPoints(npts);
+        polygon->PointIds->SetNumberOfIds(npts);
+
+        for (vtkIdType j = 0; j < npts; j++)
+          {
+          double point[3];
+          sourcePoints->GetPoint(pts[j], point);
+          polygon->Points->SetPoint(j, point);
+          polygon->PointIds->SetId(j, pts[j]);
+          }
+
+        triangles->Initialize();
+        polygon->Triangulate(triangles);
+        vtkIdType m = triangles->GetNumberOfIds();
+        trianglePolys->Initialize();
+        for (vtkIdType k = 0; k < m; k += 3)
+          {
+          trianglePolys->InsertNextCell(3);
+          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 0)]);
+          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 1)]);
+          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 2)]);
+          }
+        outputPolys = trianglePolys;
+        }
+      }
+    else
+      {
+      // Delaunay triangulation
+      //static unsigned int counter = 0;
+      //cerr << "delaunay! " << counter++ << "\n";
+      delaunay->Modified();
+      delaunay->Update();
+      outputPolys = delaunay->GetOutput()->GetPolys();
+      }
+
+    // Check to make sure that Delaunay produced something
+    if (outputPolys)
+      {
       vtkUnsignedCharArray *scalars =
         vtkUnsignedCharArray::SafeDownCast(outCD->GetScalars());
 
-      vtkIdType m = triangles->GetNumberOfIds();
-      for (vtkIdType k = 0; k < m; k += 3)
+      outputPolys->InitTraversal();
+      while (outputPolys->GetNextCell(npts, pts))
         {
-        vtkIdType cellId = polys->InsertNextCell(3);
-        polys->InsertCellPoint(newPolys[i][triangles->GetId(k + 0)]);
-        polys->InsertCellPoint(newPolys[i][triangles->GetId(k + 1)]);
-        polys->InsertCellPoint(newPolys[i][triangles->GetId(k + 2)]);
+        vtkIdType cellId = polys->InsertNextCell(npts);
+
+        for (vtkIdType k = 0; k < npts; k++)
+          {
+          polys->InsertCellPoint(pointMap[pts[k]]);
+          }
 
         if (scalars)
           {
           scalars->InsertTupleValue(cellId, color);
           }
         }
-
-      polygon->Delete();
-      triangles->Delete();
-      }
-    else if (n > 2)
-      {
-      // Add any triangles or quads directly
-
-      vtkIdType cellId = polys->InsertNextCell(static_cast<vtkIdType>(n));
-
-      for (size_t j = 0; j < n; j++)
-        {
-        polys->InsertCellPoint(newPolys[i][j]);
-        }
-
-      vtkUnsignedCharArray *scalars =
-        vtkUnsignedCharArray::SafeDownCast(outCD->GetScalars());
-
-      if (scalars)
-        {
-        scalars->InsertTupleValue(cellId, color);
-        }
       }
     }
+
+  polygon->Delete();
+  triangles->Delete();
+  trianglePolys->Delete();
+  sourcePoints->Delete();
+  sourcePolys->Delete();
+  sourceData->Delete();
+  delaunay->Delete();
 }
 
 //----------------------------------------------------------------------------
