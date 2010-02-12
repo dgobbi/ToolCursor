@@ -50,7 +50,7 @@
 #include "vtkVolumeCroppingOutline.h"
 #include "vtkClipOutlineWithPlanes.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.51 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.52 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -176,6 +176,10 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->VolumeCroppingActor->SetPickable(0);
   this->VolumeCroppingActor->SetVisibility(0);
   this->VolumeCroppingActor->GetProperty()->BackfaceCullingOn();
+
+  // For debugging triangularization: show poly outlines
+  //this->ClipOutlineFilter->GenerateFacesOn();
+  //this->VolumeCroppingActor->GetProperty()->SetRepresentationToWireframe();
 }
 
 //----------------------------------------------------------------------------
@@ -726,17 +730,18 @@ void vtkSurfaceCursor::OnRender()
 //----------------------------------------------------------------------------
 void vtkSurfaceCursor::CheckGuideVisibility()
 {
-  if ((((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
-         this->Picker->GetCroppingPlaneId() >= 0) ||
-         this->Picker->GetPickCroppingPlanes()) ||
-      (((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) &&
-         this->Picker->GetClippingPlaneId() >= 0) ||
-         this->Picker->GetPickClippingPlanes())) 
-    {
-    vtkVolumeMapper *mapper =
-      vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
+  vtkVolumeMapper *mapper =
+    vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
 
-    this->VolumeCroppingActor->SetVisibility((mapper != 0));
+  if (mapper &&
+      ((((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
+          this->Picker->GetCroppingPlaneId() >= 0) ||
+          this->Picker->GetPickCroppingPlanes()) ||
+       (((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) &&
+          this->Picker->GetClippingPlaneId() >= 0) ||
+          this->Picker->GetPickClippingPlanes())))
+    {
+    this->VolumeCroppingActor->SetVisibility(1);
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
     this->VolumeCroppingSource->SetActivePlaneId(
       this->Picker->GetCroppingPlaneId());
@@ -750,6 +755,7 @@ void vtkSurfaceCursor::CheckGuideVisibility()
     this->VolumeCroppingSource->SetVolumeMapper(0);
     this->VolumeCroppingSource->SetActivePlaneId(-1);
     this->ClipOutlineFilter->SetActivePlaneId(-1);
+    this->ClipOutlineFilter->SetClippingPlanes(0);
     }
 }
 
