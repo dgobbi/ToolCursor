@@ -34,10 +34,11 @@
 #include "vtkLine.h"
 #include "vtkMatrix4x4.h"
 #include "vtkDelaunay2D.h"
+//#include "vtkXMLPolyDataWriter.h"
 
 #include "vtkstd/vector"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.2 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.3 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -61,16 +62,29 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
   this->ActivePlaneColor[0] = 1.0;
   this->ActivePlaneColor[1] = 1.0;
   this->ActivePlaneColor[2] = 0.0;
+
+  // A whole bunch of objects needed during execution
+  this->Locator = 0;
+  this->CellClipScalars = 0;
+  this->IdList = 0;
+  this->CellArray = 0;
+  this->Polygon = 0;
+  this->Cell = 0;
+  this->Delaunay = 0;
 }
 
 //----------------------------------------------------------------------------
 vtkClipOutlineWithPlanes::~vtkClipOutlineWithPlanes()
 {
-  if (this->ClippingPlanes)
-    {
-    this->ClippingPlanes->Delete();
-    this->ClippingPlanes = 0;
-    }
+  if (this->ClippingPlanes) { this->ClippingPlanes->Delete(); } 
+
+  if (this->Locator) { this->Locator->Delete(); }
+  if (this->CellClipScalars) { this->CellClipScalars->Delete(); }
+  if (this->IdList) { this->IdList->Delete(); }
+  if (this->CellArray) { this->CellArray->Delete(); }
+  if (this->Polygon) { this->Polygon->Delete(); }
+  if (this->Cell) { this->Cell->Delete(); }
+  if (this->Delaunay) { this->Delaunay->Delete(); }
 }
 
 //----------------------------------------------------------------------------
@@ -182,9 +196,18 @@ int vtkClipOutlineWithPlanes::RequestData(
     return 1;
     }
 
-  // The points.
+  // The points, forced to double precision.
   vtkPoints *points = vtkPoints::New();
-  points->DeepCopy(input->GetPoints());
+  points->SetDataTypeToDouble();
+  vtkPoints *inputPoints = input->GetPoints();
+  vtkIdType numPts = inputPoints->GetNumberOfPoints();
+  points->SetNumberOfPoints(numPts);
+  for (vtkIdType ptId = 0; ptId < numPts; ptId++)
+    {
+    double point[3];
+    inputPoints->GetPoint(ptId, point);
+    points->SetPoint(ptId, point);
+    } 
 
   // The cell scalars
   vtkUnsignedCharArray *lineScalars = 0;
@@ -263,18 +286,9 @@ int vtkClipOutlineWithPlanes::RequestData(
     output->SetLines(lines);
     lines->Delete();
     output->GetCellData()->SetScalars(lineScalars);
-    if (lineScalars)
-      {
-      lineScalars->Delete();
-      }
-    if (polys)
-      {
-      polys->Delete();
-      }
-    if (polyScalars)
-      {
-      polyScalars->Delete();
-      }
+    if (lineScalars) { lineScalars->Delete(); }
+    if (polys) { polys->Delete(); }
+    if (polyScalars) { polyScalars->Delete(); }
 
     return 1;
     }
@@ -291,8 +305,10 @@ int vtkClipOutlineWithPlanes::RequestData(
     }
 
   // Make the locator and the points
-  vtkIncrementalPointLocator *locator = vtkMergePoints::New();
+  if (this->Locator == 0) { this->Locator = vtkMergePoints::New(); }
+  vtkIncrementalPointLocator *locator = this->Locator;
   vtkPoints *newPoints = vtkPoints::New();
+  newPoints->SetDataTypeToDouble();
 
   // These hold the point and cell scalars, they're needed for clipping
   vtkPointData *inPointData = vtkPointData::New();
@@ -363,8 +379,9 @@ int vtkClipOutlineWithPlanes::RequestData(
     outPolyData->CopyAllocate(inPolyData, 0, 0);
 
     // Clip the lines
-    this->ClipCells(points, pointScalars, locator, 1, lines, newLines,
-                    inPointData, outPointData, inLineData, outLineData);
+    this->ClipAndContourCells(
+      points, pointScalars, locator, 1, lines, 0, newLines,
+      inPointData, outPointData, inLineData, 0, outLineData);
 
     if (polys)
       {
@@ -372,8 +389,9 @@ int vtkClipOutlineWithPlanes::RequestData(
       vtkIdType numClipLines = newLines->GetNumberOfCells();
 
       // Cut the polys to generate more lines
-      this->ContourCells(points, pointScalars, locator, 2, polys, newLines,
-                         inPointData, outPointData, inPolyData, outLineData);
+      this->ClipAndContourCells(
+        points, pointScalars, locator, 2, polys, newPolys, newLines,
+        inPointData, outPointData, inPolyData, outPolyData, outLineData);
       
       // Set new scalars for the contour lines
       vtkUnsignedCharArray *scalars =
@@ -398,10 +416,6 @@ int vtkClipOutlineWithPlanes::RequestData(
             }
           }
         }
-
-      // Clip the polys
-      this->ClipCells(points, pointScalars, locator, 2, polys, newPolys,
-                      inPointData, outPointData, inPolyData, outPolyData);
 
       // Generate new polys from the cut lines
       this->MakeCutPolys(newPoints, newLines, numClipLines, newPolys, pc,
@@ -479,8 +493,8 @@ int vtkClipOutlineWithPlanes::RequestData(
 
   output->GetCellData()->SetScalars(scalars);
 
+  locator->Initialize();
   newPoints->Delete();
-  locator->Delete();
   newLines->Delete();
   if (newPolys)
     {
@@ -498,15 +512,31 @@ int vtkClipOutlineWithPlanes::RequestData(
 }
 
 //----------------------------------------------------------------------------
-void vtkClipOutlineWithPlanes::ClipCells(
+void vtkClipOutlineWithPlanes::ClipAndContourCells(
   vtkPoints *points, vtkDoubleArray *pointScalars,
   vtkIncrementalPointLocator *locator, int dimensionality,
-  vtkCellArray *inputCells, vtkCellArray *outputCells,
-  vtkPointData *inPD, vtkPointData *outPD,
-  vtkCellData *inCD, vtkCellData *outCD)
+  vtkCellArray *inputCells,
+  vtkCellArray *outputPolys, vtkCellArray *outputLines, 
+  vtkPointData *inPointData, vtkPointData *outPointData,
+  vtkCellData *inCellData,
+  vtkCellData *outPolyData, vtkCellData *outLineData)
 {
-  vtkDoubleArray *cellPointScalars = vtkDoubleArray::New();
-  vtkGenericCell *cell = vtkGenericCell::New();
+  if (this->CellClipScalars == 0) { this->CellClipScalars = vtkDoubleArray::New(); }
+  vtkDoubleArray *cellClipScalars = this->CellClipScalars;
+
+  if (this->Cell == 0) { this->Cell = vtkGenericCell::New(); }
+  vtkGenericCell *cell = this->Cell;
+
+  if (this->CellArray == 0) { this->CellArray = vtkCellArray::New(); }
+  vtkCellArray *outputVerts = this->CellArray;
+
+  vtkCellData *outCellData = outLineData;
+  vtkCellArray *outputCells = outputLines;
+  if (dimensionality == 2)
+    {
+    outCellData = outPolyData;
+    outputCells = outputPolys;
+    }
 
   vtkIdType numCells = inputCells->GetNumberOfCells();
   inputCells->InitTraversal();
@@ -516,16 +546,16 @@ void vtkClipOutlineWithPlanes::ClipCells(
     inputCells->GetNextCell(numPts, pts);
 
     // Set the cell type from the dimensionality
-    if (dimensionality == 1)
-      {
-      if (numPts == 2) { cell->SetCellTypeToLine(); }
-      else { cell->SetCellTypeToPolyLine(); }
-      }
-    else // (dimensionality == 2)
+    if (dimensionality == 2)
       {
       if (numPts == 3) { cell->SetCellTypeToTriangle(); }
       else if (numPts == 4) { cell->SetCellTypeToQuad(); }
-      else { cell->SetCellTypeToPolygon(); }
+      else { cell->SetCellTypeToPolygon(); cerr << "polygon\n"; }
+      }
+    else // (dimensionality == 1)
+      {
+      if (numPts == 2) { cell->SetCellTypeToLine(); }
+      else { cell->SetCellTypeToPolyLine(); }
       }
 
     vtkPoints *cellPts = cell->GetPoints();
@@ -533,7 +563,7 @@ void vtkClipOutlineWithPlanes::ClipCells(
 
     cellPts->SetNumberOfPoints(numPts);
     cellIds->SetNumberOfIds(numPts);
-    cellPointScalars->SetNumberOfValues(numPts);
+    cellClipScalars->SetNumberOfValues(numPts);
 
     // Copy everything over to the temporary cell
     for (vtkIdType i = 0; i < numPts; i++)
@@ -543,74 +573,21 @@ void vtkClipOutlineWithPlanes::ClipCells(
       cellPts->SetPoint(i, point);
       cellIds->SetId(i, pts[i]);
       double s = pointScalars->GetValue(cellIds->GetId(i));
-      cellPointScalars->SetValue(i, s);
+      cellClipScalars->SetValue(i, s);
       }
 
-    cell->Clip(0, cellPointScalars, locator, outputCells, inPD, outPD,
-               inCD, cellId, outCD, 0);
+    cell->Clip(0, cellClipScalars, locator, outputCells,
+               inPointData, outPointData,
+               inCellData, cellId, outCellData, 0);
+
+    if (dimensionality == 2)
+      {
+      cell->Contour(0, cellClipScalars, locator,
+                    outputVerts, outputLines, 0,
+                    inPointData, outPointData,
+                    inCellData, cellId, outLineData);
+      }
     }
-
-  cellPointScalars->Delete();
-  cell->Delete();
-}             
-
-//----------------------------------------------------------------------------
-void vtkClipOutlineWithPlanes::ContourCells(
-  vtkPoints *points, vtkDoubleArray *pointScalars,
-  vtkIncrementalPointLocator *locator, int dimensionality,
-  vtkCellArray *inputCells, vtkCellArray *outputCells,
-  vtkPointData *inPD, vtkPointData *outPD,
-  vtkCellData *inCD, vtkCellData *outCD)
-{
-  vtkDoubleArray *cellPointScalars = vtkDoubleArray::New();
-  vtkGenericCell *cell = vtkGenericCell::New();
-  vtkCellArray *verts = vtkCellArray::New();
-
-  vtkIdType numCells = inputCells->GetNumberOfCells();
-  inputCells->InitTraversal();
-  for (vtkIdType cellId = 0; cellId < numCells; cellId++)
-    {
-    vtkIdType numPts, *pts;
-    inputCells->GetNextCell(numPts, pts);
-
-    // Set the cell type from the dimensionality
-    if (dimensionality == 1)
-      {
-      if (numPts == 2) { cell->SetCellTypeToLine(); }
-      else { cell->SetCellTypeToPolyLine(); }
-      }
-    else // (dimensionality == 2)
-      {
-      if (numPts == 3) { cell->SetCellTypeToTriangle(); }
-      else if (numPts == 4) { cell->SetCellTypeToQuad(); }
-      else { cell->SetCellTypeToPolygon(); }
-      }
-
-    vtkPoints *cellPts = cell->GetPoints();
-    vtkIdList *cellIds = cell->GetPointIds();
-
-    cellPts->SetNumberOfPoints(numPts);
-    cellIds->SetNumberOfIds(numPts);
-    cellPointScalars->SetNumberOfValues(numPts);
-
-    // Copy everything over to the temporary cell
-    for (vtkIdType i = 0; i < numPts; i++)
-      {
-      double point[3];
-      points->GetPoint(pts[i], point);
-      cellPts->SetPoint(i, point);
-      cellIds->SetId(i, pts[i]);
-      double s = pointScalars->GetValue(cellIds->GetId(i));
-      cellPointScalars->SetValue(i, s);
-      }
-
-    cell->Contour(0, cellPointScalars, locator, verts, outputCells, 0,
-                  inPD, outPD, inCD, cellId, outCD);
-    }
-
-  verts->Delete();
-  cellPointScalars->Delete();
-  cell->Delete();
 }             
 
 //----------------------------------------------------------------------------
@@ -1002,6 +979,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
     polyGroups[i].set(i, 1);
     }
 
+/*
   for (size_t i = 0; i < numNewPolys; i++)
     {
     size_t n = newPolys[i].size();
@@ -1040,7 +1018,8 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
     ps[1] = bounds[3] - bounds[2];
     ps[2] = bounds[5] - bounds[4];
 
-    double tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*1e-3;
+    // Tolerance is for squared distance
+    double tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*(1e-5 * 1e-5);
 
     for (size_t j = 0; j < numNewPolys; j++)
       {
@@ -1126,7 +1105,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
       }
       delete [] pp;
     }
-
+*/
   // Now that the inside-outside check has been done, almost
   // everything is ready for a Delaunay triangulation.
 
@@ -1149,21 +1128,12 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   // ---------------------------------------------------
   // Add the polygons to the vtkCellArray.  Triangulate where necessary.
 
-  // Instantiate a Delaunay2D filter and its input polydata
+  // Instantiate input polydata for triangulation
   vtkPolyData *sourceData = vtkPolyData::New();
   vtkCellArray *sourcePolys = vtkCellArray::New();
   vtkCellArray *outputPolys = 0;
   vtkPoints *sourcePoints = vtkPoints::New();
-
-  vtkDelaunay2D *delaunay = vtkDelaunay2D::New();
-  delaunay->SetInput(sourceData);
-  delaunay->SetSource(sourceData);
-  delaunay->SetProjectionPlaneMode(VTK_DELAUNAY_XY_PLANE);
-
-  // Extra items for ear cut triangulation
-  vtkPolygon *polygon = vtkPolygon::New();
-  vtkIdList *triangles = vtkIdList::New();
-  vtkCellArray *trianglePolys = vtkCellArray::New();
+  sourcePoints->SetDataTypeToDouble();
 
   // Build a matrix to transform points into the xy plane.  The normal
   // must be the same as the one we used to set the sense of the polys.
@@ -1179,7 +1149,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
   for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
     {
-    // Make a map for recovering pointIds after Delaunay has finished
+    // Make a map for recovering pointIds after triangulation has finished
     vtkstd::vector<vtkIdType> pointMap;
     vtkIdType newPointId = 0;
 
@@ -1236,8 +1206,19 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
       else
         {
         // If it is a single polygon, use ear cut triangulation
+
+        if (this->Polygon == 0) { this->Polygon = vtkPolygon::New(); }
+        vtkPolygon *polygon = this->Polygon;
+
+        if (this->IdList == 0) { this->IdList = vtkIdList::New(); }
+        vtkIdList *triangles = this->IdList;
+
+        if (this->CellArray == 0) { this->CellArray = vtkCellArray::New(); }
+        vtkCellArray *trianglePolys = this->CellArray;
+
         sourcePolys->GetCell(0, npts, pts);
 
+        polygon->Points->SetDataTypeToDouble();
         polygon->Points->SetNumberOfPoints(npts);
         polygon->PointIds->SetNumberOfIds(npts);
 
@@ -1266,8 +1247,27 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
     else
       {
       // Delaunay triangulation
+
+      // Debug code: write data sets that cause Delaunay to die
       //static unsigned int counter = 0;
       //cerr << "delaunay! " << counter++ << "\n";
+      //vtkXMLPolyDataWriter *writer = vtkXMLPolyDataWriter::New();
+      //writer->SetFileName("baddelaunay.vtp");
+      //writer->SetInput(sourceData);
+      //writer->SetCompressorTypeToNone();
+      //writer->SetDataModeToAscii();
+      //writer->Modified();
+      //writer->Write();
+      //writer->Delete();
+
+      if (this->Delaunay == 0) { this->Delaunay = vtkDelaunay2D::New(); }
+      vtkDelaunay2D *delaunay = this->Delaunay;
+      delaunay->SetTolerance(1e-5);
+      delaunay->SetOffset(1.0);
+      delaunay->SetInput(sourceData);
+      delaunay->SetSource(sourceData);
+      delaunay->SetProjectionPlaneMode(VTK_DELAUNAY_XY_PLANE);
+
       delaunay->Modified();
       delaunay->Update();
       outputPolys = delaunay->GetOutput()->GetPolys();
@@ -1297,13 +1297,26 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
       }
     }
 
-  polygon->Delete();
-  triangles->Delete();
-  trianglePolys->Delete();
+  // Free up all the memory that we can
+
+  if (this->Polygon)
+    {
+    this->Polygon->Points->Initialize();
+    this->Polygon->PointIds->Initialize();
+    }
+  if (this->IdList) { this->IdList->Initialize(); }
+  if (this->CellArray) { this->CellArray->Initialize(); }
+
+  if (this->Delaunay)
+    {
+    this->Delaunay->SetInput(0);
+    this->Delaunay->SetSource(0);
+    this->Delaunay->SetOutput(0);
+    }
+
   sourcePoints->Delete();
   sourcePolys->Delete();
   sourceData->Delete();
-  delaunay->Delete();
 }
 
 //----------------------------------------------------------------------------

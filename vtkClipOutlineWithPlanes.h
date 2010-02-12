@@ -33,6 +33,10 @@ class vtkCellArray;
 class vtkPointData;
 class vtkCellData;
 class vtkIncrementalPointLocator;
+class vtkGenericCell;
+class vtkPolygon;
+class vtkDelaunay2D;
+class vtkIdList;
 
 class VTK_EXPORT vtkClipOutlineWithPlanes : public vtkPolyDataAlgorithm
 {
@@ -102,49 +106,50 @@ protected:
   double ClipColor[3];
   double ActivePlaneColor[3];
 
-  virtual int ComputePipelineMTime(vtkInformation* request,
-                                   vtkInformationVector** inputVector,
-                                   vtkInformationVector* outputVector,
-                                   int requestFromOutputPort,
-                                   unsigned long* mtime);
+  vtkIncrementalPointLocator *Locator;
 
-  virtual int RequestData(vtkInformation* request,
-                          vtkInformationVector** inputVector,
-                          vtkInformationVector* outputVector);
+  vtkDoubleArray *CellClipScalars;
+  vtkIdList *IdList;
+  vtkCellArray *CellArray;
+  vtkPolygon *Polygon;
+  vtkGenericCell *Cell;
+  vtkDelaunay2D *Delaunay;
 
-  static void BreakPolylines(vtkCellArray *inputlines, vtkCellArray *lines,
-                             vtkUnsignedCharArray *inputScalars,
-                             vtkIdType firstLineScalar,
-                             vtkUnsignedCharArray *scalars,
-                             unsigned char *color);
+  virtual int ComputePipelineMTime(
+    vtkInformation* request, vtkInformationVector** inputVector,
+    vtkInformationVector* outputVector, int requestFromOutputPort,
+    unsigned long* mtime);
 
-  static void CopyPolygons(vtkCellArray *inputPolys, vtkCellArray *polys,
-                           vtkUnsignedCharArray *inputScalars,
-                           vtkIdType firstPolyScalar,
-                           vtkUnsignedCharArray *polyScalars,
-                           unsigned char colors[3]);
+  virtual int RequestData(
+    vtkInformation* request, vtkInformationVector** inputVector,
+    vtkInformationVector* outputVector);
 
-  static void ClipCells(vtkPoints *points, vtkDoubleArray *pointScalars,
-                        vtkIncrementalPointLocator *locator, int dims,
-                        vtkCellArray *inputCells, vtkCellArray *outputCells,
-                        vtkPointData *inPD, vtkPointData *outPD,
-                        vtkCellData *inCD, vtkCellData *outCD);
+  void ClipAndContourCells(
+    vtkPoints *points, vtkDoubleArray *pointScalars,
+    vtkIncrementalPointLocator *locator, int dimensions,
+    vtkCellArray *inputCells, vtkCellArray *outputPolys,
+    vtkCellArray *outputLines, vtkPointData *inPointData,
+    vtkPointData *outPointData, vtkCellData *inCellData,
+    vtkCellData *outPolyData, vtkCellData *outLineData);
 
-  static void ContourCells(vtkPoints *points, vtkDoubleArray *pointScalars,
-                           vtkIncrementalPointLocator *locator, int dims,
-                           vtkCellArray *inputCells, vtkCellArray *outputCells,
-                           vtkPointData *inPD, vtkPointData *outPD,
-                           vtkCellData *inCD, vtkCellData *outCD);
+  void MakeCutPolys(
+    vtkPoints *points, vtkCellArray *lines, vtkIdType firstCell,
+    vtkCellArray *polys, double normal[3], vtkCellData *outCD,
+    unsigned char colors[3]);
 
-  static void MakeCutPolys(vtkPoints *points, vtkCellArray *lines,
-                           vtkIdType firstCell, vtkCellArray *polys,
-                           double normal[3], vtkCellData *outCD,
-                           unsigned char colors[3]);
+  static void BreakPolylines(
+    vtkCellArray *inputlines, vtkCellArray *lines,
+    vtkUnsignedCharArray *inputScalars, vtkIdType firstLineScalar,
+    vtkUnsignedCharArray *scalars, unsigned char *color);
 
-  static void CreateColorValues(double color1[3],
-                                double color2[3],
-                                double color3[3],
-                                unsigned char colors[3][3]);
+  static void CopyPolygons(
+    vtkCellArray *inputPolys, vtkCellArray *polys,
+    vtkUnsignedCharArray *inputScalars, vtkIdType firstPolyScalar,
+    vtkUnsignedCharArray *polyScalars, unsigned char colors[3]);
+
+  static void CreateColorValues(
+    double color1[3], double color2[3], double color3[3],
+    unsigned char colors[3][3]);
 
 private:
   vtkClipOutlineWithPlanes(const vtkClipOutlineWithPlanes&);  // Not implemented.
