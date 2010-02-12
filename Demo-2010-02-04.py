@@ -25,7 +25,7 @@ else:
 
 print "Instructions: "
 print " 1) Use 'Tab' to cycle through different views"
-print " 2) Use 'Space' to drop a fidicial"
+print " 2) Use 'Space' to drop a fiducial"
 print " 3) Use 'Delete/Backspace' to delete last fiducial" 
 
 #---------------------------------------------------------
