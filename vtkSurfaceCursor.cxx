@@ -50,7 +50,7 @@
 #include "vtkVolumeCroppingOutline.h"
 #include "vtkClipOutlineWithPlanes.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.53 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.54 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -747,13 +747,23 @@ void vtkSurfaceCursor::CheckGuideVisibility()
           this->Picker->GetClippingPlaneId() >= 0) ||
           this->Picker->GetPickClippingPlanes())))
     {
+    int clippingPlaneId = -1;
+    if (this->PickFlags & VTK_SCURSOR_CLIP_PLANE)
+      {
+      clippingPlaneId = this->Picker->GetClippingPlaneId();
+      }
+
+    int croppingPlaneId = -1;
+    if (this->PickFlags & VTK_SCURSOR_CROP_PLANE)
+      {
+      croppingPlaneId = this->Picker->GetCroppingPlaneId();
+      }
+
     this->VolumeCroppingActor->SetVisibility(1);
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
-    this->VolumeCroppingSource->SetActivePlaneId(
-      this->Picker->GetCroppingPlaneId());
+    this->VolumeCroppingSource->SetActivePlaneId(croppingPlaneId);
     this->ClipOutlineFilter->SetClippingPlanes(mapper->GetClippingPlanes());
-    this->ClipOutlineFilter->SetActivePlaneId(
-      this->Picker->GetClippingPlaneId());
+    this->ClipOutlineFilter->SetActivePlaneId(clippingPlaneId);
     } 
   else
     {
