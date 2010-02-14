@@ -50,7 +50,7 @@
 #include "vtkVolumeCroppingOutline.h"
 #include "vtkClipOutlineWithPlanes.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.52 $");
+vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.53 $");
 vtkStandardNewMacro(vtkSurfaceCursor);
 
 //----------------------------------------------------------------------------
@@ -60,7 +60,7 @@ public:
   static vtkSurfaceCursorRenderCommand *New(vtkSurfaceCursor *cursor) {
     return new vtkSurfaceCursorRenderCommand(cursor); };
 
-  virtual void Execute(vtkObject *object, unsigned long, void *) {
+  virtual void Execute(vtkObject *, unsigned long, void *) {
     this->Cursor->OnRender(); };
 
 protected:
@@ -580,8 +580,11 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
     double u[3];
     vtkMath::Cross(plane->GetNormal(), picker->GetPickNormal(), u);
 
+    double dcheck = vtkMath::Dot(plane->GetNormal(), picker->GetPickNormal());
+
     if (fabs(plane->EvaluateFunction(picker->GetPickPosition())) < planeTol &&
-        vtkMath::Norm(u) < normalTol)
+        (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
+        dcheck < 0)
       {
       pickFlags = (pickFlags | VTK_SCURSOR_CLIP_PLANE);
       }
@@ -602,12 +605,15 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
 
     double planeNormal[3], mapperNormal[3], u[3];
     planeNormal[0] = planeNormal[1] = planeNormal[2] = 0.0;
-    planeNormal[planeId/2] = 1.0;
+    planeNormal[planeId>>1] = 1 - 2*(planeId & 1);
     picker->GetMapperNormal(mapperNormal);
     vtkMath::Cross(planeNormal, mapperNormal, u);
+    double dcheck = vtkMath::Dot(planeNormal, mapperNormal);
 
-    if (fabs(mapperPos[planeId/2] - bounds[planeId]) < planeTol &&
-        vtkMath::Norm(u) < normalTol)
+    if (fabs(mapperPos[planeId>>1] - bounds[planeId]) < planeTol &&
+        (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
+        dcheck < 0)
+
       {
       pickFlags = (pickFlags | VTK_SCURSOR_CROP_PLANE);
       }
