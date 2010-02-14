@@ -23,7 +23,7 @@
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.8 $");
+vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
 
 vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
@@ -298,8 +298,9 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
   // InteractorStyle is currently doing an action.
   vtkInteractorStyle *istyle =
     vtkInteractorStyle::SafeDownCast(iren->GetInteractorStyle());
-  int allowTakeFocus = (istyle && istyle->GetState() == VTKIS_NONE
-                        && cursor->GetIsInViewport());
+  int allowTakeFocus = (cursor->GetIsInViewport() &&
+                        (!istyle || istyle->GetState() == VTKIS_NONE));
+  int allowReleaseFocus = (!istyle || istyle->GetState() == VTKIS_NONE);
 
   switch (event)
     {
@@ -373,7 +374,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
       iren->GetEventPosition(x, y);
       cursor->MoveToDisplayPosition(x, y);
 
-      if (allowTakeFocus)
+      if (allowReleaseFocus)
         {
         if (cursor->ReleaseButton(button))
           {
