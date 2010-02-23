@@ -38,7 +38,7 @@
 
 #include "vtkstd/vector"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.4 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -48,7 +48,7 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
 {
   this->ClippingPlanes = 0;
   this->GenerateScalars = 0;
-  this->GenerateFaces = 0;
+  this->GenerateFaces = 1;
   this->ActivePlaneId = -1;
 
   this->BaseColor[0] = 1.0;
@@ -807,7 +807,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   // polys inside these interior polys).  The polys must all be correctly 
   // oriented to be used as constrainsts for the triangulation.
 
-  vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
+  //vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
 
   // Now that the polys have been grouped, there are two methods
   // that can be used to triangulate them:
