@@ -38,7 +38,7 @@
 
 #include "vtkstd/vector"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.5 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -744,6 +744,10 @@ static void vtkClipOutlineMakePolysFromLines(
 static void vtkClipOutlineUntangleSelfIntersection(
   vtkstd::vector<vtkClipOutlinePoly> &newPolys);
 
+// Remove points that are in the middle of the polygon's sides.
+static void vtkClipOutlineFindTrueEdges(
+  vtkstd::vector<vtkClipOutlinePoly> &newPolys, vtkPoints *points);
+
 // Make sure that the sense of the polygons matches the given normal
 static void vtkClipOutlineCorrectPolygonSense(
   vtkstd::vector<vtkClipOutlinePoly> &newPolys, vtkPoints *points,
@@ -783,6 +787,12 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
   vtkClipOutlineUntangleSelfIntersection(newPolys);
 
+  // Some points might be in the middle of straight line segments.
+  // These point can be removed without changing the shape of the
+  // polys, and removing them makes triangulation more stable.
+
+  vtkClipOutlineFindTrueEdges(newPolys, points);
+
   // Check polygon orientation agains our clip plane normal, and
   // reverse if necessary.
 
@@ -807,7 +817,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   // polys inside these interior polys).  The polys must all be correctly 
   // oriented to be used as constrainsts for the triangulation.
 
-  //vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
+  vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
 
   // Now that the polys have been grouped, there are two methods
   // that can be used to triangulate them:
@@ -1208,6 +1218,61 @@ void vtkClipOutlineUntangleSelfIntersection(
         }
       newPolys[i].resize(m);
       }
+    }
+}
+
+// ---------------------------------------------------
+// The polygons might have a lot of extra points, i.e. points
+// in the middle of the edges.  Remove those points.
+
+void vtkClipOutlineFindTrueEdges(
+  vtkstd::vector<vtkClipOutlinePoly> &newPolys, vtkPoints *points)
+{
+  // Tolerance^2 for cross product to see if vectors are parallel
+  const double tol2 = 1e-10;
+
+  size_t numNewPolys = newPolys.size();
+  for (size_t i = 0; i < numNewPolys; i++)
+    {
+    vtkClipOutlinePoly newPoly;
+
+    size_t n = newPolys[i].size();
+
+    if (n < 3) { continue; }
+
+    double p0[3], p1[3], p2[3];
+    double v1[3], v2[3], v[3];
+    double l1, l2;
+
+    points->GetPoint(newPolys[i][n-1], p0);
+    points->GetPoint(newPolys[i][0], p1);
+    v1[0] = p1[0] - p0[0];  v1[1] = p1[1] - p0[1];  v1[2] = p1[2] - p0[2];  
+    l1 = vtkMath::Dot(v1, v1);
+
+    for (size_t j = 0; j < n; j++)
+      {
+      size_t k = j+1;
+      if (k == n) { k = 0; }
+      points->GetPoint(newPolys[i][k], p2);
+      v2[0] = p2[0] - p1[0];  v2[1] = p2[1] - p1[1];  v2[2] = p2[2] - p1[2];  
+      l2 = vtkMath::Dot(v2, v2);
+
+      vtkMath::Cross(v1, v2, v);
+      double s2 = vtkMath::Dot(v, v);
+      double c = vtkMath::Dot(v1, v2);
+
+      // Keep the point if angle is greater than tolerance
+      if (c < 0 || s2 > l1*l2*tol2)
+        {
+        newPoly.push_back(newPolys[i][j]);
+        }
+
+      p1[0] = p2[0]; p1[1] = p2[1]; p1[2] = p2[2];
+      v1[0] = v2[0]; v1[1] = v2[1]; v1[2] = v2[2];
+      l1 = l2;
+      }
+
+    newPolys[i] = newPoly;
     }
 }
 
