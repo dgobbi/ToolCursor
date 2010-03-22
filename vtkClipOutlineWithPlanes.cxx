@@ -38,7 +38,7 @@
 
 #include "vtkstd/vector"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.6 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.7 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -717,6 +717,10 @@ public:
     return ((chunk >> i) & 1);
   };
 
+  void clear() {
+    bitstorage.clear();
+  };
+
   void merge(vtkClipOutlineBitArray &b) {
     if (b.bitstorage.size() > bitstorage.size()) {
       bitstorage.resize(b.bitstorage.size()); }
@@ -731,6 +735,7 @@ private:
 //----------------------------------------------------------------------------
 // A simple typedefs for stl-based polygons
 typedef vtkstd::vector<vtkIdType> vtkClipOutlinePoly;
+typedef vtkstd::vector<size_t> vtkClipOutlinePolyGroup;
 
 //----------------------------------------------------------------------------
 // See below for more documentation of these methods.
@@ -756,8 +761,14 @@ static void vtkClipOutlineCorrectPolygonSense(
 // Check for polys within other polys, i.e. find polys that are holes
 static void vtkClipOutlineMakeHoleyPolys(
   vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
-  vtkstd::vector<vtkClipOutlineBitArray> &polyGroups,
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups,
   const double normal[3]);
+
+// Add cuts between outer and inner polys, thereby joining the hole
+// with the outside perimeter, in order to eliminate the holes
+static void vtkClipOutlineCutHoleyPolys(
+  vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups);
 
 //----------------------------------------------------------------------------
 void vtkClipOutlineWithPlanes::MakeCutPolys(
@@ -788,34 +799,30 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   vtkClipOutlineUntangleSelfIntersection(newPolys);
 
   // Some points might be in the middle of straight line segments.
-  // These point can be removed without changing the shape of the
+  // These points can be removed without changing the shape of the
   // polys, and removing them makes triangulation more stable.
 
   vtkClipOutlineFindTrueEdges(newPolys, points);
 
-  // Check polygon orientation agains our clip plane normal, and
+  // Check polygon orientation against our clip plane normal, and
   // reverse if necessary.
 
   vtkClipOutlineCorrectPolygonSense(newPolys, points, normal);
 
   // Next we have to check for polygons with holes, i.e. polygons that
-  // have other polygons inside.
+  // have other polygons inside.  Each polygon is "grouped" with the
+  // polygons that make up its holes.  Start with each polygon in its
+  // own group.
 
-  // Make an array of bitsets, each of which indicates a collection of
-  // polygons to be considered as a group, i.e. a polygon that contains
-  // other polygons.  Start with one poly per group.
-
-  vtkstd::vector<vtkClipOutlineBitArray> polyGroups;
   size_t numNewPolys = newPolys.size();
-  polyGroups.resize(numNewPolys);
+  vtkstd::vector<vtkClipOutlinePolyGroup> polyGroups(numNewPolys);
   for (size_t i = 0; i < numNewPolys; i++)
     {
-    polyGroups[i].set(i, 1);
+    polyGroups[i].push_back(i);
     }
 
-  // Note: this function will reverse interior polys (and re-reverse
-  // polys inside these interior polys).  The polys must all be correctly 
-  // oriented to be used as constrainsts for the triangulation.
+  // Note: this function will reverse interior polys.  Polys inside the
+  // interior polys are split off into their own groups.
 
   vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
 
@@ -829,6 +836,10 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
   //
   // Right now only the Delaunay code is complete, but unfortunately
   // vtkDelaunay2D is not stable.
+
+
+  // Make cuts to create simple polygons out of the holey polys
+  vtkClipOutlineCutHoleyPolys(newPolys, points, polyGroups);
 
   // ------ Triangulation code ------
 
@@ -862,6 +873,11 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
   for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
     {
+    if (polyGroups[groupId].size() == 0)
+      {
+      continue;
+      }
+
     // Make a map for recovering pointIds after triangulation has finished
     vtkstd::vector<vtkIdType> pointMap;
     vtkIdType newPointId = 0;
@@ -873,15 +889,13 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
     sourceData->SetPolys(sourcePolys);
 
     // Go through all polys, check whether they are in the group.
-    for (size_t i = 0; i < newPolys.size(); i++)
+    for (size_t i = 0; i < polyGroups[groupId].size(); i++)
       {
-      size_t n = newPolys[i].size();
+      size_t polyId = polyGroups[groupId][i];
+      size_t n = newPolys[polyId].size();
 
-      // If the poly is not in the group or is a line, then skip it
-      if (polyGroups[groupId].get(i) == 0 || n < 3)
-        {
-        continue;
-        }
+      // If the poly is a line, then skip it
+      if (n < 3) { continue; }
 
       // Create the source polys for a constrained Delaunay
       sourcePolys->InsertNextCell(n);
@@ -891,7 +905,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
         double point[4];
         point[3] = 1.0;
 
-        vtkIdType pointId = newPolys[i][j];
+        vtkIdType pointId = newPolys[polyId][j];
         points->GetPoint(pointId, point);
         vtkMatrix4x4::MultiplyPoint(matrix, point, point);
 
@@ -909,6 +923,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
       continue;
       }
 
+    // If polys has one cell, don't use Delaunay
     if (sourcePolys->GetNumberOfCells() == 1)
       {
       if (sourcePolys->GetNumberOfConnectivityEntries() <= 5)
@@ -1253,12 +1268,16 @@ void vtkClipOutlineFindTrueEdges(
       {
       size_t k = j+1;
       if (k == n) { k = 0; }
+
       points->GetPoint(newPolys[i][k], p2);
       v2[0] = p2[0] - p1[0];  v2[1] = p2[1] - p1[1];  v2[2] = p2[2] - p1[2];  
       l2 = vtkMath::Dot(v2, v2);
 
+      // magnitude of cross product is |v1||v2|sin(angle)
       vtkMath::Cross(v1, v2, v);
+      // s2 is square of magnitude of cross product
       double s2 = vtkMath::Dot(v, v);
+      // c is |v1||v2|cos(angle)
       double c = vtkMath::Dot(v1, v2);
 
       // Keep the point if angle is greater than tolerance
@@ -1329,25 +1348,30 @@ void vtkClipOutlineCorrectPolygonSense(
 // Check for polygons within polygons.  Group the polygons
 // if they are within each other.  Reverse the sense of 
 // the interior "hole" polygons.  A hole within a hole
-// will be reversed twice.
+// will be reversed twice and will become its own group.
 
 void vtkClipOutlineMakeHoleyPolys(
   vtkstd::vector<vtkClipOutlinePoly> &newPolys, vtkPoints *points,
-  vtkstd::vector<vtkClipOutlineBitArray> &polyGroups,
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups,
   const double normal[3])
 {
   size_t numNewPolys = newPolys.size();
+  vtkClipOutlineBitArray polyReversed;
+  vtkClipOutlineBitArray innerPolys;
+
   for (size_t i = 0; i < numNewPolys; i++)
     {
     size_t n = newPolys[i].size();
 
     if (n < 3) { continue; }
 
+    // Use pp to store the polygon vertices
     double *pp = new double[3*n];
     double bounds[6];
     bounds[0] = bounds[1] = bounds[2] = 0;
     bounds[3] = bounds[4] = bounds[5] = 0;
 
+    // Find the bounding box for the polygon
     for (size_t k = 0; k < n; k++)
       {
       double *p = &pp[3*k];
@@ -1378,10 +1402,23 @@ void vtkClipOutlineMakeHoleyPolys(
     // Tolerance is for squared distance
     double tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*(1e-5 * 1e-5);
 
+    // Look for polygons inside of this one
     for (size_t j = 0; j < numNewPolys; j++)
       {
       size_t m = newPolys[j].size();
       if (j == i || m < 3) { continue; }
+
+      // Make sure polygon i is not in polygon j
+      int isInteriorPoly = 0;
+      for (size_t k = 1; k < polyGroups[j].size(); k++)
+        {
+        if (polyGroups[j][k] == i)
+          {
+          isInteriorPoly = 1;
+          break;
+          }
+        }
+      if (isInteriorPoly) { continue; }
 
       // Find a vertex of poly "j" that isn't on the edge of poly "i".
       // This is necessary or the PointInPolygon might return "true"
@@ -1423,46 +1460,95 @@ void vtkClipOutlineMakeHoleyPolys(
           vtkPolygon::PointInPolygon(p, n, pp, bounds,
                                      const_cast<double *>(normal)) == 1)
         {
-        // Reverse the interior polygon, and mark it as being grouped
-        // with the outer polygon.  Together, grouped polygons can
-        // be used as constraints for a Delaunay triangulation.
+        // Mark the inner poly as reversed
+        polyReversed.set(j, !polyReversed.get(j));
 
-        size_t m2 = m/2;
-        for (size_t kk = 0; kk < m2; kk++)
-          {
-          vtkIdType tmpId = newPolys[j][kk];
-          newPolys[j][kk] = newPolys[j][m - kk - 1];
-          newPolys[j][m - kk - 1] = tmpId;
-          }
-
-        // Search through existing polygon groups (stored as bitsets)
-        int foundGroup = 0;
-        size_t firstGroupId = 0;
-
-        for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
-          {
-          if (polyGroups[groupId].get(i) || polyGroups[groupId].get(j))
-            {
-            if (!foundGroup)
-              {
-              foundGroup = 1;
-              firstGroupId = groupId;
-              polyGroups[firstGroupId].set(i, 1);
-              polyGroups[firstGroupId].set(j, 1);
-              }
-            else
-              {
-              polyGroups[firstGroupId].merge(polyGroups[groupId]);
-              polyGroups[groupId] = polyGroups[polyGroups.size()-1];
-              polyGroups.resize(polyGroups.size()-1);
-              groupId--;
-              }
-            } 
-          } 
+        // Add to group
+        polyGroups[i].push_back(j);
         }
       }
-      delete [] pp;
+
+    delete [] pp;
+    }
+
+  for (size_t j = 0; j < numNewPolys; j++)
+    {
+    // Reverse the interior polys, and remove their groups
+    if (polyReversed.get(j))
+      {
+      size_t m = newPolys[j].size();
+      size_t m2 = m/2;
+      for (size_t k = 0; k < m2; k++)
+        {
+        vtkIdType tmpId = newPolys[j][k];
+        newPolys[j][k] = newPolys[j][m - k - 1];
+        newPolys[j][m - k - 1] = tmpId;
+        }
+
+      polyGroups[j].clear();
+      }
+    // Polys inside the interior polys have their own groups, so remove
+    // them from this group
+    else if (polyGroups[j].size() > 1)
+      {
+      // Convert the group into a bit array, to make manipulation easier
+      innerPolys.clear();
+      for (size_t k = 1; k < polyGroups[j].size(); k++)
+        {
+        innerPolys.set(polyGroups[j][k], 1);
+        }
+
+      // Look for non-reversed polys inside this one
+      for (size_t kk = 1; kk < polyGroups[j].size(); kk++)
+        {
+        // jj is the index of the inner poly
+        size_t jj = polyGroups[j][kk];
+        // If inner poly is not reversed then
+        if (!polyReversed.get(jj))
+          {
+          // Remove that poly and all polys inside of it from the group
+          for (size_t ii = 0; ii < polyGroups[jj].size(); ii++)
+            {
+            innerPolys.set(polyGroups[jj][ii], 0);
+            }
+          }
+        }
+
+      // Use the bit array to recreate the polyGroup
+      polyGroups[j].clear();
+      polyGroups[j].push_back(j);
+      for (size_t jj = 0; jj < numNewPolys; jj++)
+        {
+        if (innerPolys.get(jj) != 0)
+          {
+          polyGroups[j].push_back(jj);
+          }
+        }
+      }
     }
 }
 
+// ---------------------------------------------------
+// After the holes have been identified, make cuts between the
+// holes and the outside perimeter in order to convert each
+// "holey poly" into two or more simple polygons.
+//
+// What makes a cut successful?  Most importantly, it cannot
+// any edges.  Second, the cut must be "inside"
 
+
+// Two cuts are required to separate an interior/exterior poly
+// into two side-by-side polys.
+
+void vtkClipOutlineCutHoleyPolys(
+  vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups)
+{
+  for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
+    {
+    if (polyGroups[groupId].size() == 0)
+      {
+      continue;
+      }
+    }
+}
