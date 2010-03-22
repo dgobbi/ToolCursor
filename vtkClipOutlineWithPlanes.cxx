@@ -37,8 +37,9 @@
 //#include "vtkXMLPolyDataWriter.h"
 
 #include "vtkstd/vector"
+#include "vtkstd/algorithm"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.7 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.8 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -48,7 +49,7 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
 {
   this->ClippingPlanes = 0;
   this->GenerateScalars = 0;
-  this->GenerateFaces = 1;
+  this->GenerateFaces = 0;
   this->ActivePlaneId = -1;
 
   this->BaseColor[0] = 1.0;
@@ -975,6 +976,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
       }
     else
       {
+      cerr << "doing delaunay!!!\n";
       // Delaunay triangulation
 
       // Debug code: write data sets that cause Delaunay to die
@@ -1529,26 +1531,275 @@ void vtkClipOutlineMakeHoleyPolys(
 }
 
 // ---------------------------------------------------
+// Check line segment with point Ids (i, j) to make sure that it
+// doesn't cut through the edges of any polys in the group.
+// Return value of zero means check failed and the cut is not
+// usable.
+
+int vtkClipOutlineCheckCut(
+  vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
+  vtkClipOutlinePolyGroup &polyGroup, size_t ptId1, size_t ptId2)
+{
+  double p1[3], p2[3];
+
+  points->GetPoint(ptId1, p1);
+  points->GetPoint(ptId2, p2);
+
+  for (size_t i = 0; i < polyGroup.size(); i++)
+    {
+    vtkClipOutlinePoly &poly = polys[polyGroup[i]];
+    size_t n = poly.size();
+
+    double q1[3], q2[3];
+    vtkIdType qtId1 = poly[n-1];
+    points->GetPoint(qtId1, q1);
+
+    for (size_t j = 0; j < n; j++)
+      {
+      vtkIdType qtId2 = poly[j];
+      points->GetPoint(qtId2, q2);
+
+      // If lines share an endpoint, they can't intersect,
+      // so don't bother with the check.
+      if (ptId1 != qtId1 && ptId1 != qtId2 &&
+          ptId2 != qtId1 && ptId2 != qtId2)
+        {
+        double u, v;
+        if (vtkLine::Intersection(p1, p2, q1, q2, u, v))
+          {
+          return 0;
+          }
+        }
+
+      qtId1 = qtId2;
+      q1[0] = q2[0]; q1[1] = q2[1]; q1[2] = q2[2];
+      }
+    }
+
+  return 1;
+}
+
+// ---------------------------------------------------
+// Check the quality of a cut between an outer and inner polygon.
+// Larger values mean that the cut will produce triangles with
+// sharp angles.  The range of values is [-1, 1], where the smallest
+// values indicate the highest quality.
+
+double vtkClipOutlineCutQuality(
+  vtkClipOutlinePoly &outerPoly, vtkClipOutlinePoly &innerPoly,
+  size_t i, size_t j, vtkPoints *points)
+{
+  size_t n = outerPoly.size();
+  size_t m = innerPoly.size();
+
+  size_t a = ((i > 0) ? i-1 : n-1);
+  size_t b = ((i < n-1) ? i+1 : 0);
+
+  size_t c = ((j > 0) ? j-1 : m-1);
+  size_t d = ((j < m-1) ? j+1 : 0);
+
+  double p0[3], p1[3], p2[3];
+  points->GetPoint(outerPoly[i], p1);
+  points->GetPoint(innerPoly[j], p2);
+
+  double v1[3], v2[3];
+  v1[0] = p2[0] - p1[0]; v1[1] = p2[1] - p1[1]; v1[2] = p2[2] - p1[2];
+
+  double l1 = sqrt(vtkMath::Dot(v1, v1));
+  double l2;
+  double qmax = -l1;
+  double q;
+
+  points->GetPoint(outerPoly[a], p0);
+  v2[0] = p0[0] - p1[0]; v2[1] = p0[1] - p1[1]; v2[2] = p0[2] - p1[2];
+  l2 = sqrt(vtkMath::Dot(v2, v2));
+  if (l2 > 0)
+    {
+    q = vtkMath::Dot(v1, v2)/l2;
+    if (q > qmax) { qmax = q; }
+    }
+
+  points->GetPoint(outerPoly[b], p0);
+  v2[0] = p0[0] - p1[0]; v2[1] = p0[1] - p1[1]; v2[2] = p0[2] - p1[2];
+  l2 = sqrt(vtkMath::Dot(v2, v2));
+  if (l2 > 0)
+    {
+    q = vtkMath::Dot(v1, v2)/l2;
+    if (q > qmax) { qmax = q; }
+    }
+
+  points->GetPoint(innerPoly[c], p0);
+  v2[0] = p0[0] - p2[0]; v2[1] = p0[1] - p2[1]; v2[2] = p0[2] - p2[2];
+  l2 = sqrt(vtkMath::Dot(v2, v2));
+  if (l2 > 0)
+    {
+    q = vtkMath::Dot(v1, v2)/l2;
+    if (q > qmax) { qmax = q; }
+    }
+
+  points->GetPoint(innerPoly[d], p0);
+  v2[0] = p0[0] - p2[0]; v2[1] = p0[1] - p2[1]; v2[2] = p0[2] - p2[2];
+  l2 = sqrt(vtkMath::Dot(v2, v2));
+  if (l2 > 0)
+    {
+    q = vtkMath::Dot(v1, v2)/l2;
+    if (q > qmax) { qmax = q; }
+    }
+
+  if (l1 > 0)
+    {
+    return qmax/l1;
+    }
+
+  return 1.0;
+}
+
+// ---------------------------------------------------
+// A simple struct to hold the endpoints of a cut and
+// a quality value for the cut
+class vtkClipOutlinePolyCut
+{
+public:
+  vtkClipOutlinePolyCut(double q, size_t p1, size_t p2) :
+    Quality(q), OuterIdx(p1), InnerIdx(p2) {};
+
+  int operator<(const vtkClipOutlinePolyCut& c) const {
+    return (this->Quality < c.Quality); };
+
+  int operator>(const vtkClipOutlinePolyCut& c) const {
+    return (this->Quality > c.Quality); };
+
+  double Quality;
+  size_t OuterIdx;
+  size_t InnerIdx;
+};
+
+// ---------------------------------------------------
 // After the holes have been identified, make cuts between the
-// holes and the outside perimeter in order to convert each
-// "holey poly" into two or more simple polygons.
-//
-// What makes a cut successful?  Most importantly, it cannot
-// any edges.  Second, the cut must be "inside"
-
-
-// Two cuts are required to separate an interior/exterior poly
-// into two side-by-side polys.
+// outer poly and each hole.  Make two cuts per hole.  The only
+// strict requirement is that the cut must not intersect any
+// edges, but it's best to make sure that no really sharp angles
+// are created.
 
 void vtkClipOutlineCutHoleyPolys(
   vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
   vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups)
 {
+  vtkstd::vector<vtkClipOutlinePolyCut> cuts;
+
   for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
     {
-    if (polyGroups[groupId].size() == 0)
+    vtkClipOutlinePolyGroup &polyGroup = polyGroups[groupId];
+
+    if (polyGroup.size() <= 1) { continue; }
+
+    // The first member of the group is the outer poly
+    size_t outerPolyId = polyGroup[0];
+    vtkClipOutlinePoly &outerPoly = polys[outerPolyId];
+
+    for (size_t i = 1; i < polyGroup.size(); i++)
       {
-      continue;
+      // Start a fresh batch of cuts
+      cuts.clear();
+
+      // Get the inner poly
+      size_t innerPolyId = polyGroup[i];
+      vtkClipOutlinePoly &innerPoly = polys[innerPolyId];
+      for (size_t j = 0; j < outerPoly.size(); j++)
+        {
+        for (size_t k = 0; k < innerPoly.size(); k++)
+          {
+          if (vtkClipOutlineCheckCut(polys, points, polyGroup,
+                                     outerPoly[j], innerPoly[k]))
+            {
+            double q = vtkClipOutlineCutQuality(outerPoly, innerPoly, j, k,
+                                                points);
+            cuts.push_back(vtkClipOutlinePolyCut(q, j, k));
+            }
+          }
+        }
+
+      // Sort the cuts to find the best one
+      vtkstd::sort(cuts.begin(), cuts.end());
+      assert(cuts.size() >= 2);
+      vtkIdType ptId1 = outerPoly[cuts[0].OuterIdx];
+      vtkIdType ptId2 = innerPoly[cuts[0].InnerIdx];
+      double p1[3], p2[3];
+      points->GetPoint(ptId1, p1);
+      points->GetPoint(ptId2, p2);
+
+      // Find the second-best cut that doesn't intersect the first
+      size_t k;
+      for (k = 1; k < cuts.size(); k++)
+        {
+        vtkIdType qtId1 = outerPoly[cuts[k].OuterIdx];
+        vtkIdType qtId2 = innerPoly[cuts[k].InnerIdx];
+
+        // Second cut shouldn't share either endpoint with first cut
+        if (ptId1 == qtId1 || ptId2 == qtId2) { continue; }
+
+        double q1[3], q2[3];
+        points->GetPoint(qtId1, q1);
+        points->GetPoint(qtId2, q2);
+
+        double u, v;
+        if (!vtkLine::Intersection(p1, p2, q1, q2, u, v))
+          {
+          // Found a good second cut
+          break;
+          }
+        }
+      assert(k < cuts.size());
+
+      // Generate new polys from the cuts
+      size_t a = cuts[0].OuterIdx;
+      size_t b = cuts[k].OuterIdx;
+      size_t c = cuts[k].InnerIdx;
+      size_t d = cuts[0].InnerIdx;
+
+      size_t n = outerPoly.size();
+      size_t m = innerPoly.size();
+      size_t idx;
+
+      // Generate poly1
+      vtkClipOutlinePoly poly1;
+      for (idx = a;;)
+        {
+        poly1.push_back(outerPoly[idx]);
+        if (idx == b) { break; }
+        if (++idx >= n) { idx = 0; }
+        }
+      for (idx = c;;)
+        {
+        poly1.push_back(innerPoly[idx]);
+        if (idx == d) { break; }
+        if (++idx >= m) { idx = 0; }
+        }
+
+      // Generate poly2
+      vtkClipOutlinePoly poly2;
+      for (idx = b;;)
+        {
+        poly2.push_back(outerPoly[idx]);
+        if (idx == a) { break; }
+        if (++idx >= n) { idx = 0; }
+        }
+      for (idx = d;;)
+        {
+        poly2.push_back(innerPoly[idx]);
+        if (idx == c) { break; }
+        if (++idx >= m) { idx = 0; }
+        }
+
+      // Replace outerPoly and innerPoly with these polys
+      polys[outerPolyId] = poly1;
+      polys[innerPolyId] = poly2;
+
+      // Re-form the groups (note: much more needs to be done here,
+      // all remaining interior polys need to be put into one group
+      // or the other)
+      polyGroups[outerPolyId].resize(1);
+      polyGroups[innerPolyId].push_back(innerPolyId);
       }
     }
 }
