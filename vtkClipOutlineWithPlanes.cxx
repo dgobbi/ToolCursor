@@ -39,7 +39,7 @@
 #include "vtkstd/vector"
 #include "vtkstd/algorithm"
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.8 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.9 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -769,7 +769,8 @@ static void vtkClipOutlineMakeHoleyPolys(
 // with the outside perimeter, in order to eliminate the holes
 static void vtkClipOutlineCutHoleyPolys(
   vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
-  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups);
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups,
+  const double normal[3]);
 
 //----------------------------------------------------------------------------
 void vtkClipOutlineWithPlanes::MakeCutPolys(
@@ -840,7 +841,7 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
 
   // Make cuts to create simple polygons out of the holey polys
-  vtkClipOutlineCutHoleyPolys(newPolys, points, polyGroups);
+  vtkClipOutlineCutHoleyPolys(newPolys, points, polyGroups, normal);
 
   // ------ Triangulation code ------
 
@@ -1347,6 +1348,115 @@ void vtkClipOutlineCorrectPolygonSense(
 }
 
 // ---------------------------------------------------
+// Check whether innerPoly is inside outerPoly.
+// The normal is needed to verify the polygon orientation.
+// The values of pp, bounds, and tol2 must be precomputed
+// by calling vtkClipOutlinePrepareForPolyInPoly() on outerPoly.
+
+int vtkClipOutlinePolyInPoly(
+  const vtkClipOutlinePoly &outerPoly,
+  const vtkClipOutlinePoly &innerPoly,
+  vtkPoints *points, const double normal[3],
+  const double *pp, const double bounds[6],
+  double tol2)
+{
+  // Find a vertex of poly "j" that isn't on the edge of poly "i".
+  // This is necessary or the PointInPolygon might return "true"
+  // based only on roundoff error.
+
+  double p[3];
+  int allPointsOnEdges = 1;
+  size_t n = outerPoly.size();
+  size_t m = innerPoly.size();
+
+  for (size_t jj = 0; jj < m; jj++)
+    {          
+    points->GetPoint(innerPoly[jj], p);
+
+    int pointOnEdge = 0;
+    double q1[3], q2[3];
+    points->GetPoint(outerPoly[n-1], q1);
+    for (size_t ii = 0; ii < n; ii++)
+      {
+      points->GetPoint(outerPoly[ii], q2);
+      double t, dummy[3];
+      // This method returns distance squared
+      if (vtkLine::DistanceToLine(p, q1, q2, t, dummy) < tol2)
+        {
+        pointOnEdge = 1;
+        break;
+        }
+      q1[0] = q2[0]; q1[1] = q2[1]; q1[2] = q2[2];
+      }
+    if (!pointOnEdge)
+      {
+      allPointsOnEdges = 0;
+      break;
+      }
+    }
+
+  if (allPointsOnEdges)
+    {
+    return 1;
+    }
+
+  // There should also be a check to see if all the verts match.
+  // If they do, both polys should be removed.
+   
+  return vtkPolygon::PointInPolygon(p, n, const_cast<double *>(pp),
+    const_cast<double *>(bounds), const_cast<double *>(normal));
+}
+
+// ---------------------------------------------------
+// Precompute values needed for the PolyInPoly check.
+// The values that are returned are as follows:
+// pp: an array of the polygon vertices
+// bounds: the polygon bounds
+// tol2: a tolerance value based on the size of the polygon
+// (note: pp must be pre-allocated to the 3*outerPoly.size())
+
+void vtkClipOutlinePrepareForPolyInPoly(
+  const vtkClipOutlinePoly &outerPoly, vtkPoints *points,
+  double *pp, double bounds[6], double &tol2)
+{
+  // Use pp to store the polygon vertices
+  size_t n = outerPoly.size();
+  bounds[0] = bounds[2] = bounds[4] = 0;
+  bounds[1] = bounds[3] = bounds[5] = 0;
+
+  // Find the bounding box for the polygon
+  for (size_t k = 0; k < n; k++)
+    {
+    double *p = &pp[3*k];
+    points->GetPoint(outerPoly[k], p);
+    if (k == 0)
+      {
+      bounds[0] = p[0]; bounds[1] = p[0];
+      bounds[2] = p[1]; bounds[3] = p[1];
+      bounds[4] = p[2]; bounds[5] = p[2];
+      }
+    else
+      {
+      if (p[0] < bounds[0]) { bounds[0] = p[0]; }
+      if (p[0] > bounds[1]) { bounds[1] = p[0]; }
+      if (p[1] < bounds[2]) { bounds[2] = p[1]; }
+      if (p[1] > bounds[3]) { bounds[3] = p[1]; }
+      if (p[2] < bounds[4]) { bounds[4] = p[2]; }
+      if (p[2] > bounds[5]) { bounds[5] = p[2]; }
+      }
+    }
+
+  // Compute a tolerance based on the poly size
+  double ps[3];
+  ps[0] = bounds[1] - bounds[0];
+  ps[1] = bounds[3] - bounds[2];
+  ps[2] = bounds[5] - bounds[4];
+
+  // Tolerance is for squared distance
+  tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*(1e-5 * 1e-5);
+}
+
+// ---------------------------------------------------
 // Check for polygons within polygons.  Group the polygons
 // if they are within each other.  Reverse the sense of 
 // the interior "hole" polygons.  A hole within a hole
@@ -1358,51 +1468,37 @@ void vtkClipOutlineMakeHoleyPolys(
   const double normal[3])
 {
   size_t numNewPolys = newPolys.size();
+  if (numNewPolys <= 1)
+    {
+    return;
+    }
+
+  // Use bit arrays to keep track of inner polys
   vtkClipOutlineBitArray polyReversed;
   vtkClipOutlineBitArray innerPolys;
 
+  // Find the maximum poly size
+  size_t nmax = 1;
+  for (size_t kk = 0; kk < numNewPolys; kk++)
+    {
+    size_t n = newPolys[kk].size();
+    if (n > nmax) { nmax = n; }
+    }
+
+  // These are some values needed for poly-in-poly checks
+  double *pp = new double[3*nmax];
+  double bounds[6];
+  double tol2;
+
+  // Go through all polys
   for (size_t i = 0; i < numNewPolys; i++)
     {
     size_t n = newPolys[i].size();
 
     if (n < 3) { continue; }
 
-    // Use pp to store the polygon vertices
-    double *pp = new double[3*n];
-    double bounds[6];
-    bounds[0] = bounds[1] = bounds[2] = 0;
-    bounds[3] = bounds[4] = bounds[5] = 0;
-
-    // Find the bounding box for the polygon
-    for (size_t k = 0; k < n; k++)
-      {
-      double *p = &pp[3*k];
-      points->GetPoint(newPolys[i][k], p);
-      if (k == 0)
-        {
-        bounds[0] = p[0]; bounds[1] = p[0];
-        bounds[2] = p[1]; bounds[3] = p[1];
-        bounds[4] = p[2]; bounds[5] = p[2];
-        }
-      else
-        {
-        if (p[0] < bounds[0]) { bounds[0] = p[0]; }
-        if (p[0] > bounds[1]) { bounds[1] = p[0]; }
-        if (p[1] < bounds[2]) { bounds[2] = p[1]; }
-        if (p[1] > bounds[3]) { bounds[3] = p[1]; }
-        if (p[2] < bounds[4]) { bounds[4] = p[2]; }
-        if (p[2] > bounds[5]) { bounds[5] = p[2]; }
-        }
-      }
-
-    // Compute a tolerance based on the poly size
-    double ps[3];
-    ps[0] = bounds[1] - bounds[0];
-    ps[1] = bounds[3] - bounds[2];
-    ps[2] = bounds[5] - bounds[4];
-
-    // Tolerance is for squared distance
-    double tol2 = (ps[0]*ps[0] + ps[1]*ps[1] + ps[2]*ps[2])*(1e-5 * 1e-5);
+    // Precompute some values needed for poly-in-poly checks
+    vtkClipOutlinePrepareForPolyInPoly(newPolys[i], points, pp, bounds, tol2);
 
     // Look for polygons inside of this one
     for (size_t j = 0; j < numNewPolys; j++)
@@ -1420,47 +1516,14 @@ void vtkClipOutlineMakeHoleyPolys(
           break;
           }
         }
-      if (isInteriorPoly) { continue; }
 
-      // Find a vertex of poly "j" that isn't on the edge of poly "i".
-      // This is necessary or the PointInPolygon might return "true"
-      // based only on roundoff error.
-
-      double p[3];
-      int allPointsOnEdges = 1;
-
-      for (size_t jj = 0; jj < m; jj++)
-        {          
-        points->GetPoint(newPolys[j][jj], p);
-
-        int pointOnEdge = 0;
-        double q1[3], q2[3];
-        points->GetPoint(newPolys[i][n-1], q1);
-        for (size_t ii = 0; ii < n; ii++)
-          {
-          points->GetPoint(newPolys[i][ii], q2);
-          double t, dummy[3];
-          // This method returns distance squared
-          if (vtkLine::DistanceToLine(p, q1, q2, t, dummy) < tol2)
-            {
-            pointOnEdge = 1;
-            break;
-            }
-          q1[0] = q2[0]; q1[1] = q2[1]; q1[2] = q2[2];
-          }
-        if (!pointOnEdge)
-          {
-          allPointsOnEdges = 0;
-          break;
-          }
+      if (isInteriorPoly)
+        {
+        continue;
         }
 
-      // There should also be a check to see if all the verts match.
-      // If they do, both polys should be removed.
-
-      if (allPointsOnEdges || 
-          vtkPolygon::PointInPolygon(p, n, pp, bounds,
-                                     const_cast<double *>(normal)) == 1)
+      if (vtkClipOutlinePolyInPoly(newPolys[i], newPolys[j], points,
+                                  normal, pp, bounds, tol2))
         {
         // Mark the inner poly as reversed
         polyReversed.set(j, !polyReversed.get(j));
@@ -1469,9 +1532,9 @@ void vtkClipOutlineMakeHoleyPolys(
         polyGroups[i].push_back(j);
         }
       }
-
-    delete [] pp;
     }
+
+  delete [] pp;
 
   for (size_t j = 0; j < numNewPolys; j++)
     {
@@ -1538,7 +1601,7 @@ void vtkClipOutlineMakeHoleyPolys(
 
 int vtkClipOutlineCheckCut(
   vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
-  vtkClipOutlinePolyGroup &polyGroup, size_t ptId1, size_t ptId2)
+  vtkClipOutlinePolyGroup &polyGroup, vtkIdType ptId1, vtkIdType ptId2)
 {
   double p1[3], p2[3];
 
@@ -1683,28 +1746,32 @@ public:
 
 void vtkClipOutlineCutHoleyPolys(
   vtkstd::vector<vtkClipOutlinePoly> &polys, vtkPoints *points,
-  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups)
+  vtkstd::vector<vtkClipOutlinePolyGroup> &polyGroups,
+  const double normal[3])
 {
-  vtkstd::vector<vtkClipOutlinePolyCut> cuts;
-
-  for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
+  // Go through all groups and cut out the first inner poly that is
+  // found.  Every time an inner poly is cut out, the groupId counter
+  // is reset because a cutting a poly creates a new group.
+  size_t groupId = 0;
+  while (groupId < polyGroups.size())
     {
     vtkClipOutlinePolyGroup &polyGroup = polyGroups[groupId];
 
-    if (polyGroup.size() <= 1) { continue; }
-
-    // The first member of the group is the outer poly
-    size_t outerPolyId = polyGroup[0];
-    vtkClipOutlinePoly &outerPoly = polys[outerPolyId];
-
-    for (size_t i = 1; i < polyGroup.size(); i++)
+    // Only need to make a cut if the group size is greater than 1
+    if (polyGroup.size() > 1)
       {
-      // Start a fresh batch of cuts
-      cuts.clear();
+      // The first member of the group is the outer poly
+      size_t outerPolyId = polyGroup[0];
+      vtkClipOutlinePoly &outerPoly = polys[outerPolyId];
 
-      // Get the inner poly
-      size_t innerPolyId = polyGroup[i];
+      // The second member of the group is the first inner poly
+      size_t innerPolyId = polyGroup[1];
       vtkClipOutlinePoly &innerPoly = polys[innerPolyId];
+
+      // Make a container for "cut" candidates
+      vtkstd::vector<vtkClipOutlinePolyCut> cuts;
+
+      // Brute-force search for potential cuts
       for (size_t j = 0; j < outerPoly.size(); j++)
         {
         for (size_t k = 0; k < innerPoly.size(); k++)
@@ -1719,9 +1786,12 @@ void vtkClipOutlineCutHoleyPolys(
           }
         }
 
+      // There must be at least 2 valid cuts
+      assert(cuts.size() >= 2);
+
       // Sort the cuts to find the best one
       vtkstd::sort(cuts.begin(), cuts.end());
-      assert(cuts.size() >= 2);
+
       vtkIdType ptId1 = outerPoly[cuts[0].OuterIdx];
       vtkIdType ptId2 = innerPoly[cuts[0].InnerIdx];
       double p1[3], p2[3];
@@ -1749,6 +1819,8 @@ void vtkClipOutlineCutHoleyPolys(
           break;
           }
         }
+
+      // Ensure that a second cut was found
       assert(k < cuts.size());
 
       // Generate new polys from the cuts
@@ -1791,15 +1863,54 @@ void vtkClipOutlineCutHoleyPolys(
         if (++idx >= m) { idx = 0; }
         }
 
-      // Replace outerPoly and innerPoly with these polys
+      // Replace outerPoly and innerPoly with these new polys
       polys[outerPolyId] = poly1;
       polys[innerPolyId] = poly2;
 
-      // Re-form the groups (note: much more needs to be done here,
-      // all remaining interior polys need to be put into one group
-      // or the other)
-      polyGroups[outerPolyId].resize(1);
+      // Move innerPolyId into its own group
+      polyGroup.erase(polyGroup.begin()+1);
       polyGroups[innerPolyId].push_back(innerPolyId);
+
+      // If there are other interior polys in the group, find out whether
+      // they are in poly1 or poly2
+      if (polyGroup.size() > 1)
+        {
+        double *pp = new double[3*poly1.size()];
+        double bounds[6];
+        double tol2;
+        vtkClipOutlinePrepareForPolyInPoly(poly1, points, pp, bounds, tol2);
+
+        size_t ii = 1;
+        while (ii < polyGroup.size())
+          {
+          if (vtkClipOutlinePolyInPoly(poly1, polys[polyGroup[ii]],
+                                       points, normal, pp, bounds, tol2))
+            {
+            // Keep this poly in polyGroup
+            ii++;
+            }
+          else
+            {
+            // Move this poly to poly2 group
+            polyGroups[innerPolyId].push_back(polyGroup[ii]);
+            polyGroup.erase(polyGroup.begin()+ii);
+
+            // Reduce the groupId to ensure that this new group
+            // will get cut
+            if (innerPolyId < groupId)
+              {
+              groupId = innerPolyId;
+              }
+            }
+          }
+        delete [] pp;
+
+        // Continue without incrementing groupId
+        continue;
+        }
       }
+
+    // Increment to the next group
+    groupId++;
     }
 }
