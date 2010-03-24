@@ -28,7 +28,7 @@
 #include "vtkDoubleArray.h"
 #include "vtkPlaneCollection.h"
 #include "vtkMath.h"
-#include "vtkMergePoints.h"
+#include "vtkIncrementalOctreePointLocator.h"
 #include "vtkGenericCell.h"
 #include "vtkPolygon.h"
 #include "vtkLine.h"
@@ -38,7 +38,7 @@
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.11 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.12 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -305,7 +305,11 @@ int vtkClipOutlineWithPlanes::RequestData(
     }
 
   // Make the locator and the points
-  if (this->Locator == 0) { this->Locator = vtkMergePoints::New(); }
+  if (this->Locator == 0)
+    {
+    this->Locator = vtkIncrementalOctreePointLocator::New();
+    this->Locator->SetTolerance(tol);
+    }
   vtkIncrementalPointLocator *locator = this->Locator;
   vtkPoints *newPoints = vtkPoints::New();
   newPoints->SetDataTypeToDouble();
@@ -574,7 +578,7 @@ void vtkClipOutlineWithPlanes::ClipAndContourCells(
       {
       if (numPts == 3) { cell->SetCellTypeToTriangle(); }
       else if (numPts == 4) { cell->SetCellTypeToQuad(); }
-      else { cell->SetCellTypeToPolygon(); cerr << "polygon\n"; }
+      else { cell->SetCellTypeToPolygon(); }
       }
     else // (dimensionality == 1)
       {
