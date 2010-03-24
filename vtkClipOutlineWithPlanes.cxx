@@ -38,7 +38,7 @@
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.10 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.11 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -1264,7 +1264,7 @@ void vtkClipOutlineUntangleSelfIntersection(
 void vtkClipOutlineFindTrueEdges(
   vtkstd::vector<vtkClipOutlinePoly> &newPolys, vtkPoints *points)
 {
-  // Tolerance^2 for cross product to see if vectors are parallel
+  // Tolerance^2 for angle to see if line segments are parallel
   const double tol2 = 1e-10;
 
   size_t numNewPolys = newPolys.size();
@@ -1276,13 +1276,13 @@ void vtkClipOutlineFindTrueEdges(
 
     if (n < 3) { continue; }
 
-    double p0[3], p1[3], p2[3];
-    double v1[3], v2[3], v[3];
+    double p1[3], p2[3];
+    double v1[3], v2[3];
     double l1, l2;
 
-    points->GetPoint(newPolys[i][n-1], p0);
+    points->GetPoint(newPolys[i][n-1], p2);
     points->GetPoint(newPolys[i][0], p1);
-    v1[0] = p1[0] - p0[0];  v1[1] = p1[1] - p0[1];  v1[2] = p1[2] - p0[2];  
+    v1[0] = p1[0] - p2[0];  v1[1] = p1[1] - p2[1];  v1[2] = p1[2] - p2[2];  
     l1 = vtkMath::Dot(v1, v1);
 
     for (size_t j = 0; j < n; j++)
@@ -1294,15 +1294,14 @@ void vtkClipOutlineFindTrueEdges(
       v2[0] = p2[0] - p1[0];  v2[1] = p2[1] - p1[1];  v2[2] = p2[2] - p1[2];  
       l2 = vtkMath::Dot(v2, v2);
 
-      // magnitude of cross product is |v1||v2|sin(angle)
-      vtkMath::Cross(v1, v2, v);
-      // s2 is square of magnitude of cross product
-      double s2 = vtkMath::Dot(v, v);
-      // c is |v1||v2|cos(angle)
+      // Dot product is |v1||v2|cos(theta)
       double c = vtkMath::Dot(v1, v2);
 
-      // Keep the point if angle is greater than tolerance
-      if (c < 0 || s2 > l1*l2*tol2)
+      // Keep the point if angle is greater than tolerance:
+      // sin^2(theta) = (1 - cos^2(theta)), where
+      // c*c = l1*l2*cos^2(theta)
+
+      if (c < 0 || (l1*l2 - c*c) > l1*l2*tol2)
         {
         newPoly.push_back(newPolys[i][j]);
         }
