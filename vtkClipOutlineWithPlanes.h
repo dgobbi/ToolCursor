@@ -19,6 +19,8 @@
 // it requires an input that has polygons that form a closed surface,
 // and that also has lines on all of the edges.  It does not accept
 // triangle strips.
+// .SECTION See Also
+// vtkOutlineFilter vtkOutlineSource vtkVolumeoutlineSource
 
 #ifndef __vtkClipOutlineWithPlanes_h
 #define __vtkClipOutlineWithPlanes_h
