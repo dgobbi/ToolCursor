@@ -37,7 +37,6 @@ class vtkCellData;
 class vtkIncrementalPointLocator;
 class vtkGenericCell;
 class vtkPolygon;
-class vtkDelaunay2D;
 class vtkIdList;
 
 class VTK_EXPORT vtkClipOutlineWithPlanes : public vtkPolyDataAlgorithm
@@ -115,7 +114,6 @@ protected:
   vtkCellArray *CellArray;
   vtkPolygon *Polygon;
   vtkGenericCell *Cell;
-  vtkDelaunay2D *Delaunay;
 
   virtual int ComputePipelineMTime(
     vtkInformation* request, vtkInformationVector** inputVector,

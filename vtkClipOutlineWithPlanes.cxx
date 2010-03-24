@@ -33,12 +33,11 @@
 #include "vtkPolygon.h"
 #include "vtkLine.h"
 #include "vtkMatrix4x4.h"
-#include "vtkDelaunay2D.h"
 
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.12 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.13 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -70,7 +69,6 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
   this->CellArray = 0;
   this->Polygon = 0;
   this->Cell = 0;
-  this->Delaunay = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -84,7 +82,6 @@ vtkClipOutlineWithPlanes::~vtkClipOutlineWithPlanes()
   if (this->CellArray) { this->CellArray->Delete(); }
   if (this->Polygon) { this->Polygon->Delete(); }
   if (this->Cell) { this->Cell->Delete(); }
-  if (this->Delaunay) { this->Delaunay->Delete(); }
 }
 
 //----------------------------------------------------------------------------
@@ -859,191 +856,80 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
 
   vtkClipOutlineMakeHoleyPolys(newPolys, points, polyGroups, normal);
 
-  // Now that the polys have been grouped, there are two methods
-  // that can be used to triangulate them:
-  //
-  // 1) Turn each group into a vtkPolyData and apply Delaunay2D.
-  //
-  // 2) Create cuts between exterior and interior polygons so that
-  //    a simple EarCut triangulation can be used.
-  //
-  // Delaunay2D would be a nice way to do things, but VTK's Delaunay2D
-  // is not numerically stable on all platforms.  So use option 2.
-
   // Make cuts to create simple polygons out of the holey polys.
   // After this is done, each polyGroup will have exactly 1 polygon.
   vtkClipOutlineCutHoleyPolys(newPolys, points, polyGroups, normal);
 
   // ------ Triangulation code ------
 
-  // The Delaunay requires creating a new set of points that
-  // are transformed to the 2D plane.  Only the points that are
-  // vertices of our polygons can be included, plus any points
-  // that are strictly interior to those polygons.
-  // The clipping plane normal and position is used to
-  // compute the transform.  A mapping from the new pointIds
-  // to the original pointIds will be needed in order to
-  // merge the triangulation with our output cell array.
+  // Need to add scalars for each cell that is created
+  vtkUnsignedCharArray *scalars =
+    vtkUnsignedCharArray::SafeDownCast(outCD->GetScalars());
 
-  // Instantiate input polydata for triangulation
-  vtkPolyData *sourceData = vtkPolyData::New();
-  vtkCellArray *sourcePolys = vtkCellArray::New();
-  vtkCellArray *outputPolys = 0;
-  vtkPoints *sourcePoints = vtkPoints::New();
-  sourcePoints->SetDataTypeToDouble();
-
-  // Build a matrix to transform points into the xy plane.  The normal
-  // must be the same as the one we used to set the sense of the polys.
-  double matrix[16];
-  vtkMatrix4x4::Identity(matrix);
-  matrix[8] = -normal[0];
-  matrix[9] = -normal[1];
-  matrix[10] = -normal[2];
-  vtkMath::Perpendiculars(&matrix[8], &matrix[0], &matrix[4], 0);
-
-  // The polygons have been grouped prior to triangulation.  A group
-  // of simple polygons is used to represent polygons with holes.
-
-  for (size_t groupId = 0; groupId < polyGroups.size(); groupId++)
+  // Go through all polys and triangulate them
+  for (size_t polyId = 0; polyId < numNewPolys; polyId++)
     {
-    if (polyGroups[groupId].size() == 0)
+    vtkClipOutlinePoly &poly = newPolys[polyId];
+    size_t n = poly.size();
+
+    // If the poly is a line, then skip it
+    if (n < 3)
       {
       continue;
       }
-
-    // Make a map for recovering pointIds after triangulation has finished
-    vtkstd::vector<vtkIdType> pointMap;
-    vtkIdType newPointId = 0;
-
-    sourcePolys->Initialize();
-    sourcePoints->Initialize();
-    sourceData->Initialize();
-    sourceData->SetPoints(sourcePoints);
-    sourceData->SetPolys(sourcePolys);
-
-    // Go through all polys in the group.
-    for (size_t i = 0; i < polyGroups[groupId].size(); i++)
+    // If the poly is a triangle, then pass it
+    else if (n == 3)
       {
-      size_t polyId = polyGroups[groupId][i];
-      size_t n = newPolys[polyId].size();
-
-      // If the poly is a line, then skip it
-      if (n < 3) { continue; }
-
-      // Create the source polys for a constrained Delaunay
-      sourcePolys->InsertNextCell(n);
-      for (size_t j = 0; j < n; j++)
+      vtkIdType cellId = polys->InsertNextCell(3);
+      polys->InsertCellPoint(poly[0]);
+      polys->InsertCellPoint(poly[1]);
+      polys->InsertCellPoint(poly[2]);
+      if (scalars)
         {
-        // Use homogeneous point with Matrix4x4
-        double point[4];
-        point[3] = 1.0;
-
-        vtkIdType pointId = newPolys[polyId][j];
-        points->GetPoint(pointId, point);
-        vtkMatrix4x4::MultiplyPoint(matrix, point, point);
-
-        sourcePoints->InsertNextPoint(point);
-        sourcePolys->InsertCellPoint(newPointId++);
-
-        // Save the old pointId
-        pointMap.push_back(pointId);
+        scalars->InsertTupleValue(cellId, color);
         }
       }
-
-    // Just in case there were no good cells
-    if (sourcePolys->GetNumberOfCells() == 0)
-      {
-      continue;
-      }
-
-    // If polys has one cell, don't use Delaunay
-    if (sourcePolys->GetNumberOfCells() == 1)
-      {
-      if (sourcePolys->GetNumberOfConnectivityEntries() <= 5)
-        {
-        // If the cell is a triangle or quad, don't triangulate
-        outputPolys = sourcePolys;
-        }
-      else
-        {
-        // If it is a single polygon, use ear cut triangulation
-
-        if (this->Polygon == 0) { this->Polygon = vtkPolygon::New(); }
-        vtkPolygon *polygon = this->Polygon;
-
-        if (this->IdList == 0) { this->IdList = vtkIdList::New(); }
-        vtkIdList *triangles = this->IdList;
-
-        if (this->CellArray == 0) { this->CellArray = vtkCellArray::New(); }
-        vtkCellArray *trianglePolys = this->CellArray;
-
-        vtkIdType npts, *pts;
-        sourcePolys->GetCell(0, npts, pts);
-
-        polygon->Points->SetDataTypeToDouble();
-        polygon->Points->SetNumberOfPoints(npts);
-        polygon->PointIds->SetNumberOfIds(npts);
-
-        for (vtkIdType j = 0; j < npts; j++)
-          {
-          double point[3];
-          sourcePoints->GetPoint(pts[j], point);
-          polygon->Points->SetPoint(j, point);
-          polygon->PointIds->SetId(j, pts[j]);
-          }
-
-        triangles->Initialize();
-        polygon->Triangulate(triangles);
-        vtkIdType m = triangles->GetNumberOfIds();
-        trianglePolys->Initialize();
-        for (vtkIdType k = 0; k < m; k += 3)
-          {
-          trianglePolys->InsertNextCell(3);
-          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 0)]);
-          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 1)]);
-          trianglePolys->InsertCellPoint(pts[triangles->GetId(k + 2)]);
-          }
-        outputPolys = trianglePolys;
-        }
-      }
+    // If the poly has 4 or more points, triangulate it
     else
       {
-      // Delaunay triangulation
-
-      if (this->Delaunay == 0)
+      // Need a polygon cell and idlist for triangulation
+      if (this->Polygon == 0)
         {
-        this->Delaunay = vtkDelaunay2D::New();
+        this->Polygon = vtkPolygon::New();
+        }
+      vtkPolygon *polygon = this->Polygon;
+
+      if (this->IdList == 0)
+        {
+        this->IdList = vtkIdList::New();
+        }
+      vtkIdList *triangles = this->IdList;
+
+      polygon->Points->SetDataTypeToDouble();
+      polygon->Points->SetNumberOfPoints(n);
+      polygon->PointIds->SetNumberOfIds(n);
+
+      for (size_t j = 0; j < n; j++)
+        {
+        vtkIdType pointId = newPolys[polyId][j];
+        double point[3];
+        points->GetPoint(pointId, point);
+        polygon->Points->SetPoint(static_cast<vtkIdType>(j), point);
+        polygon->PointIds->SetId(static_cast<vtkIdType>(j), pointId);
         }
 
-      vtkDelaunay2D *delaunay = this->Delaunay;
-      delaunay->SetTolerance(1e-5);
-      delaunay->SetOffset(1.0);
-      delaunay->SetInput(sourceData);
-      delaunay->SetSource(sourceData);
-      delaunay->SetProjectionPlaneMode(VTK_DELAUNAY_XY_PLANE);
-
-      delaunay->Modified();
-      delaunay->Update();
-      outputPolys = delaunay->GetOutput()->GetPolys();
-      }
-
-    // Check to make sure that Delaunay produced something
-    if (outputPolys)
-      {
-      vtkUnsignedCharArray *scalars =
-        vtkUnsignedCharArray::SafeDownCast(outCD->GetScalars());
-
-      outputPolys->InitTraversal();
-      vtkIdType npts, *pts;
-      while (outputPolys->GetNextCell(npts, pts))
+      triangles->Initialize();
+      polygon->Triangulate(triangles);
+      vtkIdType m = triangles->GetNumberOfIds();
+      for (vtkIdType k = 0; k < m; k += 3)
         {
-        vtkIdType cellId = polys->InsertNextCell(npts);
-
-        for (vtkIdType k = 0; k < npts; k++)
-          {
-          polys->InsertCellPoint(pointMap[pts[k]]);
-          }
-
+        vtkIdType cellId = polys->InsertNextCell(3);
+        polys->InsertCellPoint(
+          poly[static_cast<size_t>(triangles->GetId(k + 0))]);
+        polys->InsertCellPoint(
+          poly[static_cast<size_t>(triangles->GetId(k + 1))]);
+        polys->InsertCellPoint(
+          poly[static_cast<size_t>(triangles->GetId(k + 2))]);
         if (scalars)
           {
           scalars->InsertTupleValue(cellId, color);
@@ -1059,19 +945,10 @@ void vtkClipOutlineWithPlanes::MakeCutPolys(
     this->Polygon->Points->Initialize();
     this->Polygon->PointIds->Initialize();
     }
-  if (this->IdList) { this->IdList->Initialize(); }
-  if (this->CellArray) { this->CellArray->Initialize(); }
-
-  if (this->Delaunay)
+  if (this->IdList)
     {
-    this->Delaunay->SetInput(0);
-    this->Delaunay->SetSource(0);
-    this->Delaunay->SetOutput(0);
+    this->IdList->Initialize();
     }
-
-  sourcePoints->Delete();
-  sourcePolys->Delete();
-  sourceData->Delete();
 }
 
 // ---------------------------------------------------
