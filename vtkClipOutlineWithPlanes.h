@@ -14,13 +14,17 @@
 =========================================================================*/
 // .NAME vtkClipOutlineWithPlanes - Clip an outline with a plane collection
 // .SECTION Description
-// vtkClipOutlineWithPlanes will clip an outline polydata with a
-// collection of clipping planes.  In order to do this properly,
-// it requires an input that has polygons that form a closed surface,
-// and that also has lines on all of the edges.  It does not accept
-// triangle strips.
+// vtkClipOutlineWithPlanes will clip a closed polydata surface with a
+// collection of clipping planes.  Its default action is to generate
+// an outline wherever the clipping planes intersect the input.
+// If GenerateFaces is On, it will produce a new closed surface by
+// creating new polygonal faces where the input was clipped.
+// The GenerateScalars option will add color scalars to the output,
+// so that the clipped surfaces can be easily visualized.
+// .SECTION Caveats
+// This filter does not accept triangle strips as input.
 // .SECTION See Also
-// vtkOutlineFilter vtkOutlineSource vtkVolumeoutlineSource
+// vtkOutlineFilter vtkOutlineSource vtkVolumeOutlineSource
 
 #ifndef __vtkClipOutlineWithPlanes_h
 #define __vtkClipOutlineWithPlanes_h
@@ -58,6 +62,13 @@ public:
   vtkSetMacro(GenerateScalars, int);
   vtkBooleanMacro(GenerateScalars, int);
   vtkGetMacro(GenerateScalars, int);
+
+  // Description:
+  // Set whether to generate an outline wherever an input face was
+  // cut by a plane.  This is on by default. 
+  vtkSetMacro(GenerateOutline, int);
+  vtkBooleanMacro(GenerateOutline, int);
+  vtkGetMacro(GenerateOutline, int);
 
   // Description:
   // Set whether to generate polygonal faces for the output.  By default,
@@ -101,6 +112,7 @@ protected:
   vtkPlaneCollection *ClippingPlanes;
 
   int GenerateScalars;
+  int GenerateOutline;
   int GenerateFaces;
   int ActivePlaneId;
   double BaseColor[3];

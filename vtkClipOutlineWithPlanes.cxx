@@ -37,7 +37,7 @@
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.13 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.14 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -47,6 +47,7 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
 {
   this->ClippingPlanes = 0;
   this->GenerateScalars = 0;
+  this->GenerateOutline = 1;
   this->GenerateFaces = 0;
   this->ActivePlaneId = -1;
 
@@ -98,6 +99,9 @@ void vtkClipOutlineWithPlanes::PrintSelf(ostream& os, vtkIndent indent)
     {
     os << "(none)\n";
     } 
+
+  os << indent << "GenerateOutline: "
+     << (this->GenerateOutline ? "On\n" : "Off\n" );
 
   os << indent << "GenerateFaces: "
      << (this->GenerateFaces ? "On\n" : "Off\n" );
@@ -182,17 +186,6 @@ int vtkClipOutlineWithPlanes::RequestData(
     }
   tol = sqrt(tol)*1e-5;
 
-  // If the input has no line geometry, there's nothing to do
-  if (!input->GetLines())
-    {
-    output->SetPoints(0);
-    output->SetLines(0);
-    output->SetPolys(0);
-    output->GetCellData()->SetScalars(0);
-
-    return 1;
-    }
-
   // The points, forced to double precision.
   vtkPoints *points = vtkPoints::New();
   points->SetDataTypeToDouble();
@@ -221,7 +214,8 @@ int vtkClipOutlineWithPlanes::RequestData(
                           this->ActivePlaneColor, colors);
 
   // This is set if we have to work with scalars.  The input scalars
-  // will be utilized if they are unsigned char with 3 components
+  // will be copied if they are unsigned char with 3 components, otherwise
+  // new scalars will be generated.
   if (this->GenerateScalars)
     {
     // Make the scalars
@@ -253,9 +247,13 @@ int vtkClipOutlineWithPlanes::RequestData(
     }
 
   // Break the input lines into segments, generate scalars for lines
-  vtkCellArray *lines = vtkCellArray::New();
-  this->BreakPolylines(input->GetLines(), lines, inputScalars,
-                       firstLineScalar, lineScalars, colors[0]);
+  vtkCellArray *lines = 0;
+  lines = vtkCellArray::New();
+  if (input->GetLines())
+    {
+    this->BreakPolylines(input->GetLines(), lines, inputScalars,
+                         firstLineScalar, lineScalars, colors[0]);
+    }
 
   // Copy the optional polygons (no triangle strips yet)
   vtkCellArray *polys = 0;
@@ -280,18 +278,39 @@ int vtkClipOutlineWithPlanes::RequestData(
     {
     output->SetPoints(points);
     points->Delete();
-    output->SetLines(lines);
-    lines->Delete();
-    output->GetCellData()->SetScalars(lineScalars);
+    if (this->GenerateOutline)
+      {
+      output->SetLines(lines);
+      output->GetCellData()->SetScalars(lineScalars);
+      }
+    if (this->GenerateFaces)
+      {
+      output->SetPolys(polys);
+      output->GetCellData()->SetScalars(polyScalars);
+      }
+    if (this->GenerateOutline && this->GenerateFaces &&
+        lineScalars && polyScalars)
+      {
+      // Combine the scalars
+      unsigned char color[3] = { 0, 0, 0 };
+      vtkIdType n = lineScalars->GetNumberOfTuples();
+      vtkIdType m = polyScalars->GetNumberOfTuples();
+      // expand the array
+      lineScalars->InsertTupleValue(n + m - 1, color);
+      for (vtkIdType j = 0; j < m; j++)
+        {
+        polyScalars->GetTupleValue(j, color);
+        lineScalars->SetTupleValue(j+n, color);
+        }
+      output->GetCellData()->SetScalars(lineScalars);
+      }
+    if (lines) { lines->Delete(); }
     if (lineScalars) { lineScalars->Delete(); }
     if (polys) { polys->Delete(); }
     if (polyScalars) { polyScalars->Delete(); }
 
     return 1;
     }
-
-  // The point scalars, for clipping.
-  vtkDoubleArray *pointScalars = vtkDoubleArray::New();
 
   // Arrays for storing the clipped lines and polys.
   vtkCellArray *newLines = vtkCellArray::New();
@@ -311,13 +330,15 @@ int vtkClipOutlineWithPlanes::RequestData(
   vtkPoints *newPoints = vtkPoints::New();
   newPoints->SetDataTypeToDouble();
 
-  // These hold the point and cell scalars, they're needed for clipping
+  // The point scalars, needed for clipping (not for the output!)
+  vtkDoubleArray *pointScalars = vtkDoubleArray::New();
   vtkPointData *inPointData = vtkPointData::New();
   inPointData->CopyScalarsOn();
   inPointData->SetScalars(pointScalars);
   pointScalars->Delete();
   pointScalars = 0;
 
+  // The line scalars, for coloring the outline
   vtkCellData *inLineData = vtkCellData::New();
   inLineData->CopyScalarsOn();
   inLineData->SetScalars(lineScalars);
@@ -327,6 +348,7 @@ int vtkClipOutlineWithPlanes::RequestData(
     lineScalars = 0;
     }
 
+  // The poly scalars, for coloring the faces
   vtkCellData *inPolyData = vtkCellData::New();
   inPolyData->CopyScalarsOn();
   inPolyData->SetScalars(polyScalars);
@@ -336,6 +358,7 @@ int vtkClipOutlineWithPlanes::RequestData(
     polyScalars = 0;
     }
 
+  // Also create output attribute data
   vtkPointData *outPointData = vtkPointData::New();
   outPointData->CopyScalarsOn();
 
@@ -345,7 +368,7 @@ int vtkClipOutlineWithPlanes::RequestData(
   vtkCellData *outPolyData = vtkCellData::New();
   outPolyData->CopyScalarsOn();
 
-  // Go through the planes and clip the lines with each plane
+  // Go through the clipping planes and clip the input with each plane
   vtkCollectionSimpleIterator iter;
   planes->InitTraversal(iter);
   vtkPlane *plane;
@@ -371,7 +394,7 @@ int vtkClipOutlineWithPlanes::RequestData(
       pointScalars->SetValue(pointId, val);
       }
 
-    // Prepare the locator
+    // Prepare the locator for merging points during clipping
     locator->InitPointInsertion(newPoints, input->GetBounds());
 
     // Prepare the output scalars
@@ -384,6 +407,7 @@ int vtkClipOutlineWithPlanes::RequestData(
       points, pointScalars, locator, 1, lines, 0, newLines,
       inPointData, outPointData, inLineData, 0, outLineData);
 
+    // Clip the polys
     if (polys)
       {
       // Get the number of lines remaining after the clipping
@@ -394,7 +418,7 @@ int vtkClipOutlineWithPlanes::RequestData(
         points, pointScalars, locator, 2, polys, newPolys, newLines,
         inPointData, outPointData, inPolyData, outPolyData, outLineData);
       
-      // Set new scalars for the contour lines
+      // Add scalars for the newly-created contour lines
       vtkUnsignedCharArray *scalars =
         vtkUnsignedCharArray::SafeDownCast(outLineData->GetScalars());
 
@@ -462,11 +486,19 @@ int vtkClipOutlineWithPlanes::RequestData(
   output->SetPoints(points);
   points->Delete();
 
-  output->SetLines(lines);
-  lines->Delete();
-
+  // Get the line scalars
   vtkUnsignedCharArray *scalars = 
     vtkUnsignedCharArray::SafeDownCast(inLineData->GetScalars());
+
+  if (this->GenerateOutline)
+    {
+    output->SetLines(lines);
+    }
+  else if (scalars)
+    {
+    // If not adding lines to output, clear the line scalars
+    scalars->Initialize();
+    }
 
   if (this->GenerateFaces)
     {
@@ -474,18 +506,26 @@ int vtkClipOutlineWithPlanes::RequestData(
 
     if (polys && scalars)
       {
+      unsigned char color[3] = {0, 0, 0};
       vtkUnsignedCharArray *pScalars = 
         vtkUnsignedCharArray::SafeDownCast(inPolyData->GetScalars());
 
+      vtkIdType m = scalars->GetNumberOfTuples();
       vtkIdType n = pScalars->GetNumberOfTuples();
+
+      // Expand the array
+      scalars->InsertTupleValue(n+m-1, color);
+
+      // Fill in the poly scalars
       for (vtkIdType i = 0; i < n; i++)
         {
-        unsigned char color[3];
         pScalars->GetTupleValue(i, color);
-        scalars->InsertNextTupleValue(color);
+        scalars->SetTupleValue(i+m, color);
         }
       }
    }
+
+  lines->Delete();
 
   if (polys)
     {
