@@ -37,7 +37,7 @@
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.14 $");
+vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -65,11 +65,8 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
 
   // A whole bunch of objects needed during execution
   this->Locator = 0;
-  this->CellClipScalars = 0;
   this->IdList = 0;
-  this->CellArray = 0;
   this->Polygon = 0;
-  this->Cell = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -78,11 +75,8 @@ vtkClipOutlineWithPlanes::~vtkClipOutlineWithPlanes()
   if (this->ClippingPlanes) { this->ClippingPlanes->Delete(); } 
 
   if (this->Locator) { this->Locator->Delete(); }
-  if (this->CellClipScalars) { this->CellClipScalars->Delete(); }
   if (this->IdList) { this->IdList->Delete(); }
-  if (this->CellArray) { this->CellArray->Delete(); }
   if (this->Polygon) { this->Polygon->Delete(); }
-  if (this->Cell) { this->Cell->Delete(); }
 }
 
 //----------------------------------------------------------------------------
@@ -403,9 +397,9 @@ int vtkClipOutlineWithPlanes::RequestData(
     outPolyData->CopyAllocate(inPolyData, 0, 0);
 
     // Clip the lines
-    this->ClipAndContourCells(
-      points, pointScalars, locator, 1, lines, 0, newLines,
-      inPointData, outPointData, inLineData, 0, outLineData);
+    this->ClipLines(
+      points, pointScalars, locator, lines, newLines,
+      inPointData, outPointData, inLineData, outLineData);
 
     // Clip the polys
     if (polys)
@@ -414,8 +408,8 @@ int vtkClipOutlineWithPlanes::RequestData(
       vtkIdType numClipLines = newLines->GetNumberOfCells();
 
       // Cut the polys to generate more lines
-      this->ClipAndContourCells(
-        points, pointScalars, locator, 2, polys, newPolys, newLines,
+      this->ClipAndContourPolys(
+        points, pointScalars, locator, polys, newPolys, newLines,
         inPointData, outPointData, inPolyData, outPolyData, outLineData);
       
       // Add scalars for the newly-created contour lines
@@ -513,14 +507,17 @@ int vtkClipOutlineWithPlanes::RequestData(
       vtkIdType m = scalars->GetNumberOfTuples();
       vtkIdType n = pScalars->GetNumberOfTuples();
 
-      // Expand the array
-      scalars->InsertTupleValue(n+m-1, color);
-
-      // Fill in the poly scalars
-      for (vtkIdType i = 0; i < n; i++)
+      if (n)
         {
-        pScalars->GetTupleValue(i, color);
-        scalars->SetTupleValue(i+m, color);
+        // Expand the array
+        scalars->InsertTupleValue(n+m-1, color);
+
+        // Fill in the poly scalars
+        for (vtkIdType i = 0; i < n; i++)
+          {
+          pScalars->GetTupleValue(i, color);
+          scalars->SetTupleValue(i+m, color);
+          }
         }
       }
    }
@@ -577,83 +574,209 @@ void vtkClipOutlineWithPlanes::CreateColorValues(
 }
 
 //----------------------------------------------------------------------------
-void vtkClipOutlineWithPlanes::ClipAndContourCells(
+void vtkClipOutlineWithPlanes::ClipLines(
   vtkPoints *points, vtkDoubleArray *pointScalars,
-  vtkIncrementalPointLocator *locator, int dimensionality,
+  vtkIncrementalPointLocator *locator,
+  vtkCellArray *inputCells, vtkCellArray *outputLines, 
+  vtkPointData *inPointData, vtkPointData *outPointData,
+  vtkCellData *inCellData, vtkCellData *outLineData)
+{
+  vtkIdType numCells = inputCells->GetNumberOfCells();
+  vtkIdType numPts = 0;
+  vtkIdType *pts = 0;
+
+  inputCells->InitTraversal();
+  for (vtkIdType cellId = 0; cellId < numCells; cellId++)
+    {
+    inputCells->GetNextCell(numPts, pts);
+
+    vtkIdType i1 = pts[0]; 
+    double v1 = pointScalars->GetValue(i1);
+    int c1 = (v1 > 0);
+
+    for (vtkIdType i = 1; i < numPts; i++)
+      {
+      vtkIdType i0 = i1;
+      double v0 = v1;
+      int c0 = c1;
+
+      i1 = pts[i];
+      v1 = pointScalars->GetValue(i1);
+      c1 = (v1 > 0);
+
+      // If at least one point wasn't clipped
+      if ( (c0 | c1) )
+        {
+        double p0[3], p1[3];
+        points->GetPoint(i0, p0);
+        points->GetPoint(i1, p1);
+
+        vtkIdType linePts[2];
+        linePts[0] = 0;
+        linePts[1] = 0;
+
+        // If only one end was clipped, interpolate new point
+        if (c0 != c1)
+          {
+          double t = v0/(v0 - v1);
+          double s = 1.0 - t;
+
+          double p[3];
+          p[0] = s*p0[0] + t*p1[0];
+          p[1] = s*p0[1] + t*p1[1];
+          p[2] = s*p0[2] + t*p1[2];
+
+          if (locator->InsertUniquePoint(p, linePts[c0]))
+            {
+            outPointData->InterpolateEdge(inPointData,linePts[c0],i0,i1,t);
+            }
+          }
+
+        if (c0 && locator->InsertUniquePoint(p0, linePts[0]))
+          {
+          outPointData->CopyData(inPointData, i0, linePts[0]);
+          }
+
+        if (c1 && locator->InsertUniquePoint(p1, linePts[1]))
+          {
+          outPointData->CopyData(inPointData, i1, linePts[1]);
+          }
+
+        // If endpoints are different, insert the line segment
+        if (linePts[0] != linePts[1])
+          {
+          vtkIdType newCellId = outputLines->InsertNextCell(2, linePts);
+          outLineData->CopyData(inCellData, cellId, newCellId);
+          }
+        }
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
+void vtkClipOutlineWithPlanes::ClipAndContourPolys(
+  vtkPoints *points, vtkDoubleArray *pointScalars,
+  vtkIncrementalPointLocator *locator,
   vtkCellArray *inputCells,
   vtkCellArray *outputPolys, vtkCellArray *outputLines, 
   vtkPointData *inPointData, vtkPointData *outPointData,
   vtkCellData *inCellData,
   vtkCellData *outPolyData, vtkCellData *outLineData)
 {
-  if (this->CellClipScalars == 0) { this->CellClipScalars = vtkDoubleArray::New(); }
-  vtkDoubleArray *cellClipScalars = this->CellClipScalars;
-
-  if (this->Cell == 0) { this->Cell = vtkGenericCell::New(); }
-  vtkGenericCell *cell = this->Cell;
-
-  if (this->CellArray == 0) { this->CellArray = vtkCellArray::New(); }
-  vtkCellArray *outputVerts = this->CellArray;
-
-  vtkCellData *outCellData = outLineData;
-  vtkCellArray *outputCells = outputLines;
-  if (dimensionality == 2)
+  if (!this->IdList)
     {
-    outCellData = outPolyData;
-    outputCells = outputPolys;
+    this->IdList = vtkIdList::New();
     }
+  vtkIdList *idList = this->IdList;
 
   vtkIdType numCells = inputCells->GetNumberOfCells();
+  vtkIdType numPts = 0;
+  vtkIdType *pts = 0;
+
   inputCells->InitTraversal();
   for (vtkIdType cellId = 0; cellId < numCells; cellId++)
     {
-    vtkIdType numPts, *pts;
     inputCells->GetNextCell(numPts, pts);
+    idList->Reset();
 
-    // Set the cell type from the dimensionality
-    if (dimensionality == 2)
+    vtkIdType i1 = pts[numPts-1]; 
+    double v1 = pointScalars->GetValue(i1);
+    int c1 = (v1 > 0);
+
+    double p1[3];
+    points->GetPoint(i1, p1);
+
+    // The ids for the current edge
+    vtkIdType j0 = -1;
+    vtkIdType j1 = -1;
+
+    // Insert the first point (actually the last point) if it is
+    // not clipped away 
+    if (c1 && locator->InsertUniquePoint(p1, j0))
       {
-      if (numPts == 3) { cell->SetCellTypeToTriangle(); }
-      else if (numPts == 4) { cell->SetCellTypeToQuad(); }
-      else { cell->SetCellTypeToPolygon(); }
-      }
-    else // (dimensionality == 1)
-      {
-      if (numPts == 2) { cell->SetCellTypeToLine(); }
-      else { cell->SetCellTypeToPolyLine(); }
+      outPointData->CopyData(inPointData, i1, j0);
       }
 
-    vtkPoints *cellPts = cell->GetPoints();
-    vtkIdList *cellIds = cell->GetPointIds();
+    // To store the ids of the contour line
+    vtkIdType linePts[2];
+    linePts[0] = 0;
+    linePts[1] = 0;
 
-    cellPts->SetNumberOfPoints(numPts);
-    cellIds->SetNumberOfIds(numPts);
-    cellClipScalars->SetNumberOfValues(numPts);
-
-    // Copy everything over to the temporary cell
     for (vtkIdType i = 0; i < numPts; i++)
       {
-      double point[3];
-      points->GetPoint(pts[i], point);
-      cellPts->SetPoint(i, point);
-      cellIds->SetId(i, pts[i]);
-      double s = pointScalars->GetValue(cellIds->GetId(i));
-      cellClipScalars->SetValue(i, s);
+      // Save previous point info
+      vtkIdType i0 = i1;
+      double v0 = v1;
+      int c0 = c1;
+      double p0[3];
+      p0[0] = p1[0]; p0[1] = p1[1]; p0[2] = p1[2];
+
+      // Generate new point info
+      i1 = pts[i];
+      v1 = pointScalars->GetValue(i1);
+      c1 = (v1 > 0);
+      points->GetPoint(i1, p1);
+
+      // If at least one edge end point wasn't clipped
+      if ( (c0 | c1) )
+        {
+        // If only one end was clipped, interpolate new point
+        if ( (c0 ^ c1) )
+          {
+          double t = v0/(v0 - v1);
+          double s = 1.0 - t;
+
+          double p[3];
+          p[0] = s*p0[0] + t*p1[0];
+          p[1] = s*p0[1] + t*p1[1];
+          p[2] = s*p0[2] + t*p1[2];
+
+          if (locator->InsertUniquePoint(p, j1))
+            {
+            outPointData->InterpolateEdge(inPointData, j1, i0, i1, t);
+            }
+          if (j1 != j0)
+            {
+            idList->InsertNextId(j1);
+            j0 = j1;
+            }
+          // Save as one end of the contour line
+          linePts[c0] = j1;
+          }
+
+        if (c1)
+          {
+          if (locator->InsertUniquePoint(p1, j1))
+            {
+            outPointData->CopyData(inPointData, i1, j1);
+            }
+          if (j1 != j0)
+            {
+            idList->InsertNextId(j1);
+            j0 = j1;
+            }
+          }
+        }
       }
 
-    cell->Clip(0, cellClipScalars, locator, outputCells,
-               inPointData, outPointData,
-               inCellData, cellId, outCellData, 0);
-
-    if (dimensionality == 2)
+    // Insert the clipped poly
+    if (idList->GetNumberOfIds() > 2)
       {
-      cell->Contour(0, cellClipScalars, locator,
-                    outputVerts, outputLines, 0,
-                    inPointData, outPointData,
-                    inCellData, cellId, outLineData);
+      vtkIdType newCellId = outputPolys->InsertNextCell(idList);
+      outPolyData->CopyData(inCellData, cellId, newCellId);
+      }
+
+    // Insert the contour line if one was created
+    if (linePts[0] != linePts[1])
+      {
+      vtkIdType newCellId = outputLines->InsertNextCell(2, linePts);
+      outLineData->CopyData(inCellData, cellId, newCellId);
       }
     }
-}             
+
+  // Free up the idList memory
+  idList->Initialize();
+}
 
 //----------------------------------------------------------------------------
 void vtkClipOutlineWithPlanes::BreakPolylines(

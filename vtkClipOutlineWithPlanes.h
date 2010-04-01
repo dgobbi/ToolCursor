@@ -121,11 +121,8 @@ protected:
 
   vtkIncrementalPointLocator *Locator;
 
-  vtkDoubleArray *CellClipScalars;
   vtkIdList *IdList;
-  vtkCellArray *CellArray;
   vtkPolygon *Polygon;
-  vtkGenericCell *Cell;
 
   virtual int ComputePipelineMTime(
     vtkInformation* request, vtkInformationVector** inputVector,
@@ -136,9 +133,16 @@ protected:
     vtkInformation* request, vtkInformationVector** inputVector,
     vtkInformationVector* outputVector);
 
-  void ClipAndContourCells(
+  void ClipLines(
     vtkPoints *points, vtkDoubleArray *pointScalars,
-    vtkIncrementalPointLocator *locator, int dimensions,
+    vtkIncrementalPointLocator *locator,
+    vtkCellArray *inputCells, vtkCellArray *outputLines,
+    vtkPointData *inPointData, vtkPointData *outPointData,
+    vtkCellData *inCellData, vtkCellData *outLineData);
+
+  void ClipAndContourPolys(
+    vtkPoints *points, vtkDoubleArray *pointScalars,
+    vtkIncrementalPointLocator *locator,
     vtkCellArray *inputCells, vtkCellArray *outputPolys,
     vtkCellArray *outputLines, vtkPointData *inPointData,
     vtkPointData *outPointData, vtkCellData *inCellData,
