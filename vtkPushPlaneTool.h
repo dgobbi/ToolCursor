@@ -1,27 +1,26 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPushPlaneAction.h,v $
+  Program:   ToolCursor
+  Module:    vtkPushPlaneTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkPushPlaneAction - Controls plane-pushing action.
+// .NAME vtkPushPlaneTool - Controls plane-pushing action.
 // .SECTION Description
 // This class controls the "push" interaction for vtkImageActor slices,
 // vtkVolumeMapper cropping planes, or clipping planes on all types of
 // mappers.
 
-#ifndef __vtkPushPlaneAction_h
-#define __vtkPushPlaneAction_h
+#ifndef __vtkPushPlaneTool_h
+#define __vtkPushPlaneTool_h
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 
 class vtkImageActor;
 class vtkVolumeMapper;
@@ -29,16 +28,16 @@ class vtkAbstractMapper3D;
 class vtkLODProp3D;
 class vtkTransform;
 
-class VTK_EXPORT vtkPushPlaneAction : public vtkSurfaceCursorAction
+class VTK_EXPORT vtkPushPlaneTool : public vtkTool
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkPushPlaneAction *New();
+  static vtkPushPlaneTool *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkPushPlaneAction,vtkSurfaceCursorAction);
+  vtkTypeMacro(vtkPushPlaneTool,vtkTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -52,8 +51,8 @@ public:
   virtual void ConstrainCursor(double position[3], double normal[3]);
 
 protected:
-  vtkPushPlaneAction();
-  ~vtkPushPlaneAction();
+  vtkPushPlaneTool();
+  ~vtkPushPlaneTool();
 
   vtkTransform *Transform;
   vtkImageActor *ImageActor;
@@ -67,7 +66,7 @@ protected:
   double Origin[3];
   double Normal[3];
 
-  int IsPlaneValid() { return (this->PlaneId >= 0); }; 
+  int IsPlaneValid() { return (this->PlaneId >= 0); };
 
   void GetPropInformation();
   void GetPlaneOriginAndNormal(double origin[3], double normal[3]);
@@ -76,7 +75,7 @@ protected:
     this->StartOrigin[0] = origin[0];
     this->StartOrigin[1] = origin[1];
     this->StartOrigin[2] = origin[2]; };
-     
+
   void GetStartOrigin(double origin[3]) {
     origin[0] = this->StartOrigin[0];
     origin[1] = this->StartOrigin[1];
@@ -93,7 +92,7 @@ protected:
     this->StartNormal[0] = normal[0];
     this->StartNormal[1] = normal[1];
     this->StartNormal[2] = normal[2]; };
- 
+
   void GetStartNormal(double normal[3]) {
     normal[0] = this->StartNormal[0];
     normal[1] = this->StartNormal[1];
@@ -107,8 +106,8 @@ protected:
     normal[2] = this->Normal[2]; };
 
 private:
-  vtkPushPlaneAction(const vtkPushPlaneAction&);  //Not implemented
-  void operator=(const vtkPushPlaneAction&);  //Not implemented
+  vtkPushPlaneTool(const vtkPushPlaneTool&);  //Not implemented
+  void operator=(const vtkPushPlaneTool&);  //Not implemented
 };
 
 #endif

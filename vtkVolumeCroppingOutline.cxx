@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeCroppingOutline.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkVolumeCroppingOutline.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -27,7 +26,6 @@
 #include "vtkVolumeMapper.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkVolumeCroppingOutline, "$Revision: 1.6 $");
 vtkStandardNewMacro(vtkVolumeCroppingOutline);
 
 vtkCxxSetObjectMacro(vtkVolumeCroppingOutline,VolumeMapper,vtkVolumeMapper);
@@ -75,7 +73,7 @@ void vtkVolumeCroppingOutline::PrintSelf(ostream& os, vtkIndent indent)
   else
     {
     os << "(none)\n";
-    } 
+    }
 
   os << indent << "GenerateOutline: "
      << (this->GenerateOutline ? "On\n" : "Off\n" );
@@ -371,7 +369,7 @@ void vtkVolumeCroppingOutline::GeneratePolys(
             (j == 2 && tolPtId[dim1][2] == 3))
           {
           continue;
-          } 
+          }
 
         // Loop over rectangle along the "dim" dimension
         for (int k = 0; k < 3; k++)
@@ -383,7 +381,7 @@ void vtkVolumeCroppingOutline::GeneratePolys(
               (k == 2 && tolPtId[dim0][2] == 3))
             {
             continue;
-            } 
+            }
 
           // The points in the rectangle, which are nudged over to the
           // volume bounds if the cropping planes are within tolerance
@@ -429,7 +427,7 @@ void vtkVolumeCroppingOutline::GeneratePolys(
             }
 
           // Whether we need a rect depends on the the value of bitCheck.
-          // Values 00, 11 don't need lines. 
+          // Values 00, 11 don't need lines.
 
           // If our rect isn't an internal rect
           if (bitCheck != 0x0 && bitCheck != 0x3)
@@ -515,7 +513,7 @@ void vtkVolumeCroppingOutline::GenerateLines(
               (k == 2 && tolPtId[dim0][2] == 3))
             {
             continue;
-            } 
+            }
 
           // The endpoints of the segment, which are nudged over to the
           // volume bounds if the cropping planes are within tolerance
@@ -530,7 +528,7 @@ void vtkVolumeCroppingOutline::GenerateLines(
           idx[dim0] = k;
 
           // Loop through the four cubes adjacent to the line segment,
-          // in order to determine whether the line segment is on an 
+          // in order to determine whether the line segment is on an
           // edge: only the edge lines will be drawn.  The "bitCheck"
           // holds a bit for each of these four cubes.
           int bitCheck = 0;
@@ -558,11 +556,11 @@ void vtkVolumeCroppingOutline::GenerateLines(
             }
 
           // Whether we need a line depends on the the value of bitCheck.
-          // Values 0000, 0011, 0110, 1100, 1001, 1111 don't need lines. 
+          // Values 0000, 0011, 0110, 1100, 1001, 1111 don't need lines.
           // Build a bitfield to check our bitfield values against, each
-          // set bit in this new bitfield corresponds to a non-edge case. 
+          // set bit in this new bitfield corresponds to a non-edge case.
           const int noLineValues = ((1 << 0x0) | (1 << 0x3) | (1 << 0x6) |
-                                    (1 << 0x9) | (1 << 0xc) | (1 << 0xf)); 
+                                    (1 << 0x9) | (1 << 0xc) | (1 << 0xf));
 
           // If our line segment is an edge, there is lots of work to do.
           if (((noLineValues >> bitCheck) & 1) == 0)
@@ -610,7 +608,7 @@ void vtkVolumeCroppingOutline::GenerateLines(
                 {
                 scalars->InsertNextTupleValue(colors[active]);
                 }
-              } 
+              }
             }
 
           } // loop over k
@@ -668,7 +666,7 @@ void vtkVolumeCroppingOutline::GeneratePoints(
     {
     // If we're halfway done, switch over to the next 32 bits
     if (i == 2) { pointBits = pointBits2; }
- 
+
     for (int j = 0; j < 4; j++)
       {
       for (int k = 0; k < 4; k++)
@@ -692,7 +690,7 @@ void vtkVolumeCroppingOutline::GeneratePoints(
               {
               for (int ii = 0; ii < npts; ii++)
                 {
-                if (pts[ii] == ptId) { pts[ii] = newPtId; } 
+                if (pts[ii] == ptId) { pts[ii] = newPtId; }
                 }
               }
             }
@@ -703,7 +701,7 @@ void vtkVolumeCroppingOutline::GeneratePoints(
               {
               for (int ii = 0; ii < npts; ii++)
                 {
-                if (pts[ii] == ptId) { pts[ii] = newPtId; } 
+                if (pts[ii] == ptId) { pts[ii] = newPtId; }
                 }
               }
             }

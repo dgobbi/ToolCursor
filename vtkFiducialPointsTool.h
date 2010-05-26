@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFiducialPointsTool.h,v $
+  Program:   ToolCursor
+  Module:    vtkFiducialPointsTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -19,7 +18,7 @@
 #ifndef __vtkFiducialPointsTool_h
 #define __vtkFiducialPointsTool_h
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 
 class vtkTransform;
 class vtkGlyph3D;
@@ -29,7 +28,7 @@ class vtkPointSet;
 class vtkDataSetMapper;
 class vtkActor;
 
-class VTK_EXPORT vtkFiducialPointsTool : public vtkSurfaceCursorAction
+class VTK_EXPORT vtkFiducialPointsTool : public vtkTool
 {
 public:
   // Description:
@@ -38,7 +37,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkFiducialPointsTool,vtkSurfaceCursorAction);
+  vtkTypeMacro(vtkFiducialPointsTool,vtkTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

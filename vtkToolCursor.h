@@ -1,25 +1,24 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursor.h,v $
+  Program:   ToolCursor
+  Module:    vtkToolCursor.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSurfaceCursor - Cursor for picking and manipulating Prop3Ds
+// .NAME vtkToolCursor - Cursor for picking and manipulating Prop3Ds
 // .SECTION Description
 // This class assists with picking and with providing interaction with
 // objects in a 3D scene.  It allows the picking to be customized for
 // different actors in the scene.
 
-#ifndef __vtkSurfaceCursor_h
-#define __vtkSurfaceCursor_h
+#ifndef __vtkToolCursor_h
+#define __vtkToolCursor_h
 
 #include "vtkObject.h"
 
@@ -38,43 +37,43 @@ class vtkVolumePicker;
 class vtkIntArray;
 class vtkCommand;
 
-class vtkSurfaceCursorAction;
-class vtkSurfaceCursorShapes;
+class vtkTool;
+class vtkCursorShapes;
 class vtkVolumeCroppingOutline;
 class vtkClipOutlineWithPlanes;
 
 // Modifier keys and mouse buttons.
-#define VTK_SCURSOR_SHIFT        0x0001
-#define VTK_SCURSOR_CAPS         0x0002
-#define VTK_SCURSOR_CONTROL      0x0004
-#define VTK_SCURSOR_META         0x0008
-#define VTK_SCURSOR_ALT          0x0010
-#define VTK_SCURSOR_BUTTON_MASK  0x1F00
-#define VTK_SCURSOR_B1           0x0100
-#define VTK_SCURSOR_B2           0x0200
-#define VTK_SCURSOR_B3           0x0400
-#define VTK_SCURSOR_B4           0x0800
-#define VTK_SCURSOR_B5           0x1000
+#define VTK_TOOL_SHIFT        0x0001
+#define VTK_TOOL_CAPS         0x0002
+#define VTK_TOOL_CONTROL      0x0004
+#define VTK_TOOL_META         0x0008
+#define VTK_TOOL_ALT          0x0010
+#define VTK_TOOL_BUTTON_MASK  0x1F00
+#define VTK_TOOL_B1           0x0100
+#define VTK_TOOL_B2           0x0200
+#define VTK_TOOL_B3           0x0400
+#define VTK_TOOL_B4           0x0800
+#define VTK_TOOL_B5           0x1000
 
 // Pick flags, these describe what is under the cursor.
-#define VTK_SCURSOR_PROP3D       0x0F00
-#define VTK_SCURSOR_ACTOR        0x0100
-#define VTK_SCURSOR_VOLUME       0x0200
-#define VTK_SCURSOR_IMAGE_ACTOR  0x0400
-#define VTK_SCURSOR_PLANE        0x3000
-#define VTK_SCURSOR_CLIP_PLANE   0x1000
-#define VTK_SCURSOR_CROP_PLANE   0x2000
+#define VTK_TOOL_PROP3D       0x0F00
+#define VTK_TOOL_ACTOR        0x0100
+#define VTK_TOOL_VOLUME       0x0200
+#define VTK_TOOL_IMAGE_ACTOR  0x0400
+#define VTK_TOOL_PLANE        0x3000
+#define VTK_TOOL_CLIP_PLANE   0x1000
+#define VTK_TOOL_CROP_PLANE   0x2000
 
-class VTK_EXPORT vtkSurfaceCursor : public vtkObject
+class VTK_EXPORT vtkToolCursor : public vtkObject
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkSurfaceCursor *New();
+  static vtkToolCursor *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSurfaceCursor,vtkObject);
+  vtkTypeMacro(vtkToolCursor,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -166,7 +165,7 @@ public:
   // Move the cursor to a specific position, usually in response to the
   // mouse motion.  This is not a passive method like SetDisplayPosition().
   // Depending on the Action ivar, the motion will go to the appropriate
-  // interaction method. 
+  // interaction method.
   virtual void MoveToDisplayPosition(double x, double y);
 
   // Description:
@@ -189,12 +188,12 @@ public:
   // Description:
   // Add an action.  The id for the action will be returned.  Once an
   // action is added, it cannot be removed.
-  int AddAction(vtkSurfaceCursorAction *action);
+  int AddAction(vtkTool *action);
 
   // Description:
   // Add a cursor shape.  The id for the shape will be returned.  Once a
   // shape has been added, it cannot be removed.
-  int AddShape(vtkSurfaceCursorShapes *shapes, const char *name);
+  int AddShape(vtkCursorShapes *shapes, const char *name);
 
   // Description:
   // Bind the conditions under which the specified action will take place.
@@ -246,8 +245,8 @@ public:
   static int ButtonBit(int button);
 
 protected:
-  vtkSurfaceCursor();
-  ~vtkSurfaceCursor();
+  vtkToolCursor();
+  ~vtkToolCursor();
 
   double OpacityThreshold;
 
@@ -269,7 +268,7 @@ protected:
   int IsInViewport;
   double Scale;
   vtkMatrix4x4 *Matrix;
-  vtkSurfaceCursorShapes *Shapes;
+  vtkCursorShapes *Shapes;
   vtkIntArray *ShapeBindings;
   vtkCollection *Actions;
   vtkIntArray *ActionBindings;
@@ -286,9 +285,9 @@ protected:
   vtkClipOutlineWithPlanes *ClipOutlineFilter;
 
   // Description:
-  // Set the modifier bits.  This is protected because SetModifierBits() 
+  // Set the modifier bits.  This is protected because SetModifierBits()
   // is the method that should be used to set the modifier.
-  virtual void SetModifier(int modifier);  
+  virtual void SetModifier(int modifier);
   int GetModifier() { return this->Modifier; };
 
   // Description:
@@ -314,7 +313,7 @@ protected:
   static int ComputePickFlags(vtkVolumePicker *picker);
   static double ComputeScale(const double position[3], vtkRenderer *renderer);
   static void ComputeMatrix(const double position[3], const double normal[3],
-                            const double vector[3], vtkMatrix4x4 *matrix); 
+                            const double vector[3], vtkMatrix4x4 *matrix);
   static void ComputeVectorFromNormal(const double position[3],
                                       const double normal[3], double vector[3],
                                       vtkRenderer *renderer, int cursorFlags);
@@ -322,11 +321,11 @@ protected:
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
 
 private:
-  vtkSurfaceCursor(const vtkSurfaceCursor&);  //Not implemented
-  void operator=(const vtkSurfaceCursor&);  //Not implemented
+  vtkToolCursor(const vtkToolCursor&);  //Not implemented
+  void operator=(const vtkToolCursor&);  //Not implemented
 };
 
-inline void vtkSurfaceCursor::SetModifierBits(int modifier, int mask)
+inline void vtkToolCursor::SetModifierBits(int modifier, int mask)
 {
   this->SetModifier((this->GetModifier() & ~mask) | (modifier & mask));
 }

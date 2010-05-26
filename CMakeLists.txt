@@ -1,4 +1,4 @@
-PROJECT(SurfaceCursor)
+PROJECT(ToolCursor)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 IF(COMMAND CMAKE_POLICY)
@@ -12,17 +12,17 @@ SET(LIB_SRCS
   vtkClipOutlineWithPlanes.cxx
   vtkFiducialPointsTool.cxx
   vtkGeometricCursorShapes.cxx
-  vtkPanCameraAction.cxx
-  vtkPushPlaneAction.cxx
-  vtkRotateCameraAction.cxx
-  vtkSpinCameraAction.cxx
-  vtkSurfaceCursor.cxx
-  vtkSurfaceCursorAction.cxx
-  vtkSurfaceCursorInteractorObserver.cxx
-  vtkSurfaceCursorShapes.cxx
+  vtkPanCameraTool.cxx
+  vtkPushPlaneTool.cxx
+  vtkRotateCameraTool.cxx
+  vtkSpinCameraTool.cxx
+  vtkToolCursor.cxx
+  vtkTool.cxx
+  vtkToolCursorInteractorObserver.cxx
+  vtkCursorShapes.cxx
   vtkSystemCursorShapes.cxx
   vtkVolumeCroppingOutline.cxx
-  vtkZoomCameraAction.cxx
+  vtkZoomCameraTool.cxx
 )
 
 # The remainder of this file can usually be left alone

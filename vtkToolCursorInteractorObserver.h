@@ -1,41 +1,40 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorInteractorObserver.h,v $
+  Program:   ToolCursor
+  Module:    vtkToolCursorInteractorObserver.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSurfaceCursorInteractorObserver - Observer for vtkSurfaceCursor
+// .NAME vtkToolCursorInteractorObserver - Observer for vtkToolCursor
 // .SECTION Description
-// This is a helper class for vtkSurfaceCursor.  Specifically, this class
+// This is a helper class for vtkToolCursor.  Specifically, this class
 // receives events from a vtkRenderWindowInteractor and then calls the
-// appropriate methods of vtkSurfaceCursor.
+// appropriate methods of vtkToolCursor.
 
-#ifndef __vtkSurfaceCursorInteractorObserver_h
-#define __vtkSurfaceCursorInteractorObserver_h
+#ifndef __vtkToolCursorInteractorObserver_h
+#define __vtkToolCursorInteractorObserver_h
 
 #include "vtkInteractorObserver.h"
 
-class vtkSurfaceCursor;
+class vtkToolCursor;
 
-class VTK_EXPORT vtkSurfaceCursorInteractorObserver :
+class VTK_EXPORT vtkToolCursorInteractorObserver :
   public vtkInteractorObserver
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkSurfaceCursorInteractorObserver *New();
+  static vtkToolCursorInteractorObserver *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSurfaceCursorInteractorObserver,
+  vtkTypeMacro(vtkToolCursorInteractorObserver,
                        vtkInteractorObserver);
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -45,16 +44,16 @@ public:
 
   // Description:
   // Set the cursor that this object observes events for.
-  void SetSurfaceCursor(vtkSurfaceCursor *cursor);
-  vtkSurfaceCursor *GetSurfaceCursor() { return this->SurfaceCursor; };
+  void SetToolCursor(vtkToolCursor *cursor);
+  vtkToolCursor *GetToolCursor() { return this->ToolCursor; };
 
   // Description:
-  // Get vtkSurfaceCursor "modifier" bits from a VTK keysym.
+  // Get vtkToolCursor "modifier" bits from a VTK keysym.
   static int ModifierFromKeySym(const char *keysym);
 
 protected:
-  vtkSurfaceCursorInteractorObserver();
-  ~vtkSurfaceCursorInteractorObserver();
+  vtkToolCursorInteractorObserver();
+  ~vtkToolCursorInteractorObserver();
 
   static void ProcessPassiveEvents(vtkObject* object,
                                    unsigned long event,
@@ -68,11 +67,11 @@ protected:
 
   vtkCallbackCommand *PassiveEventCallbackCommand;
 
-  vtkSurfaceCursor *SurfaceCursor;
+  vtkToolCursor *ToolCursor;
 
 private:
-  vtkSurfaceCursorInteractorObserver(const vtkSurfaceCursorInteractorObserver&);  //Not implemented
-  void operator=(const vtkSurfaceCursorInteractorObserver&);  //Not implemented
+  vtkToolCursorInteractorObserver(const vtkToolCursorInteractorObserver&);  //Not implemented
+  void operator=(const vtkToolCursorInteractorObserver&);  //Not implemented
 };
 
 #endif

@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkActionCursorShapes.h,v $
+  Program:   ToolCursor
+  Module:    vtkActionCursorShapes.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,18 +14,18 @@
 // .NAME vtkActionCursorShapes - Cursor shapes for interaction.
 // .SECTION Description
 // This class is a collection of action shapes for use with the
-// vtkSurfaceCursor.  The shapes available are "Move", "Rotate",
+// vtkToolCursor.  The shapes available are "Move", "Rotate",
 // "Push", and "Spin".  All cursors are constructed from the
 // same 3D arrow shape and have a two-tone color scheme.
 
 #ifndef __vtkActionCursorShapes_h
 #define __vtkActionCursorShapes_h
 
-#include "vtkSurfaceCursorShapes.h"
+#include "vtkCursorShapes.h"
 
 class vtkPolyData;
 
-class VTK_EXPORT vtkActionCursorShapes : public vtkSurfaceCursorShapes
+class VTK_EXPORT vtkActionCursorShapes : public vtkCursorShapes
 {
 public:
   // Description:
@@ -35,7 +34,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkActionCursorShapes,vtkSurfaceCursorShapes);
+  vtkTypeMacro(vtkActionCursorShapes,vtkCursorShapes);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

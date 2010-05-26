@@ -1,38 +1,37 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRotateCameraAction.h,v $
+  Program:   ToolCursor
+  Module:    vtkRotateCameraTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkRotateCameraAction - Controls camera rotation.
+// .NAME vtkRotateCameraTool - Controls camera rotation.
 // .SECTION Description
 // This class controls camera rotation interaction.
 
-#ifndef __vtkRotateCameraAction_h
-#define __vtkRotateCameraAction_h
+#ifndef __vtkRotateCameraTool_h
+#define __vtkRotateCameraTool_h
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkRotateCameraAction : public vtkSurfaceCursorAction
+class VTK_EXPORT vtkRotateCameraTool : public vtkTool
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkRotateCameraAction *New();
+  static vtkRotateCameraTool *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkRotateCameraAction,vtkSurfaceCursorAction);
+  vtkTypeMacro(vtkRotateCameraTool,vtkTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -46,8 +45,8 @@ public:
   virtual void ConstrainCursor(double position[3], double normal[3]);
 
 protected:
-  vtkRotateCameraAction();
-  ~vtkRotateCameraAction();
+  vtkRotateCameraTool();
+  ~vtkRotateCameraTool();
 
   int IsStickyPossible(const double position[3]);
 
@@ -74,8 +73,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkRotateCameraAction(const vtkRotateCameraAction&);  //Not implemented
-  void operator=(const vtkRotateCameraAction&);  //Not implemented
+  vtkRotateCameraTool(const vtkRotateCameraTool&);  //Not implemented
+  void operator=(const vtkRotateCameraTool&);  //Not implemented
 };
 
 #endif

@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkVolumeCroppingOutline.h,v $
+  Program:   ToolCursor
+  Module:    vtkVolumeCroppingOutline.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +14,7 @@
 // .NAME vtkVolumeCroppingOutline - wireframe outline for volume cropping
 // .SECTION Description
 // vtkVolumeCroppingOutline generates a wireframe outline that corresponds
-// to the cropping region of a vtkVolumeMapper.  
+// to the cropping region of a vtkVolumeMapper.
 
 #ifndef __vtkVolumeCroppingOutline_h
 #define __vtkVolumeCroppingOutline_h
@@ -28,7 +27,7 @@ class VTK_EXPORT vtkVolumeCroppingOutline : public vtkPolyDataAlgorithm
 {
 public:
   static vtkVolumeCroppingOutline *New();
-  vtkTypeRevisionMacro(vtkVolumeCroppingOutline,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkVolumeCroppingOutline,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -49,7 +48,7 @@ public:
 
   // Description:
   // Set whether to generate an outline wherever an input face was
-  // cut by a plane.  This is on by default. 
+  // cut by a plane.  This is on by default.
   vtkSetMacro(GenerateOutline, int);
   vtkBooleanMacro(GenerateOutline, int);
   vtkGetMacro(GenerateOutline, int);
@@ -76,7 +75,7 @@ public:
 
   // Description:
   // Set the color of the active cropping plane.  This has no effect unless
-  // ColorOutline is On and ActivePlaneId is non-negative.  Default is yellow. 
+  // ColorOutline is On and ActivePlaneId is non-negative.  Default is yellow.
   vtkSetVector3Macro(ActivePlaneColor, double);
   vtkGetVector3Macro(ActivePlaneColor, double);
 

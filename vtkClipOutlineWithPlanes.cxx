@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipOutlineWithPlanes.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkClipOutlineWithPlanes.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -37,7 +36,6 @@
 #include <vtkstd/vector>
 #include <vtkstd/algorithm>
 
-vtkCxxRevisionMacro(vtkClipOutlineWithPlanes, "$Revision: 1.15 $");
 vtkStandardNewMacro(vtkClipOutlineWithPlanes);
 
 vtkCxxSetObjectMacro(vtkClipOutlineWithPlanes,ClippingPlanes,vtkPlaneCollection);
@@ -72,7 +70,7 @@ vtkClipOutlineWithPlanes::vtkClipOutlineWithPlanes()
 //----------------------------------------------------------------------------
 vtkClipOutlineWithPlanes::~vtkClipOutlineWithPlanes()
 {
-  if (this->ClippingPlanes) { this->ClippingPlanes->Delete(); } 
+  if (this->ClippingPlanes) { this->ClippingPlanes->Delete(); }
 
   if (this->Locator) { this->Locator->Delete(); }
   if (this->IdList) { this->IdList->Delete(); }
@@ -92,7 +90,7 @@ void vtkClipOutlineWithPlanes::PrintSelf(ostream& os, vtkIndent indent)
   else
     {
     os << "(none)\n";
-    } 
+    }
 
   os << indent << "GenerateOutline: "
      << (this->GenerateOutline ? "On\n" : "Off\n" );
@@ -191,7 +189,7 @@ int vtkClipOutlineWithPlanes::RequestData(
     double point[3];
     inputPoints->GetPoint(ptId, point);
     points->SetPoint(ptId, point);
-    } 
+    }
 
   // The cell scalars
   vtkUnsignedCharArray *lineScalars = 0;
@@ -411,7 +409,7 @@ int vtkClipOutlineWithPlanes::RequestData(
       this->ClipAndContourPolys(
         points, pointScalars, locator, polys, newPolys, newLines,
         inPointData, outPointData, inPolyData, outPolyData, outLineData);
-      
+
       // Add scalars for the newly-created contour lines
       vtkUnsignedCharArray *scalars =
         vtkUnsignedCharArray::SafeDownCast(outLineData->GetScalars());
@@ -481,7 +479,7 @@ int vtkClipOutlineWithPlanes::RequestData(
   points->Delete();
 
   // Get the line scalars
-  vtkUnsignedCharArray *scalars = 
+  vtkUnsignedCharArray *scalars =
     vtkUnsignedCharArray::SafeDownCast(inLineData->GetScalars());
 
   if (this->GenerateOutline)
@@ -501,7 +499,7 @@ int vtkClipOutlineWithPlanes::RequestData(
     if (polys && scalars)
       {
       unsigned char color[3] = {0, 0, 0};
-      vtkUnsignedCharArray *pScalars = 
+      vtkUnsignedCharArray *pScalars =
         vtkUnsignedCharArray::SafeDownCast(inPolyData->GetScalars());
 
       vtkIdType m = scalars->GetNumberOfTuples();
@@ -577,7 +575,7 @@ void vtkClipOutlineWithPlanes::CreateColorValues(
 void vtkClipOutlineWithPlanes::ClipLines(
   vtkPoints *points, vtkDoubleArray *pointScalars,
   vtkIncrementalPointLocator *locator,
-  vtkCellArray *inputCells, vtkCellArray *outputLines, 
+  vtkCellArray *inputCells, vtkCellArray *outputLines,
   vtkPointData *inPointData, vtkPointData *outPointData,
   vtkCellData *inCellData, vtkCellData *outLineData)
 {
@@ -590,7 +588,7 @@ void vtkClipOutlineWithPlanes::ClipLines(
     {
     inputCells->GetNextCell(numPts, pts);
 
-    vtkIdType i1 = pts[0]; 
+    vtkIdType i1 = pts[0];
     double v1 = pointScalars->GetValue(i1);
     int c1 = (v1 > 0);
 
@@ -658,7 +656,7 @@ void vtkClipOutlineWithPlanes::ClipAndContourPolys(
   vtkPoints *points, vtkDoubleArray *pointScalars,
   vtkIncrementalPointLocator *locator,
   vtkCellArray *inputCells,
-  vtkCellArray *outputPolys, vtkCellArray *outputLines, 
+  vtkCellArray *outputPolys, vtkCellArray *outputLines,
   vtkPointData *inPointData, vtkPointData *outPointData,
   vtkCellData *inCellData,
   vtkCellData *outPolyData, vtkCellData *outLineData)
@@ -679,7 +677,7 @@ void vtkClipOutlineWithPlanes::ClipAndContourPolys(
     inputCells->GetNextCell(numPts, pts);
     idList->Reset();
 
-    vtkIdType i1 = pts[numPts-1]; 
+    vtkIdType i1 = pts[numPts-1];
     double v1 = pointScalars->GetValue(i1);
     int c1 = (v1 > 0);
 
@@ -691,7 +689,7 @@ void vtkClipOutlineWithPlanes::ClipAndContourPolys(
     vtkIdType j1 = -1;
 
     // Insert the first point (actually the last point) if it is
-    // not clipped away 
+    // not clipped away
     if (c1 && locator->InsertUniquePoint(p1, j0))
       {
       outPointData->CopyData(inPointData, i1, j0);
@@ -890,7 +888,7 @@ public:
       bitstorage.resize(b.bitstorage.size()); }
     for (size_t i = 0; i < b.bitstorage.size(); i++) {
       bitstorage[i] |= b.bitstorage[i]; }
-  }; 
+  };
 
 private:
   vtkstd::vector<unsigned int> bitstorage;
@@ -1169,7 +1167,7 @@ void vtkClipOutlineMakePolysFromLines(
         if (poly.size() == 0)
           {
           for (vtkIdType i = 0; i < npts; i++)
-            { 
+            {
             poly.push_back(pts[i]);
             }
           }
@@ -1326,7 +1324,7 @@ void vtkClipOutlineFindTrueEdges(
 
     points->GetPoint(newPolys[i][n-1], p2);
     points->GetPoint(newPolys[i][0], p1);
-    v1[0] = p1[0] - p2[0];  v1[1] = p1[1] - p2[1];  v1[2] = p1[2] - p2[2];  
+    v1[0] = p1[0] - p2[0];  v1[1] = p1[1] - p2[1];  v1[2] = p1[2] - p2[2];
     l1 = vtkMath::Dot(v1, v1);
 
     for (size_t j = 0; j < n; j++)
@@ -1335,7 +1333,7 @@ void vtkClipOutlineFindTrueEdges(
       if (k == n) { k = 0; }
 
       points->GetPoint(newPolys[i][k], p2);
-      v2[0] = p2[0] - p1[0];  v2[1] = p2[1] - p1[1];  v2[2] = p2[2] - p1[2];  
+      v2[0] = p2[0] - p1[0];  v2[1] = p2[1] - p1[1];  v2[2] = p2[2] - p1[2];
       l2 = vtkMath::Dot(v2, v2);
 
       // Dot product is |v1||v2|cos(theta)
@@ -1381,12 +1379,12 @@ void vtkClipOutlineCorrectPolygonSense(
 
     points->GetPoint(newPolys[i][0], p0);
     points->GetPoint(newPolys[i][1], p1);
-    v1[0] = p1[0] - p0[0];  v1[1] = p1[1] - p0[1];  v1[2] = p1[2] - p0[2];  
+    v1[0] = p1[0] - p0[0];  v1[1] = p1[1] - p0[1];  v1[2] = p1[2] - p0[2];
 
     for (size_t jj = 2; jj < n; jj++)
       {
       points->GetPoint(newPolys[i][jj], p2);
-      v2[0] = p2[0] - p0[0];  v2[1] = p2[1] - p0[1];  v2[2] = p2[2] - p0[2];  
+      v2[0] = p2[0] - p0[0];  v2[1] = p2[1] - p0[1];  v2[2] = p2[2] - p0[2];
       vtkMath::Cross(v1, v2, v);
       pnormal[0] += v[0]; pnormal[1] += v[1]; pnormal[2] += v[2];
       p1[0] = p2[0]; p1[1] = p2[1]; p1[2] = p2[2];
@@ -1431,7 +1429,7 @@ int vtkClipOutlinePolyInPoly(
   size_t m = innerPoly.size();
 
   for (size_t jj = 0; jj < m; jj++)
-    {          
+    {
     points->GetPoint(innerPoly[jj], p);
 
     int pointOnEdge = 0;
@@ -1463,7 +1461,7 @@ int vtkClipOutlinePolyInPoly(
 
   // There should also be a check to see if all the verts match.
   // If they do, both polys should be removed.
-   
+
   return vtkPolygon::PointInPolygon(p, n, const_cast<double *>(pp),
     const_cast<double *>(bounds), const_cast<double *>(normal));
 }
@@ -1519,7 +1517,7 @@ void vtkClipOutlinePrepareForPolyInPoly(
 
 // ---------------------------------------------------
 // Check for polygons within polygons.  Group the polygons
-// if they are within each other.  Reverse the sense of 
+// if they are within each other.  Reverse the sense of
 // the interior "hole" polygons.  A hole within a hole
 // will be reversed twice and will become its own group.
 

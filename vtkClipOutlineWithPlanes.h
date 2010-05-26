@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkClipOutlineWithPlanes.h,v $
+  Program:   ToolCursor
+  Module:    vtkClipOutlineWithPlanes.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -47,7 +46,7 @@ class VTK_EXPORT vtkClipOutlineWithPlanes : public vtkPolyDataAlgorithm
 {
 public:
   static vtkClipOutlineWithPlanes *New();
-  vtkTypeRevisionMacro(vtkClipOutlineWithPlanes,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkClipOutlineWithPlanes,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -65,7 +64,7 @@ public:
 
   // Description:
   // Set whether to generate an outline wherever an input face was
-  // cut by a plane.  This is on by default. 
+  // cut by a plane.  This is on by default.
   vtkSetMacro(GenerateOutline, int);
   vtkBooleanMacro(GenerateOutline, int);
   vtkGetMacro(GenerateOutline, int);
@@ -101,7 +100,7 @@ public:
 
   // Description:
   // Set the color of the active cropping plane.  This has no effect unless
-  // ColorOutline is On and ActivePlaneId is non-negative.  Default is yellow. 
+  // ColorOutline is On and ActivePlaneId is non-negative.  Default is yellow.
   vtkSetVector3Macro(ActivePlaneColor, double);
   vtkGetVector3Macro(ActivePlaneColor, double);
 

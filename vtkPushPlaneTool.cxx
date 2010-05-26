@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPushPlaneAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkPushPlaneTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,10 +12,10 @@
 
 =========================================================================*/
 
-#include "vtkPushPlaneAction.h"
+#include "vtkPushPlaneTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkVolumePicker.h"
 #include "vtkProp3DCollection.h"
 #include "vtkImageActor.h"
@@ -30,11 +29,10 @@
 #include "vtkRenderer.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkPushPlaneAction, "$Revision: 1.8 $");
-vtkStandardNewMacro(vtkPushPlaneAction);
+vtkStandardNewMacro(vtkPushPlaneTool);
 
 //----------------------------------------------------------------------------
-vtkPushPlaneAction::vtkPushPlaneAction()
+vtkPushPlaneTool::vtkPushPlaneTool()
 {
   this->Transform = vtkTransform::New();
 
@@ -63,19 +61,19 @@ vtkPushPlaneAction::vtkPushPlaneAction()
 }
 
 //----------------------------------------------------------------------------
-vtkPushPlaneAction::~vtkPushPlaneAction()
+vtkPushPlaneTool::~vtkPushPlaneTool()
 {
   this->Transform->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkPushPlaneTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::StartAction()
+void vtkPushPlaneTool::StartAction()
 {
   this->Superclass::StartAction();
 
@@ -89,16 +87,16 @@ void vtkPushPlaneAction::StartAction()
   this->GetStartNormal(normal);
 
   vtkCamera *camera =
-    this->GetSurfaceCursor()->GetRenderer()->GetActiveCamera();
+    this->GetToolCursor()->GetRenderer()->GetActiveCamera();
 
   double position[3], focus[3];
   camera->GetPosition(position);
   camera->GetFocalPoint(focus);
 
   double v[3];
-  v[0] = focus[0] - position[0]; 
-  v[1] = focus[1] - position[1]; 
-  v[2] = focus[2] - position[2]; 
+  v[0] = focus[0] - position[0];
+  v[1] = focus[1] - position[1];
+  v[2] = focus[2] - position[2];
 
   vtkMath::Normalize(v);
   vtkMath::Normalize(normal);
@@ -109,16 +107,16 @@ void vtkPushPlaneAction::StartAction()
     {
     this->PerpendicularPlane = 1;
     }
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::StopAction()
+void vtkPushPlaneTool::StopAction()
 {
   this->Superclass::StopAction();
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::DoAction()
+void vtkPushPlaneTool::DoAction()
 {
   this->Superclass::DoAction();
 
@@ -139,7 +137,7 @@ void vtkPushPlaneAction::DoAction()
   // Get the initial display position.
   this->GetStartDisplayPosition(ox, oy);
 
-  // Get the current display position. 
+  // Get the current display position.
   double x, y;
   this->GetDisplayPosition(x, y);
 
@@ -195,7 +193,7 @@ void vtkPushPlaneAction::DoAction()
     distance = (c*d - b*e)/(a*c - b*b);
     }
 
-  // Moving relative to the original position provides a more stable 
+  // Moving relative to the original position provides a more stable
   // interaction that moving relative to the last position.
   double origin[3];
   this->GetStartOrigin(origin);
@@ -207,7 +205,7 @@ void vtkPushPlaneAction::DoAction()
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3]) 
+void vtkPushPlaneTool::ConstrainCursor(double position[3], double normal[3])
 {
   // Get and normalize the plane normal.
   this->GetNormal(normal);
@@ -231,7 +229,7 @@ void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3])
     // the cursor doesn't become hidden under other objects.  Include a
     // tolerance to ensure the distance is significant, otherwise just
     // leave the cursor where it is.
-    
+
     // Compute the squared distance for the original position
     double t2 = (vtkMath::Distance2BetweenPoints(p1,position)/
                  vtkMath::Distance2BetweenPoints(p1,p2));
@@ -247,10 +245,10 @@ void vtkPushPlaneAction::ConstrainCursor(double position[3], double normal[3])
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::GetPropInformation()
+void vtkPushPlaneTool::GetPropInformation()
 {
   // Get all the information needed for the interaction
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkVolumePicker *picker = cursor->GetPicker();
 
   vtkProp3D *prop = picker->GetProp3D();
@@ -265,7 +263,7 @@ void vtkPushPlaneAction::GetPropInformation()
   this->PlaneId = -1;
 
   // Is this a VolumeMapper cropping plane or AbstractMapper clipping plane?
-  if (this->VolumeMapper && (cursor->GetPickFlags() & VTK_SCURSOR_CROP_PLANE))
+  if (this->VolumeMapper && (cursor->GetPickFlags() & VTK_TOOL_CROP_PLANE))
     {
     this->Mapper = 0;
     this->PlaneId = picker->GetCroppingPlaneId();
@@ -295,7 +293,7 @@ void vtkPushPlaneAction::GetPropInformation()
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::GetPlaneOriginAndNormal(double origin[3],
+void vtkPushPlaneTool::GetPlaneOriginAndNormal(double origin[3],
                                                  double normal[3])
 {
   if (this->Mapper)
@@ -340,7 +338,7 @@ void vtkPushPlaneAction::GetPlaneOriginAndNormal(double origin[3],
 }
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::SetOrigin(const double o[3])
+void vtkPushPlaneTool::SetOrigin(const double o[3])
 {
   // Store the origin that was set
   this->Origin[0] = o[0];
@@ -384,15 +382,15 @@ void vtkPushPlaneAction::SetOrigin(const double o[3])
       this->ImageActor->GetInput()->GetWholeExtent(wholeExtent);
       int displayExtent[6];
       this->ImageActor->GetDisplayExtent(displayExtent);
-      
+
       double x = (origin[i] - dataOrigin[i])/dataSpacing[i];
       if (x < wholeExtent[2*i]) { x = wholeExtent[2*i]; }
       if (x > wholeExtent[2*i+1]) { x = wholeExtent[2*i+1]; }
- 
+
       int xi = int(floor(x));
       if ((x - xi) >= 0.5) { xi++; }
 
-      displayExtent[2*i] = displayExtent[2*i+1] = xi; 
+      displayExtent[2*i] = displayExtent[2*i+1] = xi;
       this->ImageActor->SetDisplayExtent(displayExtent);
       }
     else if (this->VolumeMapper)
@@ -452,10 +450,10 @@ void vtkPushPlaneAction::SetOrigin(const double o[3])
         }
       }
     }
-}   
+}
 
 //----------------------------------------------------------------------------
-void vtkPushPlaneAction::SetNormal(const double n[3])
+void vtkPushPlaneTool::SetNormal(const double n[3])
 {
   // Store the normal that was set
   this->Normal[0] = n[0];

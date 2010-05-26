@@ -1,39 +1,38 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpinCameraAction.h,v $
+  Program:   ToolCursor
+  Module:    vtkSpinCameraTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSpinCameraAction - Spin the camera with the cursor.
+// .NAME vtkSpinCameraTool - Spin the camera with the cursor.
 // .SECTION Description
 // This is an interaction class for spinning the cursor around the
 // camera's view direction.
 
-#ifndef __vtkSpinCameraAction_h
-#define __vtkSpinCameraAction_h
+#ifndef __vtkSpinCameraTool_h
+#define __vtkSpinCameraTool_h
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkSpinCameraAction : public vtkSurfaceCursorAction
+class VTK_EXPORT vtkSpinCameraTool : public vtkTool
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkSpinCameraAction *New();
+  static vtkSpinCameraTool *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSpinCameraAction,vtkSurfaceCursorAction);
+  vtkTypeMacro(vtkSpinCameraTool,vtkTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -43,16 +42,16 @@ public:
   virtual void DoAction();
 
 protected:
-  vtkSpinCameraAction();
-  ~vtkSpinCameraAction();
+  vtkSpinCameraTool();
+  ~vtkSpinCameraTool();
 
   double StartCameraViewUp[3];
 
   vtkTransform *Transform;
 
 private:
-  vtkSpinCameraAction(const vtkSpinCameraAction&);  //Not implemented
-  void operator=(const vtkSpinCameraAction&);  //Not implemented
+  vtkSpinCameraTool(const vtkSpinCameraTool&);  //Not implemented
+  void operator=(const vtkSpinCameraTool&);  //Not implemented
 };
 
 #endif

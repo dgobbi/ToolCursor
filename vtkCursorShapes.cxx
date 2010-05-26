@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorShapes.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkCursorShapes.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,26 +12,25 @@
 
 =========================================================================*/
 
-#include "vtkSurfaceCursorShapes.h"
+#include "vtkCursorShapes.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkDataSet.h"
 #include "vtkSmartPointer.h"
 
 #include <vtkstd/string>
 #include <vtkstd/vector>
 
-vtkCxxRevisionMacro(vtkSurfaceCursorShapes, "$Revision: 1.1 $");
-vtkStandardNewMacro(vtkSurfaceCursorShapes);
+vtkStandardNewMacro(vtkCursorShapes);
 
 // A simple container for cursor data
-class vtkSurfaceCursorShape
+class vtkToolCursorShape
 {
 public:
-  vtkSurfaceCursorShape(const char *name,
+  vtkToolCursorShape(const char *name,
                         vtkDataSet *data,
-                        int flags) : Name(name), Data(data), Flags(flags) {}; 
+                        int flags) : Name(name), Data(data), Flags(flags) {};
 
   vtkstd::string Name;
   vtkSmartPointer<vtkDataSet> Data;
@@ -40,21 +38,21 @@ public:
 };
 
 // A vector of the above, with a VTK-like interface
-class vtkSurfaceCursorShapeArray
+class vtkToolCursorShapeArray
 {
 private:
-  typedef vtkstd::vector<vtkSurfaceCursorShape> VectorType;
+  typedef vtkstd::vector<vtkToolCursorShape> VectorType;
   VectorType Vector;
 
 public:
-  static vtkSurfaceCursorShapeArray *New() {
-    return new vtkSurfaceCursorShapeArray; };
+  static vtkToolCursorShapeArray *New() {
+    return new vtkToolCursorShapeArray; };
 
   void Delete() {
     delete this; };
 
   void AddItem(const char *name, vtkDataSet *shape, int flags) {
-    this->Vector.push_back(vtkSurfaceCursorShape(name, shape, flags)); };
+    this->Vector.push_back(vtkToolCursorShape(name, shape, flags)); };
 
   int GetIndex(const char *name) {
     if (name) {
@@ -79,20 +77,20 @@ public:
 };
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorShapes::vtkSurfaceCursorShapes()
+vtkCursorShapes::vtkCursorShapes()
 {
   this->NumberOfShapes = 0;
-  this->Shapes = vtkSurfaceCursorShapeArray::New();
+  this->Shapes = vtkToolCursorShapeArray::New();
 }
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorShapes::~vtkSurfaceCursorShapes()
+vtkCursorShapes::~vtkCursorShapes()
 {
   this->Shapes->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorShapes::PrintSelf(ostream& os, vtkIndent indent)
+void vtkCursorShapes::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
@@ -100,7 +98,7 @@ void vtkSurfaceCursorShapes::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursorShapes::AddShape(const char *name, vtkDataSet *data,
+int vtkCursorShapes::AddShape(const char *name, vtkDataSet *data,
                                      int flags)
 {
   this->Shapes->AddItem(name, data, flags);
@@ -111,25 +109,25 @@ int vtkSurfaceCursorShapes::AddShape(const char *name, vtkDataSet *data,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursorShapes::GetShapeIndex(const char *name)
+int vtkCursorShapes::GetShapeIndex(const char *name)
 {
   return this->Shapes->GetIndex(name);
 }
 
 //----------------------------------------------------------------------------
-const char *vtkSurfaceCursorShapes::GetShapeName(int i)
+const char *vtkCursorShapes::GetShapeName(int i)
 {
   return this->Shapes->GetName(i);
 }
 
 //----------------------------------------------------------------------------
-vtkDataSet *vtkSurfaceCursorShapes::GetShapeData(int i)
+vtkDataSet *vtkCursorShapes::GetShapeData(int i)
 {
   return this->Shapes->GetData(i);
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursorShapes::GetShapeFlags(int i)
+int vtkCursorShapes::GetShapeFlags(int i)
 {
   return this->Shapes->GetFlags(i);
 }

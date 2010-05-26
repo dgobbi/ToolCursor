@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkFiducialPointsTool.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkFiducialPointsTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -17,7 +16,7 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkGeometricCursorShapes.h"
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
@@ -31,7 +30,6 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkFiducialPointsTool, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkFiducialPointsTool);
 
 //----------------------------------------------------------------------------
@@ -128,11 +126,11 @@ void vtkFiducialPointsTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   this->Transform->Identity();
-} 
+}
 
 //----------------------------------------------------------------------------
 void vtkFiducialPointsTool::StopAction()
@@ -145,7 +143,7 @@ void vtkFiducialPointsTool::DoAction()
 {
   this->Superclass::DoAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   // Get the initial point.
@@ -156,7 +154,7 @@ void vtkFiducialPointsTool::DoAction()
   double x, y, z;
   this->WorldToDisplay(p0, x, y, z);
 
-  // Get the display position. 
+  // Get the display position.
   double p[3];
   this->GetDisplayPosition(x, y);
   this->DisplayToWorld(x, y, z, p);

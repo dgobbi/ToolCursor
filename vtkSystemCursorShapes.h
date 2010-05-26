@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSystemCursorShapes.h,v $
+  Program:   ToolCursor
+  Module:    vtkSystemCursorShapes.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,18 +14,18 @@
 // .NAME vtkSystemCursorShapes - Vectorized system cursor shapes.
 // .SECTION Description
 // This class is a collection of cursor shapes for use with the
-// vtkSurfaceCursor.  The shapes are vectorized version of system
+// vtkToolCursor.  The shapes are vectorized version of system
 // cursor shapes that can be magnified or reoriented without looking
 // pixellated.  The two shapes available are "Pointer" and "Crosshair".
 
 #ifndef __vtkSystemCursorShapes_h
 #define __vtkSystemCursorShapes_h
 
-#include "vtkSurfaceCursorShapes.h"
+#include "vtkCursorShapes.h"
 
 class vtkPolyData;
 
-class VTK_EXPORT vtkSystemCursorShapes : public vtkSurfaceCursorShapes
+class VTK_EXPORT vtkSystemCursorShapes : public vtkCursorShapes
 {
 public:
   // Description:
@@ -35,7 +34,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSystemCursorShapes,vtkSurfaceCursorShapes);
+  vtkTypeMacro(vtkSystemCursorShapes,vtkCursorShapes);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

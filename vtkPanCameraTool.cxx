@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPanCameraAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkPanCameraTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,10 +12,10 @@
 
 =========================================================================*/
 
-#include "vtkPanCameraAction.h"
+#include "vtkPanCameraTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
@@ -24,53 +23,52 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkPanCameraAction, "$Revision: 1.1 $");
-vtkStandardNewMacro(vtkPanCameraAction);
+vtkStandardNewMacro(vtkPanCameraTool);
 
 //----------------------------------------------------------------------------
-vtkPanCameraAction::vtkPanCameraAction()
+vtkPanCameraTool::vtkPanCameraTool()
 {
   this->Transform = vtkTransform::New();
 }
 
 //----------------------------------------------------------------------------
-vtkPanCameraAction::~vtkPanCameraAction()
+vtkPanCameraTool::~vtkPanCameraTool()
 {
   this->Transform->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkPanCameraAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkPanCameraTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkPanCameraAction::StartAction()
+void vtkPanCameraTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   camera->GetFocalPoint(this->StartCameraFocalPoint);
   camera->GetPosition(this->StartCameraPosition);
 
   this->Transform->Identity();
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkPanCameraAction::StopAction()
+void vtkPanCameraTool::StopAction()
 {
   this->Superclass::StopAction();
 }
 
 //----------------------------------------------------------------------------
-void vtkPanCameraAction::DoAction()
+void vtkPanCameraTool::DoAction()
 {
   this->Superclass::DoAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   // Get the initial point.
@@ -81,7 +79,7 @@ void vtkPanCameraAction::DoAction()
   double x, y, z;
   this->WorldToDisplay(p0, x, y, z);
 
-  // Get the display position. 
+  // Get the display position.
   double p[3];
   this->GetDisplayPosition(x, y);
   this->DisplayToWorld(x, y, z, p);

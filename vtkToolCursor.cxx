@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursor.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkToolCursor.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,7 +12,7 @@
 
 =========================================================================*/
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkObjectFactory.h"
 
 #include "vtkRenderer.h"
@@ -38,46 +37,45 @@
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
 
-#include "vtkSurfaceCursorShapes.h"
+#include "vtkCursorShapes.h"
 #include "vtkActionCursorShapes.h"
 #include "vtkGeometricCursorShapes.h"
-#include "vtkSurfaceCursorAction.h"
-#include "vtkPushPlaneAction.h"
-#include "vtkPanCameraAction.h"
-#include "vtkRotateCameraAction.h"
-#include "vtkSpinCameraAction.h"
-#include "vtkZoomCameraAction.h"
+#include "vtkTool.h"
+#include "vtkPushPlaneTool.h"
+#include "vtkPanCameraTool.h"
+#include "vtkRotateCameraTool.h"
+#include "vtkSpinCameraTool.h"
+#include "vtkZoomCameraTool.h"
 #include "vtkVolumeCroppingOutline.h"
 #include "vtkClipOutlineWithPlanes.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursor, "$Revision: 1.54 $");
-vtkStandardNewMacro(vtkSurfaceCursor);
+vtkStandardNewMacro(vtkToolCursor);
 
 //----------------------------------------------------------------------------
-class vtkSurfaceCursorRenderCommand : public vtkCommand
+class vtkToolCursorRenderCommand : public vtkCommand
 {
 public:
-  static vtkSurfaceCursorRenderCommand *New(vtkSurfaceCursor *cursor) {
-    return new vtkSurfaceCursorRenderCommand(cursor); };
+  static vtkToolCursorRenderCommand *New(vtkToolCursor *cursor) {
+    return new vtkToolCursorRenderCommand(cursor); };
 
   virtual void Execute(vtkObject *, unsigned long, void *) {
     this->Cursor->OnRender(); };
 
 protected:
-  vtkSurfaceCursorRenderCommand(vtkSurfaceCursor *cursor) {
+  vtkToolCursorRenderCommand(vtkToolCursor *cursor) {
     this->Cursor = cursor; };
 
-  vtkSurfaceCursor* Cursor;
+  vtkToolCursor* Cursor;
 
 private:
-  static vtkSurfaceCursorRenderCommand *New(); // Not implemented.
-  vtkSurfaceCursorRenderCommand(); // Not implemented.
-  vtkSurfaceCursorRenderCommand(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
-  void operator=(const vtkSurfaceCursorRenderCommand&);  // Not implemented.
+  static vtkToolCursorRenderCommand *New(); // Not implemented.
+  vtkToolCursorRenderCommand(); // Not implemented.
+  vtkToolCursorRenderCommand(const vtkToolCursorRenderCommand&);  // Not implemented.
+  void operator=(const vtkToolCursorRenderCommand&);  // Not implemented.
 };
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursor::vtkSurfaceCursor()
+vtkToolCursor::vtkToolCursor()
 {
   this->DisplayPosition[0] = 0.0;
   this->DisplayPosition[1] = 0.0;
@@ -113,7 +111,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->LookupTable = vtkLookupTable::New();
   this->Mapper->SetLookupTable(this->LookupTable);
   this->Mapper->UseLookupTableScalarRangeOn();
-  this->Shapes = vtkSurfaceCursorShapes::New();
+  this->Shapes = vtkCursorShapes::New();
   this->Actions = vtkCollection::New();
   this->ShapeBindings = vtkIntArray::New();
   this->ShapeBindings->SetName("ShapeBindings");
@@ -141,7 +139,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   property->BackfaceCullingOn();
 
   // Insert a null action, so that actions start at 1
-  vtkSurfaceCursorAction *action = vtkSurfaceCursorAction::New();
+  vtkTool *action = vtkTool::New();
   this->Actions->AddItem(action);
   action->Delete();
 
@@ -151,7 +149,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
   this->Shapes->AddShape("", data, 0);
   data->Delete();
 
-  this->RenderCommand = vtkSurfaceCursorRenderCommand::New(this);
+  this->RenderCommand = vtkToolCursorRenderCommand::New(this);
 
   // Volume cropping actor items
   this->VolumeCroppingSource = vtkVolumeCroppingOutline::New();
@@ -183,7 +181,7 @@ vtkSurfaceCursor::vtkSurfaceCursor()
 }
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursor::~vtkSurfaceCursor()
+vtkToolCursor::~vtkToolCursor()
 {
   this->SetRenderer(0);
 
@@ -205,21 +203,21 @@ vtkSurfaceCursor::~vtkSurfaceCursor()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::PrintSelf(ostream& os, vtkIndent indent)
+void vtkToolCursor::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::BindDefaultActions()
+void vtkToolCursor::BindDefaultActions()
 {
-  vtkSurfaceCursorShapes *actionShapes = vtkActionCursorShapes::New();
-  vtkSurfaceCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
-  vtkSurfaceCursorAction *pushAction = vtkPushPlaneAction::New();
-  vtkSurfaceCursorAction *rotateAction = vtkRotateCameraAction::New();
-  vtkSurfaceCursorAction *spinAction = vtkSpinCameraAction::New();
-  vtkSurfaceCursorAction *panAction = vtkPanCameraAction::New();
-  vtkSurfaceCursorAction *zoomAction = vtkZoomCameraAction::New();
+  vtkCursorShapes *actionShapes = vtkActionCursorShapes::New();
+  vtkCursorShapes *geometricShapes = vtkGeometricCursorShapes::New();
+  vtkTool *pushAction = vtkPushPlaneTool::New();
+  vtkTool *rotateAction = vtkRotateCameraTool::New();
+  vtkTool *spinAction = vtkSpinCameraTool::New();
+  vtkTool *panAction = vtkPanCameraTool::New();
+  vtkTool *zoomAction = vtkZoomCameraTool::New();
 
   int action, shape, mode, modifier, pickInfo;
 
@@ -230,44 +228,44 @@ void vtkSurfaceCursor::BindDefaultActions()
   // default bindings and work up to more specific collections of
   // PickInfo flags.
 
-  // ------------ Default Bindings ------------- 
+  // ------------ Default Bindings -------------
   pickInfo = 0;
 
   // Binding for "Rotate" cursor and action, when user clicks background
   modifier = 0;
   shape = this->AddShape(actionShapes, "Rotate");
   action = this->AddAction(rotateAction);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   // Binding for "Mover" cursor and action
-  modifier = VTK_SCURSOR_SHIFT;
+  modifier = VTK_TOOL_SHIFT;
   shape = this->AddShape(actionShapes, "Move");
   action = this->AddAction(panAction);
   this->BindShape(shape, mode, pickInfo, modifier);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   // Also bind to middle button
   modifier = 0;
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B3);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B3);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B3);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B3);
 
   // Binding for "Zoom" cursor and action
-  modifier = VTK_SCURSOR_CONTROL;
+  modifier = VTK_TOOL_CONTROL;
   shape = this->AddShape(actionShapes, "Zoom");
   action = this->AddAction(zoomAction);
   this->BindShape(shape, mode, pickInfo, modifier);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   // Also bind to right button
   modifier = 0;
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B2);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B2);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B2);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B2);
 
-  // ------------ Default Prop3D Bindings------------- 
-  pickInfo = VTK_SCURSOR_PROP3D;
+  // ------------ Default Prop3D Bindings-------------
+  pickInfo = VTK_TOOL_PROP3D;
 
   // Binding for "Cone" cursor
   modifier = 0;
@@ -278,13 +276,13 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = 0;
   shape = this->AddShape(actionShapes, "Rotate");
   action = this->AddAction(rotateAction);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   // ------------ Bindings for Volumes with Clip/Crop Planes -------------
-  pickInfo = (VTK_SCURSOR_VOLUME |
-              VTK_SCURSOR_CLIP_PLANE |
-              VTK_SCURSOR_CROP_PLANE);
+  pickInfo = (VTK_TOOL_VOLUME |
+              VTK_TOOL_CLIP_PLANE |
+              VTK_TOOL_CROP_PLANE);
 
   // Binding for "SplitCross" cursor
   modifier = 0;
@@ -295,11 +293,11 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = 0;
   shape = this->AddShape(actionShapes, "Push");
   action = this->AddAction(pushAction);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   // ------------ Bindings for ImageActor -------------
-  pickInfo = VTK_SCURSOR_IMAGE_ACTOR;
+  pickInfo = VTK_TOOL_IMAGE_ACTOR;
 
   // Binding for "SplitCross" cursor
   modifier = 0;
@@ -310,8 +308,8 @@ void vtkSurfaceCursor::BindDefaultActions()
   modifier = 0;
   shape = this->AddShape(actionShapes, "Push");
   action = this->AddAction(pushAction);
-  this->BindShape(shape, mode, pickInfo, modifier | VTK_SCURSOR_B1);
-  this->BindAction(action, mode, pickInfo, modifier | VTK_SCURSOR_B1);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B1);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B1);
 
   actionShapes->Delete();
   geometricShapes->Delete();
@@ -323,21 +321,21 @@ void vtkSurfaceCursor::BindDefaultActions()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::BindShape(int shape, int mode,
+void vtkToolCursor::BindShape(int shape, int mode,
                                  int pickFlags, int modifier)
 {
   this->AddBinding(this->ShapeBindings, shape, mode, pickFlags, modifier);
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::BindAction(int action, int mode,
+void vtkToolCursor::BindAction(int action, int mode,
                                   int pickFlags, int modifier)
 {
   this->AddBinding(this->ActionBindings, action, mode, pickFlags, modifier);
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
+int vtkToolCursor::FindShape(int mode, int pickFlags, int modifier)
 {
   // Search the shape bindings and return the first match
 
@@ -355,7 +353,7 @@ int vtkSurfaceCursor::FindShape(int mode, int pickFlags, int modifier)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
+int vtkToolCursor::FindAction(int mode, int pickFlags, int modifier)
 {
   // Search the action bindings and return the first match
 
@@ -373,13 +371,13 @@ int vtkSurfaceCursor::FindAction(int mode, int pickFlags, int modifier)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::FindActionButtons(int mode, int pickFlags, int modifier)
+int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
 {
   // Find all matching actions and return a bitmask of the mouse buttons
   // for those actions.
 
   int modifierMask = 0;
-  modifier |= VTK_SCURSOR_BUTTON_MASK;
+  modifier |= VTK_TOOL_BUTTON_MASK;
 
   int tuple[4];
   int j = 0;
@@ -395,11 +393,11 @@ int vtkSurfaceCursor::FindActionButtons(int mode, int pickFlags, int modifier)
     j = i + 1;
     }
 
-  return (modifierMask & VTK_SCURSOR_BUTTON_MASK);
+  return (modifierMask & VTK_TOOL_BUTTON_MASK);
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
+void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
 {
   if (renderer == this->Renderer)
     {
@@ -429,7 +427,7 @@ void vtkSurfaceCursor::SetRenderer(vtkRenderer *renderer)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetColor(int i, double r, double b, double g)
+void vtkToolCursor::SetColor(int i, double r, double b, double g)
 {
   if (i >= 0 && i <= 255)
     {
@@ -444,7 +442,7 @@ void vtkSurfaceCursor::SetColor(int i, double r, double b, double g)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::GetColor(int i, double rgb[3])
+void vtkToolCursor::GetColor(int i, double rgb[3])
 {
   if (i < 0) { i = 0; }
   if (i > 255) { i = 255; }
@@ -455,10 +453,10 @@ void vtkSurfaceCursor::GetColor(int i, double rgb[3])
   rgb[0] = rgba[0];
   rgb[1] = rgba[1];
   rgb[2] = rgba[2];
-}  
+}
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
+void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
                                           vtkRenderer *renderer)
 {
   // Go through all Prop3Ds that might be picked and update their data.
@@ -492,7 +490,7 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
       vtkActor *actor;
       vtkVolume *volume;
       vtkImageActor *imageActor;
-      
+
       if ( (actor = vtkActor::SafeDownCast(anyProp)) )
         {
         vtkDataSet *data = actor->GetMapper()->GetInput();
@@ -553,7 +551,7 @@ void vtkSurfaceCursor::UpdatePropsForPick(vtkPicker *picker,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
+int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
 {
   const double planeTol = 1e-6;
   const double normalTol = 1e-15;
@@ -586,7 +584,7 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
         (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
         dcheck < 0)
       {
-      pickFlags = (pickFlags | VTK_SCURSOR_CLIP_PLANE);
+      pickFlags = (pickFlags | VTK_TOOL_CLIP_PLANE);
       }
     }
 
@@ -595,7 +593,7 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
     {
     // Also ensure that our Position lies on the cropping plane
     int planeId = picker->GetCroppingPlaneId();
-    vtkVolumeMapper *volumeMapper = static_cast<vtkVolumeMapper *>(mapper); 
+    vtkVolumeMapper *volumeMapper = static_cast<vtkVolumeMapper *>(mapper);
 
     double bounds[6];
     volumeMapper->GetCroppingRegionPlanes(bounds);
@@ -615,28 +613,28 @@ int vtkSurfaceCursor::ComputePickFlags(vtkVolumePicker *picker)
         dcheck < 0)
 
       {
-      pickFlags = (pickFlags | VTK_SCURSOR_CROP_PLANE);
+      pickFlags = (pickFlags | VTK_TOOL_CROP_PLANE);
       }
     }
 
   if (mapper && mapper->IsA("vtkMapper"))
     {
-    pickFlags = (pickFlags | VTK_SCURSOR_ACTOR);
+    pickFlags = (pickFlags | VTK_TOOL_ACTOR);
     }
   else if (mapper && mapper->IsA("vtkAbstractVolumeMapper"))
     {
-    pickFlags = (pickFlags | VTK_SCURSOR_VOLUME);
+    pickFlags = (pickFlags | VTK_TOOL_VOLUME);
     }
   else if (prop->IsA("vtkImageActor"))
     {
-    pickFlags = (pickFlags | VTK_SCURSOR_IMAGE_ACTOR);
+    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
     }
 
   return pickFlags;
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::ComputePosition()
+void vtkToolCursor::ComputePosition()
 {
   if (!this->Renderer)
     {
@@ -659,8 +657,8 @@ void vtkSurfaceCursor::ComputePosition()
   // Allow the action to constrain the cursor
   if (this->Action)
     {
-    vtkSurfaceCursorAction *actionObject =
-      static_cast<vtkSurfaceCursorAction *>(
+    vtkTool *actionObject =
+      static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
@@ -683,11 +681,11 @@ void vtkSurfaceCursor::ComputePosition()
   // Check to see if the PickFlags have changed
   int pickFlags = this->ComputePickFlags(this->Picker);
 
-  if ((this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 && !this->Action)
+  if ((this->Modifier & VTK_TOOL_BUTTON_MASK) == 0 && !this->Action)
     {
     if (pickFlags != this->PickFlags)
       {
-      // Compute the cursor shape from the state.  
+      // Compute the cursor shape from the state.
       this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
 
       // See if we need focus for potential button actions
@@ -695,7 +693,7 @@ void vtkSurfaceCursor::ComputePosition()
                                                     this->Modifier);
       }
     this->PickFlags = pickFlags;
-  
+
     // Check to see if guide visibility should be changed
     this->CheckGuideVisibility();
     }
@@ -716,14 +714,14 @@ void vtkSurfaceCursor::ComputePosition()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::Modified()
+void vtkToolCursor::Modified()
 {
   this->Mapper->Modified();
   this->Superclass::Modified();
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::OnRender()
+void vtkToolCursor::OnRender()
 {
   // Compute the position when the Renderer renders, since it needs to
   // update all of the props in the scene.
@@ -734,27 +732,27 @@ void vtkSurfaceCursor::OnRender()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::CheckGuideVisibility()
+void vtkToolCursor::CheckGuideVisibility()
 {
   vtkVolumeMapper *mapper =
     vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
 
   if (mapper &&
-      ((((this->PickFlags & VTK_SCURSOR_CROP_PLANE) &&
+      ((((this->PickFlags & VTK_TOOL_CROP_PLANE) &&
           this->Picker->GetCroppingPlaneId() >= 0) ||
           this->Picker->GetPickCroppingPlanes()) ||
-       (((this->PickFlags & VTK_SCURSOR_CLIP_PLANE) &&
+       (((this->PickFlags & VTK_TOOL_CLIP_PLANE) &&
           this->Picker->GetClippingPlaneId() >= 0) ||
           this->Picker->GetPickClippingPlanes())))
     {
     int clippingPlaneId = -1;
-    if (this->PickFlags & VTK_SCURSOR_CLIP_PLANE)
+    if (this->PickFlags & VTK_TOOL_CLIP_PLANE)
       {
       clippingPlaneId = this->Picker->GetClippingPlaneId();
       }
 
     int croppingPlaneId = -1;
-    if (this->PickFlags & VTK_SCURSOR_CROP_PLANE)
+    if (this->PickFlags & VTK_TOOL_CROP_PLANE)
       {
       croppingPlaneId = this->Picker->GetCroppingPlaneId();
       }
@@ -764,7 +762,7 @@ void vtkSurfaceCursor::CheckGuideVisibility()
     this->VolumeCroppingSource->SetActivePlaneId(croppingPlaneId);
     this->ClipOutlineFilter->SetClippingPlanes(mapper->GetClippingPlanes());
     this->ClipOutlineFilter->SetActivePlaneId(clippingPlaneId);
-    } 
+    }
   else
     {
     this->VolumeCroppingActor->SetVisibility(0);
@@ -776,7 +774,7 @@ void vtkSurfaceCursor::CheckGuideVisibility()
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetDisplayPosition(double x, double y)
+void vtkToolCursor::SetDisplayPosition(double x, double y)
 {
   if (this->DisplayPosition[0] == x && this->DisplayPosition[1] == y)
     {
@@ -790,7 +788,7 @@ void vtkSurfaceCursor::SetDisplayPosition(double x, double y)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
+void vtkToolCursor::MoveToDisplayPosition(double x, double y)
 {
   this->SetDisplayPosition(x, y);
 
@@ -801,8 +799,8 @@ void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 
   if (this->Action)
     {
-    vtkSurfaceCursorAction *actionObject =
-      static_cast<vtkSurfaceCursorAction *>(
+    vtkTool *actionObject =
+      static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
@@ -813,28 +811,28 @@ void vtkSurfaceCursor::MoveToDisplayPosition(double x, double y)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::GetVisibility()
+int vtkToolCursor::GetVisibility()
 {
   return this->Actor->GetVisibility();
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetIsInViewport(int inside)
+void vtkToolCursor::SetIsInViewport(int inside)
 {
   if (this->IsInViewport == inside)
     {
     return;
     }
-    
+
   this->IsInViewport = inside;
   this->Modified();
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ButtonBit(int button)
+int vtkToolCursor::ButtonBit(int button)
 {
-  static int buttonmap[6] = { 0, VTK_SCURSOR_B1, VTK_SCURSOR_B2,
-    VTK_SCURSOR_B3, VTK_SCURSOR_B4, VTK_SCURSOR_B5 };
+  static int buttonmap[6] = { 0, VTK_TOOL_B1, VTK_TOOL_B2,
+    VTK_TOOL_B3, VTK_TOOL_B4, VTK_TOOL_B5 };
 
   if (button <= 0 || button > 5)
     {
@@ -845,7 +843,7 @@ int vtkSurfaceCursor::ButtonBit(int button)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::PressButton(int button)
+int vtkToolCursor::PressButton(int button)
 {
   int buttonBit = this->ButtonBit(button);
   int started = 0;
@@ -867,7 +865,7 @@ int vtkSurfaceCursor::PressButton(int button)
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ReleaseButton(int button)
+int vtkToolCursor::ReleaseButton(int button)
 {
   int buttonBit = this->ButtonBit(button);
   int concluded = 0;
@@ -887,18 +885,18 @@ int vtkSurfaceCursor::ReleaseButton(int button)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetModifier(int modifier)
+void vtkToolCursor::SetModifier(int modifier)
 {
   if (this->Modifier == modifier)
     {
     return;
     }
 
-  if ( ((this->Modifier & VTK_SCURSOR_BUTTON_MASK) == 0 ||
-        (modifier & VTK_SCURSOR_BUTTON_MASK) == 0) &&
+  if ( ((this->Modifier & VTK_TOOL_BUTTON_MASK) == 0 ||
+        (modifier & VTK_TOOL_BUTTON_MASK) == 0) &&
        !this->Action)
     {
-    // Compute the cursor shape from the state.  
+    // Compute the cursor shape from the state.
     this->SetShape(this->FindShape(this->Mode, this->PickFlags, modifier));
 
     // See if we need focus for potential button actions
@@ -911,7 +909,7 @@ void vtkSurfaceCursor::SetModifier(int modifier)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetAction(int action)
+void vtkToolCursor::SetAction(int action)
 {
   if (action == this->Action)
     {
@@ -920,14 +918,14 @@ void vtkSurfaceCursor::SetAction(int action)
 
   if (this->Action)
     {
-    vtkSurfaceCursorAction *actionObject =
-      static_cast<vtkSurfaceCursorAction *>(
+    vtkTool *actionObject =
+      static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
       {
       actionObject->StopAction();
-      actionObject->SetSurfaceCursor(0);
+      actionObject->SetToolCursor(0);
       }
     }
 
@@ -936,20 +934,20 @@ void vtkSurfaceCursor::SetAction(int action)
 
   if (action)
     {
-    vtkSurfaceCursorAction *actionObject =
-      static_cast<vtkSurfaceCursorAction *>(
+    vtkTool *actionObject =
+      static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
       {
-      actionObject->SetSurfaceCursor(this);
+      actionObject->SetToolCursor(this);
       actionObject->StartAction();
       }
     }
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::AddShape(vtkSurfaceCursorShapes *shapes,
+int vtkToolCursor::AddShape(vtkCursorShapes *shapes,
                                const char *name)
 {
   int i = shapes->GetShapeIndex(name);
@@ -962,32 +960,32 @@ int vtkSurfaceCursor::AddShape(vtkSurfaceCursorShapes *shapes,
 
   this->Shapes->AddShape(name, shapes->GetShapeData(i),
                          shapes->GetShapeFlags(i));
-  
+
   return (this->Shapes->GetNumberOfShapes() - 1);
 }
- 
+
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::AddAction(vtkSurfaceCursorAction *action)
+int vtkToolCursor::AddAction(vtkTool *action)
 {
   this->Actions->AddItem(action);
-  
+
   return (this->Actions->GetNumberOfItems() - 1);
 }
- 
+
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetMode(int mode)
+void vtkToolCursor::SetMode(int mode)
 {
   if (this->Mode == mode)
     {
     return;
     }
-    
+
   this->Mode = mode;
   this->Modified();
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::SetShape(int shape)
+void vtkToolCursor::SetShape(int shape)
 {
   vtkDataSet *data = this->Shapes->GetShapeData(shape);
 
@@ -999,7 +997,7 @@ void vtkSurfaceCursor::SetShape(int shape)
 }
 
 //----------------------------------------------------------------------------
-double vtkSurfaceCursor::ComputeScale(const double position[3],
+double vtkToolCursor::ComputeScale(const double position[3],
                                       vtkRenderer *renderer)
 {
   // Find the cursor scale factor such that 1 data unit length
@@ -1044,7 +1042,7 @@ double vtkSurfaceCursor::ComputeScale(const double position[3],
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::ComputeMatrix(const double p[3], const double n[3],
+void vtkToolCursor::ComputeMatrix(const double p[3], const double n[3],
                                      const double v[3], vtkMatrix4x4 *matrix)
 {
   double u[3];
@@ -1061,14 +1059,14 @@ void vtkSurfaceCursor::ComputeMatrix(const double p[3], const double n[3],
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::ComputeVectorFromNormal(const double position[3],
+void vtkToolCursor::ComputeVectorFromNormal(const double position[3],
                                                const double normal[3],
                                                double vector[3],
                                                vtkRenderer *renderer,
                                                int cursorFlags)
 {
   // Mask out all but the relevant flags
-  cursorFlags = (cursorFlags & VTK_SCURSOR_ORIENT);
+  cursorFlags = (cursorFlags & VTK_TOOL_ORIENT);
 
   // Get the camera orientation
   vtkCamera *camera = renderer->GetActiveCamera();
@@ -1083,8 +1081,8 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double position[3],
     mat[i][2] = matrix->GetElement(i, 2);
     }
 
-  if (cursorFlags == VTK_SCURSOR_RADIALX ||
-      cursorFlags == VTK_SCURSOR_RADIALY)
+  if (cursorFlags == VTK_TOOL_RADIALX ||
+      cursorFlags == VTK_TOOL_RADIALY)
     {
     // Make "y" point away from camera axis
     double f[3];
@@ -1111,25 +1109,25 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double position[3],
 
   // If the data is "flat" and the flat dimension is not the z dimension,
   // then point the flat side at the camera.
-  if (cursorFlags == VTK_SCURSOR_FLATX)
+  if (cursorFlags == VTK_TOOL_FLATX)
     {
     direction = 0;
     primary = 2;
     secondary = 1;
     }
-  else if (cursorFlags == VTK_SCURSOR_FLATY)
+  else if (cursorFlags == VTK_TOOL_FLATY)
     {
     direction = 1;
     primary = 2;
     secondary = 1;
     }
-  else if (cursorFlags == VTK_SCURSOR_RADIALX)
+  else if (cursorFlags == VTK_TOOL_RADIALX)
     {
     direction = 0;
     primary = 1;
     secondary = 0;
     }
-  else if (cursorFlags == VTK_SCURSOR_RADIALY)
+  else if (cursorFlags == VTK_TOOL_RADIALY)
     {
     direction = 1;
     primary = 1;
@@ -1156,7 +1154,7 @@ void vtkSurfaceCursor::ComputeVectorFromNormal(const double position[3],
   vtkMath::Cross(normal, u, u);
   if (direction == 1)
     {
-    vtkMath::Cross(u, normal, u); 
+    vtkMath::Cross(u, normal, u);
     }
 
   double norm = vtkMath::Norm(u);
@@ -1173,7 +1171,7 @@ static void PrintFlags(int flags);
 */
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
+void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
                                   int pickFlags, int modifier)
 {
   // The bindings are sorted by mode and by the number of modifier bits.
@@ -1185,7 +1183,7 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
   //PrintModifier(modifier);
   //cerr << " " << item << "\n";
 
-  int i = vtkSurfaceCursor::ResolveBinding(array, 0,
+  int i = vtkToolCursor::ResolveBinding(array, 0,
                                            mode, pickFlags, modifier);
   int n = array->GetNumberOfTuples();
 
@@ -1230,7 +1228,7 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
     array->GetTupleValue(j-1, tuple);
     array->SetTupleValue(j, tuple);
     }
- 
+
   // Set the tuple at the desired index
   tuple[0] = mode;
   tuple[1] = pickFlags;
@@ -1241,7 +1239,7 @@ void vtkSurfaceCursor::AddBinding(vtkIntArray *array, int item, int mode,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
+int vtkToolCursor::ResolveBinding(vtkIntArray *array, int start,
                                      int mode, int pickFlags, int modifier)
 {
   // The following rules are used to resolve a binding:
@@ -1260,8 +1258,8 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
   //PrintModifier(modifier);
   //cerr << "\n";
 
-  int propType = (pickFlags & VTK_SCURSOR_PROP3D);
-  int planeType = (pickFlags & VTK_SCURSOR_PLANE);
+  int propType = (pickFlags & VTK_TOOL_PROP3D);
+  int planeType = (pickFlags & VTK_TOOL_PLANE);
 
   int tuple[4];
   int n = array->GetNumberOfTuples();
@@ -1277,9 +1275,9 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
 
     if (tuple[0] == mode)
       {
-      if (((tuple[1] & VTK_SCURSOR_PROP3D) == 0 ||
+      if (((tuple[1] & VTK_TOOL_PROP3D) == 0 ||
            (propType != 0 && (tuple[1] & propType) == propType)) &&
-          ((tuple[1] & VTK_SCURSOR_PLANE) == 0 ||
+          ((tuple[1] & VTK_TOOL_PLANE) == 0 ||
            (planeType != 0 && (tuple[1] & planeType) == planeType)))
         {
         if ((tuple[2] & modifier) == tuple[2])
@@ -1297,44 +1295,44 @@ int vtkSurfaceCursor::ResolveBinding(vtkIntArray *array, int start,
 
   //cerr << "not resolved\n";
   return -1;
-}   
+}
 
 /*
 static void PrintModifier(int modifier)
 {
   cerr << "( ";
-  if (modifier & VTK_SCURSOR_SHIFT) { cerr << "SHIFT "; }
-  if (modifier & VTK_SCURSOR_CAPS) { cerr << "CAPS "; }
-  if (modifier & VTK_SCURSOR_CONTROL) { cerr << "CONTROL "; }
-  if (modifier & VTK_SCURSOR_META) { cerr << "META "; }
-  if (modifier & VTK_SCURSOR_ALT) { cerr << "ALT "; }
-  if (modifier & VTK_SCURSOR_B1) { cerr << "B1 "; }
-  if (modifier & VTK_SCURSOR_B2) { cerr << "B2 "; }
-  if (modifier & VTK_SCURSOR_B3) { cerr << "B3 "; }
+  if (modifier & VTK_TOOL_SHIFT) { cerr << "SHIFT "; }
+  if (modifier & VTK_TOOL_CAPS) { cerr << "CAPS "; }
+  if (modifier & VTK_TOOL_CONTROL) { cerr << "CONTROL "; }
+  if (modifier & VTK_TOOL_META) { cerr << "META "; }
+  if (modifier & VTK_TOOL_ALT) { cerr << "ALT "; }
+  if (modifier & VTK_TOOL_B1) { cerr << "B1 "; }
+  if (modifier & VTK_TOOL_B2) { cerr << "B2 "; }
+  if (modifier & VTK_TOOL_B3) { cerr << "B3 "; }
   cerr << ")";
 }
 
 static void PrintFlags(int flags)
 {
   cerr << "( ";
-  if ((flags & VTK_SCURSOR_PROP3D) == VTK_SCURSOR_PROP3D)
+  if ((flags & VTK_TOOL_PROP3D) == VTK_TOOL_PROP3D)
     {
     cerr << "PROP3DS ";
     }
   else
     {
-    if (flags & VTK_SCURSOR_ACTOR) { cerr << "ACTOR "; }
-    if (flags & VTK_SCURSOR_VOLUME) { cerr << "VOLUME "; }
-    if (flags & VTK_SCURSOR_IMAGE_ACTOR) { cerr << "IMAGE_ACTOR "; }
+    if (flags & VTK_TOOL_ACTOR) { cerr << "ACTOR "; }
+    if (flags & VTK_TOOL_VOLUME) { cerr << "VOLUME "; }
+    if (flags & VTK_TOOL_IMAGE_ACTOR) { cerr << "IMAGE_ACTOR "; }
     }
-  if ((flags & VTK_SCURSOR_CLIP_PLANE) && (flags & VTK_SCURSOR_CROP_PLANE))
+  if ((flags & VTK_TOOL_CLIP_PLANE) && (flags & VTK_TOOL_CROP_PLANE))
     {
     cerr << "PLANES ";
     }
   else
     {
-    if (flags & VTK_SCURSOR_CLIP_PLANE) { cerr << "CLIP_PLANE "; }
-    if (flags & VTK_SCURSOR_CROP_PLANE) { cerr << "CROP_PLANE "; }
+    if (flags & VTK_TOOL_CLIP_PLANE) { cerr << "CLIP_PLANE "; }
+    if (flags & VTK_TOOL_CROP_PLANE) { cerr << "CROP_PLANE "; }
     }
   cerr << ")";
 }

@@ -1,50 +1,49 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorShapes.h,v $
+  Program:   ToolCursor
+  Module:    vtkCursorShapes.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSurfaceCursorShapes - A base class for cursor shape sets.
+// .NAME vtkCursorShapes - A base class for cursor shape sets.
 // .SECTION Description
-// This is the base class for vtkSurfaceCursor cursor shapes.  Each
+// This is the base class for vtkToolCursor cursor shapes.  Each
 // subclass will define a set of 3D cursor shapes that can be used.
 
-#ifndef __vtkSurfaceCursorShapes_h
-#define __vtkSurfaceCursorShapes_h
+#ifndef __vtkCursorShapes_h
+#define __vtkCursorShapes_h
 
 #include "vtkObject.h"
 
-class vtkSurfaceCursorShapeArray;
+class vtkToolCursorShapeArray;
 class vtkDataSet;
 
 // Flags for shapes.  The first few flags give hints about how
 // the cursor should be oriented.
-#define VTK_SCURSOR_ORIENT   0x0F
-#define VTK_SCURSOR_FLATX    0x01  // cursor is mainly in YZ plane
-#define VTK_SCURSOR_FLATY    0x02  // cursor is mainly in XZ plane
-#define VTK_SCURSOR_RADIALX  0x03  // point "x" away from camera axis
-#define VTK_SCURSOR_RADIALY  0x04  // point "y" away from camera axis
-#define VTK_SCURSOR_IMAGEXY  0x05  // Align cursor with image axes
-#define VTK_SCURSOR_RGB      0x10  // cursor uses RGB scalars
+#define VTK_TOOL_ORIENT   0x0F
+#define VTK_TOOL_FLATX    0x01  // cursor is mainly in YZ plane
+#define VTK_TOOL_FLATY    0x02  // cursor is mainly in XZ plane
+#define VTK_TOOL_RADIALX  0x03  // point "x" away from camera axis
+#define VTK_TOOL_RADIALY  0x04  // point "y" away from camera axis
+#define VTK_TOOL_IMAGEXY  0x05  // Align cursor with image axes
+#define VTK_TOOL_RGB      0x10  // cursor uses RGB scalars
 
-class VTK_EXPORT vtkSurfaceCursorShapes : public vtkObject
+class VTK_EXPORT vtkCursorShapes : public vtkObject
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkSurfaceCursorShapes *New();
+  static vtkCursorShapes *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSurfaceCursorShapes,vtkObject);
+  vtkTypeMacro(vtkCursorShapes,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -81,15 +80,15 @@ public:
     return this->GetShapeFlags(this->GetShapeIndex(name)); };
 
 protected:
-  vtkSurfaceCursorShapes();
-  ~vtkSurfaceCursorShapes();
+  vtkCursorShapes();
+  ~vtkCursorShapes();
 
   int NumberOfShapes;
-  vtkSurfaceCursorShapeArray *Shapes;
+  vtkToolCursorShapeArray *Shapes;
 
 private:
-  vtkSurfaceCursorShapes(const vtkSurfaceCursorShapes&);  //Not implemented
-  void operator=(const vtkSurfaceCursorShapes&);  //Not implemented
+  vtkCursorShapes(const vtkCursorShapes&);  //Not implemented
+  void operator=(const vtkCursorShapes&);  //Not implemented
 };
 
 #endif

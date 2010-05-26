@@ -3,7 +3,7 @@
 import math
 import sys
 import vtk
-import surfacecursor
+import toolcursor
 
 from vtk.util.misc import vtkGetDataRoot
 VTK_DATA_ROOT = vtkGetDataRoot()
@@ -65,7 +65,7 @@ cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
 
 # there are 27 blocks that can be cropped, just like a Rubik's cube
 cropblock = (0,2,2)
-cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0])) 
+cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0]))
 cropflags = (0x07ffffff & ~cropblockbit);
 
 volumeMapper = vtk.vtkVolumeRayCastMapper()
@@ -247,17 +247,17 @@ renWin.Render()
 ren.ResetCameraClippingRange()
 
 #---------------------------------------------------------
-cursor = vtk.vtkSurfaceCursor()
+cursor = vtk.vtkToolCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 
-observer = vtk.vtkSurfaceCursorInteractorObserver()
-observer.SetSurfaceCursor(cursor)
+observer = vtk.vtkToolCursorInteractorObserver()
+observer.SetToolCursor(cursor)
 observer.SetInteractor(iren)
 observer.SetEnabled(1)
 
-# Add an observer for when the title bar "Close Window" is pressed. 
+# Add an observer for when the title bar "Close Window" is pressed.
 iren.AddObserver("ExitEvent", lambda o,e: o.TerminateApp())
 
 iren.Start()

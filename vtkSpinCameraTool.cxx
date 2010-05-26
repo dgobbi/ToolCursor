@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSpinCameraAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkSpinCameraTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,10 +12,10 @@
 
 =========================================================================*/
 
-#include "vtkSpinCameraAction.h"
+#include "vtkSpinCameraTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
@@ -24,52 +23,51 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkSpinCameraAction, "$Revision: 1.1 $");
-vtkStandardNewMacro(vtkSpinCameraAction);
+vtkStandardNewMacro(vtkSpinCameraTool);
 
 //----------------------------------------------------------------------------
-vtkSpinCameraAction::vtkSpinCameraAction()
+vtkSpinCameraTool::vtkSpinCameraTool()
 {
   this->Transform = vtkTransform::New();
 }
 
 //----------------------------------------------------------------------------
-vtkSpinCameraAction::~vtkSpinCameraAction()
+vtkSpinCameraTool::~vtkSpinCameraTool()
 {
   this->Transform->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkSpinCameraAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSpinCameraTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkSpinCameraAction::StartAction()
+void vtkSpinCameraTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   camera->GetViewUp(this->StartCameraViewUp);
 
   this->Transform->Identity();
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkSpinCameraAction::StopAction()
+void vtkSpinCameraTool::StopAction()
 {
   this->Superclass::StopAction();
 }
 
 //----------------------------------------------------------------------------
-void vtkSpinCameraAction::DoAction()
+void vtkSpinCameraTool::DoAction()
 {
   this->Superclass::DoAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
   vtkMatrix4x4 *viewMatrix = camera->GetViewTransformMatrix();
 
@@ -89,7 +87,7 @@ void vtkSpinCameraAction::DoAction()
   double p0[3];
   this->GetStartPosition(p0);
 
-  // Get the display position. 
+  // Get the display position.
   double x, y;
   this->GetDisplayPosition(x, y);
 

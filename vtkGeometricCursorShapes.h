@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeometricCursorShapes.h,v $
+  Program:   ToolCursor
+  Module:    vtkGeometricCursorShapes.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -15,7 +14,7 @@
 // .NAME vtkGeometricCursorShapes - Basic geometrical cursor shapes.
 // .SECTION Description
 // This class is a collection of geometric cursor shapes for use with the
-// vtkSurfaceCursor.  All shapes come in two varieties, one with a single
+// vtkToolCursor.  All shapes come in two varieties, one with a single
 // color and another with a two-tone color scheme, where the colors are
 // separated  by a split at the Z plane.  The names of the shapes are
 // "Cross", "SplitCross", "Sphere", "SplitSphere", "Cone", and "DualCone".
@@ -23,11 +22,11 @@
 #ifndef __vtkGeometricCursorShapes_h
 #define __vtkGeometricCursorShapes_h
 
-#include "vtkSurfaceCursorShapes.h"
+#include "vtkCursorShapes.h"
 
 class vtkPolyData;
 
-class VTK_EXPORT vtkGeometricCursorShapes : public vtkSurfaceCursorShapes
+class VTK_EXPORT vtkGeometricCursorShapes : public vtkCursorShapes
 {
 public:
   // Description:
@@ -36,7 +35,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkGeometricCursorShapes,vtkSurfaceCursorShapes);
+  vtkTypeMacro(vtkGeometricCursorShapes,vtkCursorShapes);
   void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:

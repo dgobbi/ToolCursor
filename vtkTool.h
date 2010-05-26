@@ -1,46 +1,45 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorAction.h,v $
+  Program:   ToolCursor
+  Module:    vtkTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSurfaceCursorAction - A base class for an interaction state.
+// .NAME vtkTool - A base class for an interaction state.
 // .SECTION Description
 // This is the base class for interactions, i.e. for what happens when
 // you drag the mouse in a renderer.  It contains all the necessary
 // state information, data, and code for the interaction.
 
-#ifndef __vtkSurfaceCursorAction_h
-#define __vtkSurfaceCursorAction_h
+#ifndef __vtkTool_h
+#define __vtkTool_h
 
 #include "vtkObject.h"
 
-class vtkSurfaceCursor;
+class vtkToolCursor;
 
-class VTK_EXPORT vtkSurfaceCursorAction : public vtkObject
+class VTK_EXPORT vtkTool : public vtkObject
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkSurfaceCursorAction *New();
+  static vtkTool *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkSurfaceCursorAction,vtkObject);
+  vtkTypeMacro(vtkTool,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Set the cursor that this action is bound to.
-  void SetSurfaceCursor(vtkSurfaceCursor *cursor);
-  vtkSurfaceCursor *GetSurfaceCursor() { return this->SurfaceCursor; };
+  void SetToolCursor(vtkToolCursor *cursor);
+  vtkToolCursor *GetToolCursor() { return this->ToolCursor; };
 
   // Description:
   // These are the methods that are called when the action takes place.
@@ -81,10 +80,10 @@ public:
   double *GetStartPosition() { return this->StartPosition; };
 
 protected:
-  vtkSurfaceCursorAction();
-  ~vtkSurfaceCursorAction();
+  vtkTool();
+  ~vtkTool();
 
-  vtkSurfaceCursor *SurfaceCursor;
+  vtkToolCursor *ToolCursor;
 
   double StartPosition[3];
   double StartDisplayPosition[2];
@@ -105,8 +104,8 @@ protected:
   void GetViewRay(double x, double y, double z, double p[3], double v[3]);
 
 private:
-  vtkSurfaceCursorAction(const vtkSurfaceCursorAction&);  //Not implemented
-  void operator=(const vtkSurfaceCursorAction&);  //Not implemented
+  vtkTool(const vtkTool&);  //Not implemented
+  void operator=(const vtkTool&);  //Not implemented
 };
 
 #endif

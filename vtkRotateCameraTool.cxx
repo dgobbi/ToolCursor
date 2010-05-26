@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkRotateCameraAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkRotateCameraTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,10 +12,10 @@
 
 =========================================================================*/
 
-#include "vtkRotateCameraAction.h"
+#include "vtkRotateCameraTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
@@ -24,33 +23,32 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkRotateCameraAction, "$Revision: 1.7 $");
-vtkStandardNewMacro(vtkRotateCameraAction);
+vtkStandardNewMacro(vtkRotateCameraTool);
 
 //----------------------------------------------------------------------------
-vtkRotateCameraAction::vtkRotateCameraAction()
+vtkRotateCameraTool::vtkRotateCameraTool()
 {
   this->Transform = vtkTransform::New();
 }
 
 //----------------------------------------------------------------------------
-vtkRotateCameraAction::~vtkRotateCameraAction()
+vtkRotateCameraTool::~vtkRotateCameraTool()
 {
   this->Transform->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkRotateCameraAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkRotateCameraTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkRotateCameraAction::StartAction()
+void vtkRotateCameraTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   camera->GetFocalPoint(this->CenterOfRotation);
@@ -97,13 +95,13 @@ void vtkRotateCameraAction::StartAction()
 }
 
 //----------------------------------------------------------------------------
-void vtkRotateCameraAction::StopAction()
+void vtkRotateCameraTool::StopAction()
 {
   this->Superclass::StopAction();
 }
 
 //----------------------------------------------------------------------------
-void vtkRotateCameraAction::DoAction()
+void vtkRotateCameraTool::DoAction()
 {
   this->Superclass::DoAction();
 
@@ -116,10 +114,10 @@ void vtkRotateCameraAction::DoAction()
   rotationAxis[2] = 1;
 
   // Get the camera
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
   vtkMatrix4x4 *viewMatrix = camera->GetViewTransformMatrix();
- 
+
   // Get the camera's x, y, and z axes
   double cvx[3], cvy[3], cvz[3];
   for (int i = 0; i < 3; i++)
@@ -177,7 +175,7 @@ void vtkRotateCameraAction::DoAction()
   g[1] = f[1] + fg*cvz[1];
   g[2] = f[2] + fg*cvz[2];
 
-  // Get the current display position. 
+  // Get the current display position.
   double x, y;
   this->GetDisplayPosition(x, y);
 
@@ -458,11 +456,11 @@ void vtkRotateCameraAction::DoAction()
 }
 
 //----------------------------------------------------------------------------
-int vtkRotateCameraAction::IsStickyPossible(const double position[3])
+int vtkRotateCameraTool::IsStickyPossible(const double position[3])
 {
   // Check for conditions where "sticky" interaction won't work:
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
 
   // Sticky depends on there being an object to stick to
   if (cursor->GetPickFlags() == 0)
@@ -518,10 +516,10 @@ int vtkRotateCameraAction::IsStickyPossible(const double position[3])
     }
 
   return 1;
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkRotateCameraAction::ConstrainCursor(double position[3],
+void vtkRotateCameraTool::ConstrainCursor(double position[3],
                                             double normal[3])
 {
   if (this->Sticky)
@@ -531,7 +529,7 @@ void vtkRotateCameraAction::ConstrainCursor(double position[3],
 
   // When cursor becomes "unstuck", point normal to the center
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   double f[3];
@@ -548,7 +546,7 @@ void vtkRotateCameraAction::ConstrainCursor(double position[3],
     {
     double p[3];
     camera->GetPosition(p);
- 
+
     double u[3];
     u[0] = position[0] - p[0];
     u[1] = position[1] - p[1];

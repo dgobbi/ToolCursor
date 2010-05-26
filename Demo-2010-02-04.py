@@ -3,7 +3,7 @@
 import math
 import sys
 import vtk
-import surfacecursor
+import toolcursor
 
 from vtk.util.misc import vtkGetDataRoot
 VTK_DATA_ROOT = vtkGetDataRoot()
@@ -26,7 +26,7 @@ else:
 print "Instructions: "
 print " 1) Use 'Tab' to cycle through different views"
 print " 2) Use 'Space' to drop a fiducial"
-print " 3) Use 'Delete/Backspace' to delete last fiducial" 
+print " 3) Use 'Delete/Backspace' to delete last fiducial"
 
 #---------------------------------------------------------
 # read the volume
@@ -202,20 +202,20 @@ class VolumeLOD(vtk.vtkLODProp3D):
     def SetEnabled(self, mode, enabled):
         if enabled:
             if mode == '2D':
-                self.EnableLOD(self.lod2D) 
+                self.EnableLOD(self.lod2D)
             if mode == '3D':
-                self.EnableLOD(self.lod3D) 
+                self.EnableLOD(self.lod3D)
             if mode == 'RC':
-                self.EnableLOD(self.lodRC) 
+                self.EnableLOD(self.lodRC)
         else:
             if mode == '2D':
-                self.DisableLOD(self.lod2D) 
+                self.DisableLOD(self.lod2D)
             if mode == '3D':
-                self.DisableLOD(self.lod3D) 
+                self.DisableLOD(self.lod3D)
             if mode == 'RC':
-                self.DisableLOD(self.lodRC) 
- 
-    def SetInputConnection(self, algorithmOutput): 
+                self.DisableLOD(self.lodRC)
+
+    def SetInputConnection(self, algorithmOutput):
         self.ShiftScale.SetInputConnection(algorithmOutput)
         self.UpdatePipelineIvars()
 
@@ -244,7 +244,7 @@ class VolumeLOD(vtk.vtkLODProp3D):
         self.Mapper.SetCroppingRegionFlags(cropflags)
         self.Mapper3D.SetCroppingRegionFlags(cropflags)
         self.Mapper2D.SetCroppingRegionFlags(cropflags)
-        
+
     def SetCroppingRegion(self, cropping):
         self.Mapper.CroppingOn()
         self.Mapper3D.CroppingOn()
@@ -257,7 +257,7 @@ class VolumeLOD(vtk.vtkLODProp3D):
         self.Mapper.CroppingOn()
         self.Mapper3D.CroppingOn()
         self.Mapper2D.CroppingOn()
-        
+
     def CroppingOff(self):
         self.Mapper.CroppingOff()
         self.Mapper3D.CroppingOff()
@@ -278,7 +278,7 @@ cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
 
 # there are 27 blocks that can be cropped, just like a Rubik's cube
 cropblock = (0,2,2)
-cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0])) 
+cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0]))
 cropflags = (0x07ffffff & ~cropblockbit);
 
 volume = VolumeLOD()
@@ -495,13 +495,13 @@ renWin.Render()
 ren.ResetCameraClippingRange()
 
 #---------------------------------------------------------
-cursor = vtk.vtkSurfaceCursor()
+cursor = vtk.vtkToolCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 
-observer = vtk.vtkSurfaceCursorInteractorObserver()
-observer.SetSurfaceCursor(cursor)
+observer = vtk.vtkToolCursorInteractorObserver()
+observer.SetToolCursor(cursor)
 observer.SetInteractor(iren)
 observer.SetEnabled(1)
 
@@ -523,7 +523,7 @@ def OnRender(o, e):
     xslice = min(max(xslice, extent[0]), extent[1])
     yslice = min(max(yslice, extent[2]), extent[3])
     zslice = min(max(zslice, extent[4]), extent[5])
-    
+
     if imageActorX.GetPickable():
         xslice = imageActorX.GetDisplayExtent()[0]
         yslice = imageActorY.GetDisplayExtent()[2]
@@ -552,7 +552,7 @@ def OnRender(o, e):
         imageActorZ.SetDisplayExtent(extent[0], xslice,
                                      yslice, extent[3],
                                      zslice, zslice)
- 
+
     skinClipX.SetOrigin(planes[0],planes[3],planes[5])
     skinClipY.SetOrigin(planes[0],planes[3],planes[5])
     skinClipZ.SetOrigin(planes[0],planes[3],planes[5])
@@ -647,7 +647,7 @@ def OnKeyPress(o, e):
         x = cursor.GetPicker().GetPickCroppingPlanes()
         cursor.GetPicker().SetPickCroppingPlanes(not x)
         iren.Render()
-        
+
     if keysym in ("space","Space"):
         if (ren.HasViewProp(fids.GetActor()) and
             cursor.GetPicker().GetProp3D()):
@@ -665,7 +665,7 @@ def OnKeyPress(o, e):
 iren.AddObserver('KeyPressEvent', OnKeyPress)
 
 #---------------------------------------------------------
-# Add an observer for when the title bar "Close Window" is pressed. 
+# Add an observer for when the title bar "Close Window" is pressed.
 iren.AddObserver("ExitEvent", lambda o,e: o.TerminateApp())
 
 iren.Start()

@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkGeometricCursorShapes.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkGeometricCursorShapes.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -16,7 +15,7 @@
 #include "vtkGeometricCursorShapes.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkPolyData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
@@ -26,7 +25,6 @@
 #include "vtkPointData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkGeometricCursorShapes, "$Revision: 1.2 $");
 vtkStandardNewMacro(vtkGeometricCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -94,7 +92,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
   vtkPoints *points = vtkPoints::New();
   vtkCellArray *strips = vtkCellArray::New();
   vtkIdType nPoints = 0;
-  
+
   int colorIndex = 0;
 
   for (int i = 0; i < 2; i++)
@@ -114,7 +112,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
         scalars->InsertNextTupleValue(&colorIndex);
         z = zmin;
         }
-   
+
       static vtkIdType rectIds[5][4] = { { 1, 0, 2, 3 },
                                          { 4, 0, 5, 1 },
                                          { 5, 1, 6, 2 },
@@ -178,7 +176,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
   vtkPoints *points = vtkPoints::New();
   vtkCellArray *strips = vtkCellArray::New();
   vtkIdType nPoints = 0;
- 
+
   int colorIndex = 0;
 
   for (int i = 0; i < 2; i++)
@@ -195,7 +193,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
     points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
     normals->InsertNextTupleValue(v);
     scalars->InsertNextTupleValue(&colorIndex);
-      
+
     int n = (resolution + 1)/2;
     int m = 2*resolution;
 
@@ -285,7 +283,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
   vtkPoints *points = vtkPoints::New();
   vtkCellArray *strips = vtkCellArray::New();
   vtkIdType nPoints = 0;
- 
+
   int sides = (dual ? 2 : 1);
 
   for (int colorIndex = 0; colorIndex < sides; colorIndex++)
@@ -328,7 +326,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
     v[2] = s;
     points->InsertNextPoint(0, 0, height*s);
     normals->InsertNextTupleValue(v);
-    scalars->InsertNextTupleValue(&colorIndex); 
+    scalars->InsertNextTupleValue(&colorIndex);
 
     for (int k = 0; k < resolution; k++)
       {
@@ -351,7 +349,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
     pointIds[2] = nPoints + resolution;
     strips->InsertNextCell(3, pointIds);
     nPoints += 2*resolution;
- 
+
     // Make the fan for the base
     pointIds[0] = nPoints++;
     for (int jj = 0; jj < (resolution-1); jj++)

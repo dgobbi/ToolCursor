@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,81 +12,80 @@
 
 =========================================================================*/
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkRenderer.h"
 #include "vtkCamera.h"
 #include "vtkVolumePicker.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorAction, "$Revision: 1.3 $");
-vtkStandardNewMacro(vtkSurfaceCursorAction);
+vtkStandardNewMacro(vtkTool);
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorAction::vtkSurfaceCursorAction()
+vtkTool::vtkTool()
 {
-  this->SurfaceCursor = 0;
+  this->ToolCursor = 0;
 }
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorAction::~vtkSurfaceCursorAction()
+vtkTool::~vtkTool()
 {
-  // SurfaceCursor is not reference counted and therefore not deleted.
-  this->SurfaceCursor = 0;
+  // ToolCursor is not reference counted and therefore not deleted.
+  this->ToolCursor = 0;
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::SetSurfaceCursor(vtkSurfaceCursor *cursor)
+void vtkTool::SetToolCursor(vtkToolCursor *cursor)
 {
-  if (cursor != this->SurfaceCursor)
+  if (cursor != this->ToolCursor)
     {
-    this->SurfaceCursor = cursor;
+    this->ToolCursor = cursor;
     this->Modified();
     }
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::StartAction()
+void vtkTool::StartAction()
 {
-  this->SurfaceCursor->GetPosition(this->StartPosition);
-  this->SurfaceCursor->GetDisplayPosition(this->StartDisplayPosition);
+  this->ToolCursor->GetPosition(this->StartPosition);
+  this->ToolCursor->GetDisplayPosition(this->StartDisplayPosition);
   this->DisplayPosition[0] = this->StartDisplayPosition[0];
   this->DisplayPosition[1] = this->StartDisplayPosition[1];
   this->LastDisplayPosition[0] = this->DisplayPosition[0];
   this->LastDisplayPosition[1] = this->DisplayPosition[1];
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::StopAction()
+void vtkTool::StopAction()
 {
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::DoAction()
+void vtkTool::DoAction()
 {
   this->LastDisplayPosition[0] = this->DisplayPosition[0];
   this->LastDisplayPosition[1] = this->DisplayPosition[1];
-  this->SurfaceCursor->GetDisplayPosition(this->DisplayPosition);
+  this->ToolCursor->GetDisplayPosition(this->DisplayPosition);
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::ConstrainCursor(double *, double *) 
+void vtkTool::ConstrainCursor(double *, double *)
 {
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::WorldToDisplay(const double world[3],
+void vtkTool::WorldToDisplay(const double world[3],
                                             double &x, double &y, double &z)
 {
-  vtkRenderer *renderer = this->SurfaceCursor->GetRenderer();
+  vtkRenderer *renderer = this->ToolCursor->GetRenderer();
   double hcoord[4];
   hcoord[0] = world[0];
   hcoord[1] = world[1];
@@ -104,10 +102,10 @@ void vtkSurfaceCursorAction::WorldToDisplay(const double world[3],
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::DisplayToWorld(double x, double y, double z,
+void vtkTool::DisplayToWorld(double x, double y, double z,
                                             double world[3])
 {
-  vtkRenderer *renderer = this->SurfaceCursor->GetRenderer();
+  vtkRenderer *renderer = this->ToolCursor->GetRenderer();
   double hcoord[4];
 
   // Use the viewport interterface for conversions.
@@ -120,7 +118,7 @@ void vtkSurfaceCursorAction::DisplayToWorld(double x, double y, double z,
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorAction::GetViewRay(double x, double y, double z,
+void vtkTool::GetViewRay(double x, double y, double z,
                                         double p[3], double v[3])
 {
   double p1[3], p2[3];

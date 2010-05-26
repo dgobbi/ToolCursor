@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSurfaceCursorInteractorObserver.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkToolCursorInteractorObserver.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,60 +12,59 @@
 
 =========================================================================*/
 
-#include "vtkSurfaceCursorInteractorObserver.h"
+#include "vtkToolCursorInteractorObserver.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkInteractorStyle.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
 
-vtkCxxRevisionMacro(vtkSurfaceCursorInteractorObserver, "$Revision: 1.9 $");
-vtkStandardNewMacro(vtkSurfaceCursorInteractorObserver);
+vtkStandardNewMacro(vtkToolCursorInteractorObserver);
 
-vtkCxxSetObjectMacro(vtkSurfaceCursorInteractorObserver,SurfaceCursor, vtkSurfaceCursor);
+vtkCxxSetObjectMacro(vtkToolCursorInteractorObserver,ToolCursor, vtkToolCursor);
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorInteractorObserver::vtkSurfaceCursorInteractorObserver()
+vtkToolCursorInteractorObserver::vtkToolCursorInteractorObserver()
 {
   // The surface cursor that this object handles the events for
-  this->SurfaceCursor = 0;
+  this->ToolCursor = 0;
 
   // Set priority to be higher than the InteractorStyle
   this->Priority = 0.1;
 
   // InteractorObservers use a static method to handle window events.
   this->EventCallbackCommand->SetCallback(
-    vtkSurfaceCursorInteractorObserver::ProcessEvents);
+    vtkToolCursorInteractorObserver::ProcessEvents);
 
   // Make a callback for the RenderWindow render start & end
   this->PassiveEventCallbackCommand = vtkCallbackCommand::New();
   this->PassiveEventCallbackCommand->SetPassiveObserver(1);
   this->PassiveEventCallbackCommand->SetClientData(this);
   this->PassiveEventCallbackCommand->SetCallback(
-    vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents);
+    vtkToolCursorInteractorObserver::ProcessPassiveEvents);
 }
 
 //----------------------------------------------------------------------------
-vtkSurfaceCursorInteractorObserver::~vtkSurfaceCursorInteractorObserver()
+vtkToolCursorInteractorObserver::~vtkToolCursorInteractorObserver()
 {
   this->PassiveEventCallbackCommand->Delete();
-  this->SurfaceCursor->Delete();
+  this->ToolCursor->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorInteractorObserver::PrintSelf(ostream& os,
+void vtkToolCursorInteractorObserver::PrintSelf(ostream& os,
                                                    vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
-  os << indent << "SurfaceCursor: " << this->SurfaceCursor << "\n";
+  os << indent << "ToolCursor: " << this->ToolCursor << "\n";
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
+void vtkToolCursorInteractorObserver::SetEnabled(int enable)
 {
   vtkRenderWindowInteractor *iren = this->Interactor;
   if (!iren)
@@ -94,7 +92,7 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
     // 3) call cursor->MoveToDisplayPosition(x,y) when the mouse moves
     // 4) call cursor->PressButton(button) when a button is pressed
     // 5) call cursor->ReleaseButton(button) when a button is released
-    //  
+    //
     // The SetIsInViewport() and SetModifierBits() are done in passive
     // interactor observers.  The MoveToDisplayPosition(), PressButton(),
     // and ReleaseButton() and done in regular observers.
@@ -144,13 +142,13 @@ void vtkSurfaceCursorInteractorObserver::SetEnabled(int enable)
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
+void vtkToolCursorInteractorObserver::ProcessPassiveEvents(
   vtkObject *object, unsigned long event, void *clientdata, void *)
 {
-  vtkSurfaceCursorInteractorObserver* self =
-    reinterpret_cast<vtkSurfaceCursorInteractorObserver *>(clientdata);
+  vtkToolCursorInteractorObserver* self =
+    reinterpret_cast<vtkToolCursorInteractorObserver *>(clientdata);
 
-  vtkSurfaceCursor *cursor = self->GetSurfaceCursor();
+  vtkToolCursor *cursor = self->GetToolCursor();
   vtkRenderWindowInteractor *iren = self->GetInteractor();
 
   // Look for events from the RenderWindow
@@ -185,7 +183,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
   if (!iren || iren != vtkRenderWindowInteractor::SafeDownCast(object))
     {
     return;
-    } 
+    }
 
   switch (event)
     {
@@ -198,38 +196,38 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
     case vtkCommand::MiddleButtonReleaseEvent:
       {
       // First look for modifier keys
-      int modifierMask = (VTK_SCURSOR_SHIFT | VTK_SCURSOR_CONTROL);
+      int modifierMask = (VTK_TOOL_SHIFT | VTK_TOOL_CONTROL);
       int modifier = 0;
-      if (iren->GetShiftKey()) { modifier |= VTK_SCURSOR_SHIFT; }
-      if (iren->GetControlKey()) { modifier |= VTK_SCURSOR_CONTROL; }
+      if (iren->GetShiftKey()) { modifier |= VTK_TOOL_SHIFT; }
+      if (iren->GetControlKey()) { modifier |= VTK_TOOL_CONTROL; }
 
       // Next look for the button, and whether it was pressed or released
       if (event == vtkCommand::LeftButtonPressEvent)
         {
-        modifierMask |= VTK_SCURSOR_B1;
-        modifier |= VTK_SCURSOR_B1;
+        modifierMask |= VTK_TOOL_B1;
+        modifier |= VTK_TOOL_B1;
         }
       else if (event == vtkCommand::RightButtonPressEvent)
         {
-        modifierMask = VTK_SCURSOR_B2;
-        modifier = VTK_SCURSOR_B2;
+        modifierMask = VTK_TOOL_B2;
+        modifier = VTK_TOOL_B2;
         }
       else if (event == vtkCommand::MiddleButtonPressEvent)
         {
-        modifierMask = VTK_SCURSOR_B3;
-        modifier = VTK_SCURSOR_B3;
+        modifierMask = VTK_TOOL_B3;
+        modifier = VTK_TOOL_B3;
         }
       else if (event == vtkCommand::LeftButtonReleaseEvent)
         {
-        modifierMask |= VTK_SCURSOR_B1;
+        modifierMask |= VTK_TOOL_B1;
         }
       else if (event == vtkCommand::RightButtonReleaseEvent)
         {
-        modifierMask = VTK_SCURSOR_B2;
+        modifierMask = VTK_TOOL_B2;
         }
       else if (event == vtkCommand::MiddleButtonReleaseEvent)
         {
-        modifierMask = VTK_SCURSOR_B3;
+        modifierMask = VTK_TOOL_B3;
         }
 
       // Set the modifier with the button and key information
@@ -263,7 +261,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
       {
       // We need to know the exact moment when modifier keys change
       int modifierMask = self->ModifierFromKeySym(iren->GetKeySym());
-      int modifier = modifierMask; 
+      int modifier = modifierMask;
       cursor->SetModifierBits(modifier, modifierMask);
       }
       break;
@@ -271,7 +269,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
     case vtkCommand::KeyReleaseEvent:
       {
       int modifierMask = self->ModifierFromKeySym(iren->GetKeySym());
-      int modifier = 0; 
+      int modifier = 0;
       cursor->SetModifierBits(modifier, modifierMask);
       }
       break;
@@ -279,20 +277,20 @@ void vtkSurfaceCursorInteractorObserver::ProcessPassiveEvents(
 }
 
 //----------------------------------------------------------------------------
-void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
+void vtkToolCursorInteractorObserver::ProcessEvents(vtkObject *object,
                                                        unsigned long event,
                                                        void *clientdata,
                                                        void *)
 {
-  vtkSurfaceCursorInteractorObserver* self =
-    reinterpret_cast<vtkSurfaceCursorInteractorObserver *>(clientdata);
+  vtkToolCursorInteractorObserver* self =
+    reinterpret_cast<vtkToolCursorInteractorObserver *>(clientdata);
 
-  vtkSurfaceCursor *cursor = self->GetSurfaceCursor();
+  vtkToolCursor *cursor = self->GetToolCursor();
   vtkRenderWindowInteractor *iren = self->GetInteractor();
   if (!iren || iren != vtkRenderWindowInteractor::SafeDownCast(object))
     {
     return;
-    } 
+    }
 
   // Is it safe to grab the focus for the cursor?  Check to see if the
   // InteractorStyle is currently doing an action.
@@ -398,7 +396,7 @@ void vtkSurfaceCursorInteractorObserver::ProcessEvents(vtkObject *object,
 }
 
 //----------------------------------------------------------------------------
-int vtkSurfaceCursorInteractorObserver::ModifierFromKeySym(const char *keysym)
+int vtkToolCursorInteractorObserver::ModifierFromKeySym(const char *keysym)
 {
   if (keysym)
     {
@@ -406,23 +404,23 @@ int vtkSurfaceCursorInteractorObserver::ModifierFromKeySym(const char *keysym)
     // 1st button = 256, 2nd button = 512, middle button = 1024
     if (strncmp(keysym, "Shift_", 6) == 0)
       {
-      return VTK_SCURSOR_SHIFT;
+      return VTK_TOOL_SHIFT;
       }
     else if (strncmp(keysym, "Caps_Lock", 9) == 0)
       {
-      return VTK_SCURSOR_CAPS;
+      return VTK_TOOL_CAPS;
       }
     else if (strncmp(keysym, "Control_", 8) == 0)
       {
-      return VTK_SCURSOR_CONTROL;
+      return VTK_TOOL_CONTROL;
       }
     else if (strncmp(keysym, "Meta_", 5) == 0)
       {
-      return VTK_SCURSOR_META;
+      return VTK_TOOL_META;
       }
     else if (strncmp(keysym, "Alt_", 4) == 0)
       {
-      return VTK_SCURSOR_ALT;
+      return VTK_TOOL_ALT;
       }
     }
 

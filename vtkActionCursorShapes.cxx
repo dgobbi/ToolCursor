@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkActionCursorShapes.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkActionCursorShapes.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -16,7 +15,7 @@
 #include "vtkActionCursorShapes.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkPolyData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
@@ -35,7 +34,6 @@
 #include "vtkTransform.h"
 #include "vtkPerspectiveTransform.h"
 
-vtkCxxRevisionMacro(vtkActionCursorShapes, "$Revision: 1.5 $");
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -71,15 +69,15 @@ void vtkActionCursorShapes::MakeShapes()
   data->Delete();
 
   data = this->MakePushShape(arrow);
-  this->AddShape("Push", data, VTK_SCURSOR_FLATX);
+  this->AddShape("Push", data, VTK_TOOL_FLATX);
   data->Delete();
 
   data = this->MakeSpinShape(arrow);
-  this->AddShape("Spin", data, VTK_SCURSOR_RADIALY);
+  this->AddShape("Spin", data, VTK_TOOL_RADIALY);
   data->Delete();
 
   data = this->MakeZoomShape(arrow);
-  this->AddShape("Zoom", data, VTK_SCURSOR_RADIALX);
+  this->AddShape("Zoom", data, VTK_TOOL_RADIALX);
   data->Delete();
 
   arrow->Delete();
@@ -296,7 +294,7 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
       {
       scalars->InsertNextTupleValue(&color);
       }
-    // This transform puts the arrows tail-to-tail, instead of tip-to-tip 
+    // This transform puts the arrows tail-to-tail, instead of tip-to-tip
     transform->Translate(0, 0, -44);
     transform->Scale(-1,1,-1);
     color = !color;

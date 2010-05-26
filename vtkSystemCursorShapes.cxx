@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkSystemCursorShapes.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkSystemCursorShapes.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -16,7 +15,7 @@
 #include "vtkSystemCursorShapes.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkPolyData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
@@ -26,7 +25,6 @@
 #include "vtkPointData.h"
 #include "vtkMath.h"
 
-vtkCxxRevisionMacro(vtkSystemCursorShapes, "$Revision: 1.1 $");
 vtkStandardNewMacro(vtkSystemCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -52,11 +50,11 @@ void vtkSystemCursorShapes::MakeShapes()
   vtkDataSet *data;
 
   data = this->MakePointerShape();
-  this->AddShape("Pointer", data, VTK_SCURSOR_RGB);
+  this->AddShape("Pointer", data, VTK_TOOL_RGB);
   data->Delete();
 
   data = this->MakeCrosshairShape();
-  this->AddShape("Crosshair", data, VTK_SCURSOR_RGB);
+  this->AddShape("Crosshair", data, VTK_TOOL_RGB);
   data->Delete();
 }
 
@@ -66,9 +64,9 @@ vtkDataSet *vtkSystemCursorShapes::MakePointerShape()
   vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
   scalars->SetNumberOfComponents(4);
   vtkPoints *points = vtkPoints::New();
-  vtkCellArray *strips = vtkCellArray::New();  
-  vtkCellArray *lines = vtkCellArray::New();  
-  
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkCellArray *lines = vtkCellArray::New();
+
   static unsigned char black[4] = {  0,   0,   0, 255};
   static unsigned char white[4] = {255, 255, 255, 255};
 
@@ -146,9 +144,9 @@ vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
   vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
   scalars->SetNumberOfComponents(4);
   vtkPoints *points = vtkPoints::New();
-  vtkCellArray *strips = vtkCellArray::New();  
-  vtkCellArray *lines = vtkCellArray::New();  
-  
+  vtkCellArray *strips = vtkCellArray::New();
+  vtkCellArray *lines = vtkCellArray::New();
+
   static unsigned char black[4] = {  0,   0,   0, 255};
   static unsigned char white[4] = {255, 255, 255, 255};
 
@@ -161,10 +159,10 @@ vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
   };
 
   static double outCoords[16][2] = {
-    { -1, -radius-1 }, { +1, -radius-1 }, { +1, -inner+1 }, { -1, -inner+1 }, 
-    { +1, +radius+1 }, { -1, +radius+1 }, { -1, +inner-1 }, { +1, +inner-1 }, 
-    { -radius-1, +1 }, { -radius-1, -1 }, { -inner+1, -1 }, { -inner+1, +1 }, 
-    { +radius+1, -1 }, { +radius+1, +1 }, { +inner-1, +1 }, { +inner-1, -1 }, 
+    { -1, -radius-1 }, { +1, -radius-1 }, { +1, -inner+1 }, { -1, -inner+1 },
+    { +1, +radius+1 }, { -1, +radius+1 }, { -1, +inner-1 }, { +1, +inner-1 },
+    { -radius-1, +1 }, { -radius-1, -1 }, { -inner+1, -1 }, { -inner+1, +1 },
+    { +radius+1, -1 }, { +radius+1, +1 }, { +inner-1, +1 }, { +inner-1, -1 },
   };
 
   static vtkIdType toplineIds[] = {

@@ -1,11 +1,10 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkZoomCameraAction.cxx,v $
+  Program:   ToolCursor
+  Module:    vtkZoomCameraTool.cxx
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -13,10 +12,10 @@
 
 =========================================================================*/
 
-#include "vtkZoomCameraAction.h"
+#include "vtkZoomCameraTool.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSurfaceCursor.h"
+#include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkTransform.h"
@@ -24,11 +23,10 @@
 
 #include "vtkVolumePicker.h"
 
-vtkCxxRevisionMacro(vtkZoomCameraAction, "$Revision: 1.4 $");
-vtkStandardNewMacro(vtkZoomCameraAction);
+vtkStandardNewMacro(vtkZoomCameraTool);
 
 //----------------------------------------------------------------------------
-vtkZoomCameraAction::vtkZoomCameraAction()
+vtkZoomCameraTool::vtkZoomCameraTool()
 {
   this->ZoomByDolly = 1;
 
@@ -36,13 +34,13 @@ vtkZoomCameraAction::vtkZoomCameraAction()
 }
 
 //----------------------------------------------------------------------------
-vtkZoomCameraAction::~vtkZoomCameraAction()
+vtkZoomCameraTool::~vtkZoomCameraTool()
 {
   this->Transform->Delete();
 }
 
 //----------------------------------------------------------------------------
-void vtkZoomCameraAction::PrintSelf(ostream& os, vtkIndent indent)
+void vtkZoomCameraTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
@@ -50,11 +48,11 @@ void vtkZoomCameraAction::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkZoomCameraAction::StartAction()
+void vtkZoomCameraTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   camera->GetPosition(this->StartCameraPosition);
@@ -65,20 +63,20 @@ void vtkZoomCameraAction::StartAction()
   this->ZoomFactor = 1.0;
 
   this->Transform->Identity();
-} 
+}
 
 //----------------------------------------------------------------------------
-void vtkZoomCameraAction::StopAction()
+void vtkZoomCameraTool::StopAction()
 {
   this->Superclass::StopAction();
 }
 
 //----------------------------------------------------------------------------
-void vtkZoomCameraAction::DoAction()
+void vtkZoomCameraTool::DoAction()
 {
   this->Superclass::DoAction();
 
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
   vtkMatrix4x4 *viewMatrix = camera->GetViewTransformMatrix();
 
@@ -105,7 +103,7 @@ void vtkZoomCameraAction::DoAction()
   double x, y, z;
   this->WorldToDisplay(p0, x, y, z);
 
-  // Get the display position. 
+  // Get the display position.
   double p[3];
   this->GetDisplayPosition(x, y);
   this->DisplayToWorld(x, y, z, p);
@@ -213,10 +211,10 @@ void vtkZoomCameraAction::DoAction()
 }
 
 //----------------------------------------------------------------------------
-void vtkZoomCameraAction::ConstrainCursor(double position[3],
+void vtkZoomCameraTool::ConstrainCursor(double position[3],
                                           double normal[3])
 {
-  vtkSurfaceCursor *cursor = this->GetSurfaceCursor();
+  vtkToolCursor *cursor = this->GetToolCursor();
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
   vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
 

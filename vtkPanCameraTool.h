@@ -1,40 +1,39 @@
 /*=========================================================================
 
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: vtkPanCameraAction.h,v $
+  Program:   ToolCursor
+  Module:    vtkPanCameraTool.h
 
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  Copyright (c) 2010 David Gobbi
   All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
 
      This software is distributed WITHOUT ANY WARRANTY; without even
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkPanCameraAction - Pan the camera in order to move the scene.
+// .NAME vtkPanCameraTool - Pan the camera in order to move the scene.
 // .SECTION Description
 // This class is used to pan the camera.  The pan is achieved by moving
 // the camera position and focal point together, not by slowly rotating
 // the camera around its position.
 
-#ifndef __vtkPanCameraAction_h
-#define __vtkPanCameraAction_h
+#ifndef __vtkPanCameraTool_h
+#define __vtkPanCameraTool_h
 
-#include "vtkSurfaceCursorAction.h"
+#include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkPanCameraAction : public vtkSurfaceCursorAction
+class VTK_EXPORT vtkPanCameraTool : public vtkTool
 {
 public:
   // Description:
   // Instantiate the object.
-  static vtkPanCameraAction *New();
+  static vtkPanCameraTool *New();
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeRevisionMacro(vtkPanCameraAction,vtkSurfaceCursorAction);
+  vtkTypeMacro(vtkPanCameraTool,vtkTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -44,8 +43,8 @@ public:
   virtual void DoAction();
 
 protected:
-  vtkPanCameraAction();
-  ~vtkPanCameraAction();
+  vtkPanCameraTool();
+  ~vtkPanCameraTool();
 
   double StartCameraFocalPoint[3];
   double StartCameraPosition[3];
@@ -53,8 +52,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkPanCameraAction(const vtkPanCameraAction&);  //Not implemented
-  void operator=(const vtkPanCameraAction&);  //Not implemented
+  vtkPanCameraTool(const vtkPanCameraTool&);  //Not implemented
+  void operator=(const vtkPanCameraTool&);  //Not implemented
 };
 
 #endif
