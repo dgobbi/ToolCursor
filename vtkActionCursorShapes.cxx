@@ -197,6 +197,10 @@ vtkDataSet *vtkActionCursorShapes::MakeMoveShape(
     transform->Scale(1.5, 1.0, 1.0);
     transform->Translate(0, 0, 14);
     }
+  else
+    {
+    transform->Translate(0, 0, 2.22);
+    }
 
   int color = 0;
 
