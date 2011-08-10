@@ -611,7 +611,6 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     if (fabs(mapperPos[planeId>>1] - bounds[planeId]) < planeTol &&
         (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
         dcheck < 0)
-
       {
       pickFlags = (pickFlags | VTK_TOOL_CROP_PLANE);
       }
@@ -625,7 +624,8 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     {
     pickFlags = (pickFlags | VTK_TOOL_VOLUME);
     }
-  else if (prop->IsA("vtkImageActor"))
+  else if (prop->IsA("vtkImageSlice") ||
+           prop->IsA("vtkImageActor"))
     {
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
     }

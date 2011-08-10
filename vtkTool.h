@@ -48,9 +48,9 @@ public:
   virtual void DoAction();
 
   // Description:
-  // This method allow the action to constrain the cursor's position.
+  // This method allows subclasses to constrain the cursor's position.
   // It is called immediately after the cursor positioning pick occurs.
-  // The default action is to do nothing.
+  // Its default implementation does nothing.
   virtual void ConstrainCursor(double position[3], double normal[3]);
 
   // Description:
