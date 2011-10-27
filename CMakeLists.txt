@@ -11,6 +11,7 @@ SET(LIB_SRCS
   vtkActionCursorShapes.cxx
   vtkClipOutlineWithPlanes.cxx
   vtkFiducialPointsTool.cxx
+  vtkFocalPlaneTool.cxx
   vtkGeometricCursorShapes.cxx
   vtkPanCameraTool.cxx
   vtkPushPlaneTool.cxx
@@ -22,6 +23,7 @@ SET(LIB_SRCS
   vtkCursorShapes.cxx
   vtkSystemCursorShapes.cxx
   vtkVolumeCroppingOutline.cxx
+  vtkWindowLevelTool.cxx
   vtkZoomCameraTool.cxx
 )
 

@@ -15,7 +15,8 @@
 // .SECTION Description
 // This class is used to zoom the view.  The default way of doing the zoom
 // is by dollying the camera towards or away from the focal point in order
-// to achieve the zoom.
+// to achieve the zoom.  If a parallel projection is used, then the zoom
+// will adjust the parallel scale.
 
 #ifndef __vtkZoomCameraTool_h
 #define __vtkZoomCameraTool_h
@@ -45,6 +46,14 @@ public:
   int GetZoomByDolly(int) { return this->ZoomByDolly; };
 
   // Description:
+  // The default behavior is to zoom the camera the mouse moves vertically
+  // on the screen, but if RadialInteraction is On, then moving the mouse
+  // away from the center of the window will cause the camera to zoom.
+  vtkSetMacro(RadialInteraction, int);
+  vtkBooleanMacro(RadialInteraction, int);
+  vtkGetMacro(RadialInteraction, int);
+  
+  // Description:
   // These are the methods that are called when the action takes place.
   virtual void StartAction();
   virtual void StopAction();
@@ -59,6 +68,7 @@ protected:
   ~vtkZoomCameraTool();
 
   int ZoomByDolly;
+  int RadialInteraction;
 
   double StartCameraPosition[3];
   double StartClippingRange[2];
