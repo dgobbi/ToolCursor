@@ -131,6 +131,7 @@ vtkPolyData *vtkActionCursorShapes::MakeArrow()
   reverse->Delete();
   contour->Delete();
   modeller->Delete();
+  arrow->Delete();
 
   return data;
 }
