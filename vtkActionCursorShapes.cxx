@@ -77,7 +77,7 @@ void vtkActionCursorShapes::MakeShapes()
   data->Delete();
 
   data = this->MakeZoomShape(arrow);
-  this->AddShape("Zoom", data, VTK_TOOL_RADIALX);
+  this->AddShape("Zoom", data, 0);
   data->Delete();
 
   arrow->Delete();
@@ -479,8 +479,8 @@ vtkDataSet *vtkActionCursorShapes::MakeZoomShape(vtkPolyData *arrow)
     }
 
   static double rotate90[16] = {
+     0, -1,  0,  0,
      0,  0,  1,  0,
-     0,  1,  0,  0,
     -1,  0,  0,  0,
      0,  0,  0,  1
   };

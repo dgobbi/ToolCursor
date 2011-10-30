@@ -182,6 +182,17 @@ void vtkZoomCameraTool::DoAction()
     this->GetStartDisplayPosition(x0, y0);
     double dyFactor = (y - y0)/(0.5*(size[1] + 1));
     this->ZoomFactor = pow(10.0, dyFactor);
+
+    double f[3], p[3];
+    camera->GetFocalPoint(f);
+    double *p0 = this->StartCameraPosition;
+
+    p[0] = p0[0]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[0]; 
+    p[1] = p0[1]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[1]; 
+    p[2] = p0[2]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[2]; 
+
+    this->Transform->Identity();
+    this->Transform->Translate(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2]);
     }
 
   if (camera->GetParallelProjection())
@@ -204,11 +215,27 @@ void vtkZoomCameraTool::DoAction()
 
       double dist = vtkMath::Dot(v, cvz);
 
-      double d1 = this->StartClippingRange[0] + dist;
-      double d2 = this->StartClippingRange[1] + dist;
+      double d1 = this->StartClippingRange[0];
+      double d2 = this->StartClippingRange[1];
 
       double tol = cursor->GetRenderer()->GetNearClippingPlaneTolerance();
 
+      // was near clipping plane close to tolerance?
+      if (d1 < 2*d2*tol)
+        {
+        // need to recompute the near clipping range
+        cursor->GetRenderer()->ResetCameraClippingRange();
+        camera->GetClippingRange(d1, d2);
+        d2 = this->StartClippingRange[1] + dist;
+        }
+      else
+        {
+        // no problems, just adjust clipping range by dolly distance
+        d1 += dist;
+        d2 += dist;
+        }
+
+      // ensure that front plane is not too close to camera
       if (d1 < d2*tol)
         {
         d1 = d2*tol;
@@ -241,5 +268,7 @@ void vtkZoomCameraTool::ConstrainCursor(double vtkNotUsed(position)[3],
   normal[0] = matrix->GetElement(2, 0);
   normal[1] = matrix->GetElement(2, 1);
   normal[2] = matrix->GetElement(2, 2);
+
+  // Force the position to the near clipping plane
 }
 
