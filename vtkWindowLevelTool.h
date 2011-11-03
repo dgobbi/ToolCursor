@@ -20,11 +20,9 @@
 #ifndef __vtkWindowLevelTool_h
 #define __vtkWindowLevelTool_h
 
-#include "vtkTool.h"
+#include "vtkImageTool.h"
 
-class vtkImageProperty;
-
-class VTK_EXPORT vtkWindowLevelTool : public vtkTool
+class VTK_EXPORT vtkWindowLevelTool : public vtkImageTool
 {
 public:
   // Description:
@@ -33,7 +31,7 @@ public:
 
   // Description:
   // Standard vtkObject methods
-  vtkTypeMacro(vtkWindowLevelTool, vtkTool);
+  vtkTypeMacro(vtkWindowLevelTool, vtkImageTool);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -47,9 +45,7 @@ protected:
   ~vtkWindowLevelTool();
 
   double StartWindowLevel[2];
-  vtkImageProperty *CurrentImageProperty;
 
-  void SetCurrentImageToNthImage(int i);
 
 private:
   vtkWindowLevelTool(const vtkWindowLevelTool&);  //Not implemented

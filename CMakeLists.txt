@@ -13,6 +13,7 @@ SET(LIB_SRCS
   vtkFiducialPointsTool.cxx
   vtkFocalPlaneTool.cxx
   vtkGeometricCursorShapes.cxx
+  vtkImageTool.cxx
   vtkOpacityTool.cxx
   vtkPanCameraTool.cxx
   vtkPushPlaneTool.cxx
