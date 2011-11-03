@@ -18,6 +18,7 @@ SET(LIB_SRCS
   vtkPanCameraTool.cxx
   vtkPushPlaneTool.cxx
   vtkRotateCameraTool.cxx
+  vtkSliceImageTool.cxx
   vtkSpinCameraTool.cxx
   vtkToolCursor.cxx
   vtkTool.cxx
