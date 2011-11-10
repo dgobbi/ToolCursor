@@ -59,6 +59,7 @@ protected:
   vtkLassoImageTool();
   ~vtkLassoImageTool();
 
+  vtkCellLocator *CellLocator;
   vtkROIContourData *ROIData;
   vtkROIContourDataToPolyDataFilter *ROIDataToPointSet;
   vtkROIContourDataToPolyDataFilter *ROIDataToPolyData;

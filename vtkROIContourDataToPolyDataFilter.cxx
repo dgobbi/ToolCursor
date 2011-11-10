@@ -21,6 +21,7 @@
 #include "vtkPolyData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
+#include "vtkIntArray.h"
 #include "vtkDoubleArray.h"
 #include "vtkCellData.h"
 #include "vtkPointData.h"
@@ -254,7 +255,7 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
 //----------------------------------------------------------------------------
 void vtkROIContourDataToPolyDataFilter::GenerateSpline(
   vtkPoints *contourPoints, int closed,
-  vtkPoints *points, vtkCellArray *lines)
+  vtkPoints *points, vtkCellArray *lines, vtkIntArray *subIds)
 {
   double tmax, dmax;
   this->ComputeSpline(contourPoints, closed, tmax, dmax);
@@ -282,6 +283,10 @@ void vtkROIContourDataToPolyDataFilter::GenerateSpline(
         p[1] = yspline->Evaluate(t);
         p[2] = zspline->Evaluate(t);
         points->InsertNextPoint(p);
+        if (subIds)
+          {
+          subIds->InsertNextValue(static_cast<int>(j-1));
+          }
         }
       t0 = t1;
       }
@@ -293,6 +298,10 @@ void vtkROIContourDataToPolyDataFilter::GenerateSpline(
       p[1] = yspline->Evaluate(tmax);
       p[2] = zspline->Evaluate(tmax);
       points->InsertNextPoint(p);
+      if (subIds)
+        {
+        subIds->InsertNextValue(m-1);
+        }
       }
 
     vtkIdType id1 = points->GetNumberOfPoints();
@@ -329,10 +338,16 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
   vtkPlane *plane = this->SelectionPlane;
   double tol = this->SelectionPlaneTolerance;
 
-  // The output points
+  // The output points and cells
   vtkPoints *outPoints = vtkPoints::New(VTK_DOUBLE);
   vtkCellArray *lines = 0;
   vtkCellArray *verts = 0;
+
+  // The scalars
+  vtkIntArray *contourIds = vtkIntArray::New();
+  contourIds->SetName("Labels");
+  vtkIntArray *contourSubIds = vtkIntArray::New();
+  contourSubIds->SetName("SubIds");
 
   // Go through all the contours
   int n = input->GetNumberOfContours();
@@ -340,6 +355,8 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
     {
     vtkPoints *points = input->GetContourPoints(i);
     int t = input->GetContourType(i);
+
+    contourIds->InsertNextValue(i);
 
     if (points)
       {
@@ -392,7 +409,8 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
         if (this->Subdivision && t != vtkROIContourData::POINT)
           {
           // Use a spline to subdivide and smooth contour
-          this->GenerateSpline(points, closed, outPoints, lines);
+          this->GenerateSpline(
+            points, closed, outPoints, lines, contourSubIds);
           }
         else
           {
@@ -405,6 +423,10 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
             double p[3];
             points->GetPoint(j, p);
             vtkIdType pointId = outPoints->InsertNextPoint(p);
+            if (contourSubIds)
+              {
+              contourSubIds->InsertNextValue(j);
+              }
             cells->InsertCellPoint(pointId);
             }
 
@@ -418,9 +440,12 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
       }
     }
 
+
   output->SetPoints(outPoints);
   output->SetLines(lines);
   output->SetVerts(verts);
+  output->GetCellData()->SetScalars(contourIds);
+  output->GetPointData()->AddArray(contourSubIds);
 
   if (outPoints)
     {
@@ -434,6 +459,29 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
     {
     verts->Delete();
     }
+  if (contourIds)
+    {
+    contourIds->Delete();
+    }
+  if (contourSubIds)
+    {
+    contourSubIds->Delete();
+    }
+
+  // assign colors to the output points
+  unsigned char color[3] = { 255, 0, 255 };
+  vtkUnsignedCharArray *colors = vtkUnsignedCharArray::New();
+  colors->SetNumberOfComponents(3);
+  colors->SetName("Colors");
+  vtkIdType m = outPoints->GetNumberOfPoints();
+  colors->SetNumberOfTuples(m);
+  for (vtkIdType j = 0; j < m; j++)
+    {
+    colors->SetTupleValue(j, color);
+    }
+
+  //output->GetPointData()->SetScalars(colors);
+  colors->Delete();
 
   return 1;
 }

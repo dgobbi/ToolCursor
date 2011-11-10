@@ -30,6 +30,7 @@ class vtkSpline;
 class vtkPoints;
 class vtkCellArray;
 class vtkDoubleArray;
+class vtkIntArray;
 
 class VTK_EXPORT vtkROIContourDataToPolyDataFilter : public vtkPolyDataAlgorithm
 {
@@ -87,7 +88,7 @@ protected:
 
   void GenerateSpline(
     vtkPoints *contourPoints, int closed,
-    vtkPoints *points, vtkCellArray *lines);
+    vtkPoints *points, vtkCellArray *lines, vtkIntArray *subIds);
 
   vtkPlane *SelectionPlane;
   double SelectionPlaneTolerance;

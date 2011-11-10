@@ -24,8 +24,11 @@
 #include "vtkMatrix4x4.h"
 #include "vtkMath.h"
 #include "vtkGlyph3D.h"
+#include "vtkCellLocator.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
+#include "vtkPointData.h"
+#include "vtkCellData.h"
 #include "vtkPolyData.h"
 #include "vtkPointData.h"
 #include "vtkActor.h"
@@ -53,7 +56,8 @@ vtkLassoImageTool::vtkLassoImageTool()
 
   this->Glyph3D = vtkGlyph3D::New();
   this->Glyph3D->SetColorModeToColorByScalar();
-  this->Glyph3D->SetScaleFactor(0.7);
+  this->Glyph3D->SetScaleModeToDataScalingOff();
+  this->Glyph3D->SetScaleFactor(0.2);
   this->Glyph3D->SetInputConnection(this->ROIDataToPointSet->GetOutputPort());
   this->Glyph3D->SetSource(vtkPolyData::SafeDownCast(
     shapes->GetShapeData("Sphere")));
@@ -65,6 +69,7 @@ vtkLassoImageTool::vtkLassoImageTool()
   this->GlyphActor->PickableOff();
   this->GlyphActor->SetMapper(this->GlyphMapper);
   this->GlyphActor->GetProperty()->SetColor(1,0,0);
+  this->GlyphActor->GetProperty()->LightingOff();
   this->GlyphActor->SetUserMatrix(this->Matrix);
 
   this->ContourMapper = vtkDataSetMapper::New();
@@ -74,9 +79,12 @@ vtkLassoImageTool::vtkLassoImageTool()
   this->ContourActor->PickableOff();
   this->ContourActor->SetMapper(this->ContourMapper);
   this->ContourActor->GetProperty()->SetColor(1,0,0);
+  this->ContourActor->GetProperty()->LightingOff();
   //this->ContourActor->GetProperty()->SetLineStipplePattern(0xe0e0e0e0);
   this->ContourActor->GetProperty()->SetLineStipplePattern(0xfcfcfcfc);
   this->ContourActor->SetUserMatrix(this->Matrix);
+
+  this->CellLocator = vtkCellLocator::New();
 
   shapes->Delete();
 
@@ -94,6 +102,7 @@ vtkLassoImageTool::~vtkLassoImageTool()
     this->ROIData->Delete();
     }
 
+  this->CellLocator->Delete();
   this->Matrix->Delete();
   this->ROIDataToPointSet->Delete();
   this->ROIDataToPolyData->Delete();
@@ -131,6 +140,16 @@ void vtkLassoImageTool::StartAction()
 
   vtkToolCursor *cursor = this->GetToolCursor();
 
+  this->ROIDataToPolyData->Update();
+  vtkDataSet *contourData = this->ROIDataToPolyData->GetOutput();
+  vtkCellLocator *cellLocator = 0;
+  if (contourData->GetNumberOfCells() > 0)
+    {
+    cellLocator = this->CellLocator;
+    cellLocator->SetDataSet(contourData);
+    cellLocator->BuildLocator();
+    }
+
   double position[3];
   cursor->GetPosition(position);
 
@@ -145,16 +164,16 @@ void vtkLassoImageTool::StartAction()
     }
   else
     {
-    points= this->ROIData->GetContourPoints(0);
+    points = this->ROIData->GetContourPoints(0);
     }
 
-  double tol = 3;
   // Is the mouse over a previous point?
+  double tol = 3;
   this->CurrentPointId = -1;
   vtkIdType n = points->GetNumberOfPoints();
+  double p[3];
   for (vtkIdType i = 0; i < n; i++)
     {
-    double p[3];
     points->GetPoint(i, p);
     if (vtkMath::Distance2BetweenPoints(position, p) < tol*tol)
       {
@@ -168,12 +187,40 @@ void vtkLassoImageTool::StartAction()
 
   if (this->CurrentPointId < 0)
     {
-    points->InsertNextPoint(position);
+    vtkIdType cellId;
+    int subId;
+    double d2;
+    if (cellLocator &&
+        (cellLocator->FindClosestPointWithinRadius(
+         position, tol, p, cellId, subId, d2)))
+      {
+      vtkIntArray *contourIds = vtkIntArray::SafeDownCast(
+        contourData->GetCellData()->GetArray("Labels"));
+      vtkIntArray *contourSubIds = vtkIntArray::SafeDownCast(
+        contourData->GetPointData()->GetArray("SubIds"));
+      int pointId = contourSubIds->GetValue(subId) + 1;
+      int m = static_cast<int>(points->InsertNextPoint(p));
+      for (int i = m; i > pointId; --i)
+        {
+        double ptmp[3];
+        points->GetPoint(i-1, ptmp);
+        points->SetPoint(i, ptmp); 
+        }
+      points->SetPoint(pointId, p);
+
+      this->CurrentPointId = pointId;
+      this->InitialPointPosition[0] = p[0];
+      this->InitialPointPosition[1] = p[1];
+      this->InitialPointPosition[2] = p[2];
+      }
+    else
+      {
+      points->InsertNextPoint(position);
+      }
+
     this->ROIData->Modified();
     cursor->GetRenderer()->AddViewProp(this->GlyphActor);
     cursor->GetRenderer()->AddViewProp(this->ContourActor);
-
-    cerr << "inserting point " << points->GetNumberOfPoints() << " " << position[0] << ", " << position[1] << ", " << position[2] << "\n";
     }
 }
 
