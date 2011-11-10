@@ -160,6 +160,7 @@ void vtkLassoImageTool::StartAction()
     points = vtkPoints::New();
     this->ROIData->SetNumberOfContours(1);
     this->ROIData->SetContourPoints(0, points);
+    this->ROIData->SetContourType(0, vtkROIContourData::OPEN_PLANAR);
     points->Delete();
     }
   else
@@ -177,6 +178,10 @@ void vtkLassoImageTool::StartAction()
     points->GetPoint(i, p);
     if (vtkMath::Distance2BetweenPoints(position, p) < tol*tol)
       {
+      if (i == 0)
+        {
+        this->ROIData->SetContourType(0, vtkROIContourData::CLOSED_PLANAR);
+        }
       this->CurrentPointId = i;
       this->InitialPointPosition[0] = p[0];
       this->InitialPointPosition[1] = p[1];
@@ -213,7 +218,8 @@ void vtkLassoImageTool::StartAction()
       this->InitialPointPosition[1] = p[1];
       this->InitialPointPosition[2] = p[2];
       }
-    else
+    else if (this->ROIData->GetContourType(0) !=
+             vtkROIContourData::CLOSED_PLANAR)
       {
       points->InsertNextPoint(position);
       }
