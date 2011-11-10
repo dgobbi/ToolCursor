@@ -24,12 +24,12 @@
 class vtkMatrix4x4;
 class vtkROIContourData;
 class vtkROIContourDataToPolyDataFilter;
-class vtkSpline;
 class vtkGlyph3D;
 class vtkPoints;
 class vtkPolyData;
 class vtkPointSet;
 class vtkDataSetMapper;
+class vtkCellLocator;
 class vtkActor;
 
 class VTK_EXPORT vtkLassoImageTool : public vtkImageTool
@@ -59,17 +59,12 @@ protected:
   vtkLassoImageTool();
   ~vtkLassoImageTool();
 
-  void UpdateSpline(double &tmax, double &dmax);
-  void UpdateContourData();
-
-  vtkSpline *SplineX;
-  vtkSpline *SplineY;
   vtkROIContourData *ROIData;
+  vtkROIContourDataToPolyDataFilter *ROIDataToPointSet;
   vtkROIContourDataToPolyDataFilter *ROIDataToPolyData;
   vtkGlyph3D *Glyph3D;
   vtkDataSetMapper *GlyphMapper;
   vtkActor *GlyphActor;
-  vtkPolyData *ContourData;
   vtkDataSetMapper *ContourMapper;
   vtkActor *ContourActor;
   vtkMatrix4x4 *Matrix;

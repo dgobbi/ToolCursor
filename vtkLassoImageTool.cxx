@@ -23,7 +23,6 @@
 #include "vtkRenderer.h"
 #include "vtkMatrix4x4.h"
 #include "vtkMath.h"
-#include "vtkCardinalSpline.h"
 #include "vtkGlyph3D.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
@@ -44,18 +43,18 @@ vtkLassoImageTool::vtkLassoImageTool()
 
   vtkGeometricCursorShapes *shapes = vtkGeometricCursorShapes::New();
 
-  this->SplineX = vtkCardinalSpline::New();
-  this->SplineY = vtkCardinalSpline::New();
-
   this->ROIData = vtkROIContourData::New();
 
+  this->ROIDataToPointSet = vtkROIContourDataToPolyDataFilter::New();
+  this->ROIDataToPointSet->SetInput(this->ROIData);
   this->ROIDataToPolyData = vtkROIContourDataToPolyDataFilter::New();
   this->ROIDataToPolyData->SetInput(this->ROIData);
+  this->ROIDataToPolyData->SubdivisionOn();
 
   this->Glyph3D = vtkGlyph3D::New();
   this->Glyph3D->SetColorModeToColorByScalar();
   this->Glyph3D->SetScaleFactor(0.7);
-  this->Glyph3D->SetInputConnection(this->ROIDataToPolyData->GetOutputPort());
+  this->Glyph3D->SetInputConnection(this->ROIDataToPointSet->GetOutputPort());
   this->Glyph3D->SetSource(vtkPolyData::SafeDownCast(
     shapes->GetShapeData("Sphere")));
 
@@ -68,21 +67,15 @@ vtkLassoImageTool::vtkLassoImageTool()
   this->GlyphActor->GetProperty()->SetColor(1,0,0);
   this->GlyphActor->SetUserMatrix(this->Matrix);
 
-  this->ContourData = vtkPolyData::New();
-  vtkPoints *linePoints = vtkPoints::New();
-  vtkCellArray *lines = vtkCellArray::New();
-  this->ContourData->SetPoints(linePoints);
-  this->ContourData->SetLines(lines);
-  linePoints->Delete();
-  lines->Delete();
-
   this->ContourMapper = vtkDataSetMapper::New();
-  this->ContourMapper->SetInput(this->ContourData);
+  this->ContourMapper->SetInputConnection(this->ROIDataToPolyData->GetOutputPort());
 
   this->ContourActor = vtkActor::New();
   this->ContourActor->PickableOff();
   this->ContourActor->SetMapper(this->ContourMapper);
   this->ContourActor->GetProperty()->SetColor(1,0,0);
+  //this->ContourActor->GetProperty()->SetLineStipplePattern(0xe0e0e0e0);
+  this->ContourActor->GetProperty()->SetLineStipplePattern(0xfcfcfcfc);
   this->ContourActor->SetUserMatrix(this->Matrix);
 
   shapes->Delete();
@@ -101,12 +94,9 @@ vtkLassoImageTool::~vtkLassoImageTool()
     this->ROIData->Delete();
     }
 
-  this->SplineX->Delete();
-  this->SplineY->Delete();
-
   this->Matrix->Delete();
+  this->ROIDataToPointSet->Delete();
   this->ROIDataToPolyData->Delete();
-  this->ContourData->Delete();
   this->Glyph3D->Delete();
   this->GlyphActor->Delete();
   this->GlyphMapper->Delete();
@@ -180,7 +170,6 @@ void vtkLassoImageTool::StartAction()
     {
     points->InsertNextPoint(position);
     this->ROIData->Modified();
-    this->UpdateContourData();
     cursor->GetRenderer()->AddViewProp(this->GlyphActor);
     cursor->GetRenderer()->AddViewProp(this->ContourActor);
 
@@ -227,189 +216,5 @@ void vtkLassoImageTool::DoAction()
     points->SetPoint(this->CurrentPointId, p);
 
     this->ROIData->Modified();
-    this->UpdateContourData();
     }
-}
-
-//----------------------------------------------------------------------------
-void vtkLassoImageTool::UpdateSpline(double &tmax, double &dmax)
-{
-
-  vtkSpline *xspline = this->SplineX;
-  vtkSpline *yspline = this->SplineY;
-
-  // initialize the spline
-  xspline->RemoveAllPoints();
-  yspline->RemoveAllPoints();
-  xspline->ClosedOff();
-  yspline->ClosedOff();
-
-  // get the number of points and the first/last point
-  vtkPoints *points = 0;
-  if (this->ROIData->GetNumberOfContours() > 0)
-    {
-    points = this->ROIData->GetContourPoints(0);
-    }
-
-  vtkIdType n = points->GetNumberOfPoints();
-  double p[3];
-  double p0[2], p1[2];
-
-  int xj = 0;
-  int yj = 1;
-
-  points->GetPoint(n-1, p);
-  p0[0] = p[xj];
-  p0[1] = p[yj];
-
-  points->GetPoint(0, p);
-  p1[0] = p[xj];
-  p1[1] = p[yj];
-
-  // factor between real distance and parametric distance
-  double f = 1.0;
-  // the length of the implicit segment for closed loops
-  double lastd = 0;
-
-  // if first and last point are same, spline is closed
-  double dx = p1[0] - p0[0];
-  double dy = p1[1] - p0[1];
-  double d2 = dx*dx + dy*dy;
-  cerr << "d2 " << d2 << "\n";
-  while (d2 < 100 && n > 1)
-    {
-    cerr << "closing\n";
-    n -= 1;
-    points->GetPoint(n-1, p);
-    p0[0] = p[xj];
-    p0[1] = p[yj];
-
-    xspline->ClosedOn();
-    yspline->ClosedOn();
-
-    // vtkSpline considers the parametric length of the implicit
-    // segment of closed loops to be unity, so set "f" so that
-    // multiplying the real length of that segment by "f" gives unity.
-    dx = p1[0] - p0[0];
-    dy = p1[1] - p0[1];
-    d2 = dx*dx + dy*dy;
-    lastd = sqrt(d2);
-    if (lastd > 0)
-      {
-      f = 1.0/lastd;
-      }
-    }
-
-  // Add all the points to the spline.
-  double d = 0.0;
-  for (vtkIdType i = 0; i < n; i++)
-    {
-    p0[0] = p1[0];
-    p0[1] = p1[1];
-
-    points->GetPoint(i, p);
-    p1[0] = p[xj];
-    p1[1] = p[yj];
-
-    dx = p1[0] - p0[0];
-    dy = p1[1] - p0[1];
-
-    d += sqrt(dx*dx + dy*dy);
-
-    double t = f*d;
-
-    xspline->AddPoint(t, p1[0]);
-    yspline->AddPoint(t, p1[1]);
-    }
-
-  // Do the spline precomputations
-  xspline->Compute();
-  yspline->Compute();
-
-  // The spline is valid over t = [0, tmax]
-  d += lastd;
-  tmax = f*d;
-  dmax = d;
-}
-
-//----------------------------------------------------------------------------
-void vtkLassoImageTool::UpdateContourData()
-{
-  vtkPoints *points = this->ContourData->GetPoints();
-  vtkCellArray *lines = this->ContourData->GetLines();
-
-  vtkPoints *knots = 0;
-  if (this->ROIData->GetNumberOfContours() > 0)
-    {
-    knots = this->ROIData->GetContourPoints(0);
-    }
-
-  if (!knots)
-    {
-    return;
-    }
-
-  double z = 0;
-  if (knots->GetNumberOfPoints() > 0)
-    {
-    double p[3];
-    knots->GetPoint(0, p);
-    z = p[2];
-    }
-
-  if (knots->GetNumberOfPoints() < 2)
-    {
-    return;
-    }
-
-  double tmax, dmax;
-  this->UpdateSpline(tmax, dmax);
-
-  vtkIdType n = vtkMath::Floor(dmax) + 1;
-  double delta = tmax/n;
-
-  vtkSpline *xspline = this->SplineX;
-  vtkSpline *yspline = this->SplineY;
-
-  double t = tmax;
-  if (xspline->GetClosed())
-    {
-    t = (n-1)*tmax/n;
-    }
-  else
-    {
-    n = n + 1;
-    }
-
-  t = 0;
-  points->SetNumberOfPoints(0);
-  for (vtkIdType i = 0; i < n; i++)
-    {
-    double p[3];
-
-    p[0] = xspline->Evaluate(t);
-    p[1] = yspline->Evaluate(t);
-    p[2] = z;
-    points->InsertNextPoint(p);
-
-    t += delta;
-    if (i == n-2)
-      {
-      t = 0;
-      }
-    }
-
-  vtkIdType m = n;
-  lines->Initialize();
-  lines->InsertNextCell(m);
-  for (vtkIdType i = 0; i < n; i++)
-    {
-    lines->InsertCellPoint(i);
-    }
-  if (m > n)
-    {
-    lines->InsertCellPoint(0);
-    }
-
-  this->ContourData->Modified();
 }

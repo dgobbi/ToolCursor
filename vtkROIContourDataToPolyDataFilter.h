@@ -14,7 +14,10 @@
 // .NAME vtkROIContourDataToPolyDataFilter - Convert ROI contours to polydata
 // .SECTION Description
 // This filter will convert a set of contours that define an ROI into a
-// vtkPolyData consisting of verts and lines.
+// vtkPolyData consisting of verts and lines.  The resulting polydata will
+// have integer cell scalars called "Labels" to identify of the contour that
+// they originated from, and will have integer point scalars called "SubIds"
+// to indicate which line segment they correspond to.
 
 #ifndef __vtkROIContourDataToPolyDataFilter_h
 #define __vtkROIContourDataToPolyDataFilter_h
@@ -23,6 +26,10 @@
 
 class vtkROIContourData;
 class vtkPlane;
+class vtkSpline;
+class vtkPoints;
+class vtkCellArray;
+class vtkDoubleArray;
 
 class VTK_EXPORT vtkROIContourDataToPolyDataFilter : public vtkPolyDataAlgorithm
 {
@@ -44,6 +51,22 @@ public:
   vtkSetMacro(SelectionPlaneTolerance, double);
   vtkGetMacro(SelectionPlaneTolerance, double);
 
+  // Description:
+  // Smooth the contour by subdividing it with a spline.
+  vtkSetMacro(Subdivision, int);
+  vtkBooleanMacro(Subdivision, int);
+  vtkGetMacro(Subdivision, int);
+
+  // Description:
+  // The target segment length for subdivision.
+  vtkSetMacro(SubdivisionTarget, double);
+  vtkGetMacro(SubdivisionTarget, double);
+
+  // Description:
+  // Specify an instance of vtkSpline to use to perform the subdivision.
+  virtual void SetSpline(vtkSpline *spline);
+  vtkSpline *GetSpline() { return this->Spline; }
+
 protected:
   vtkROIContourDataToPolyDataFilter();
   ~vtkROIContourDataToPolyDataFilter();
@@ -59,8 +82,23 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
+  void ComputeSpline(
+    vtkPoints *points, int closed, double &tmax, double &dmax);
+
+  void GenerateSpline(
+    vtkPoints *contourPoints, int closed,
+    vtkPoints *points, vtkCellArray *lines);
+
   vtkPlane *SelectionPlane;
   double SelectionPlaneTolerance;
+  int Subdivision;
+  double SubdivisionTarget;
+  vtkSpline *Spline;
+
+  vtkSpline *SplineX;
+  vtkSpline *SplineY;
+  vtkSpline *SplineZ;
+  vtkDoubleArray *KnotPositions;
 
 private:
   vtkROIContourDataToPolyDataFilter(const vtkROIContourDataToPolyDataFilter&);  // Not implemented.
