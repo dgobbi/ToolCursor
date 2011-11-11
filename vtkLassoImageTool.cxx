@@ -229,22 +229,9 @@ void vtkLassoImageTool::StartAction()
         contourData->GetPointData()->GetArray("SubIds"));
 
       // Get the cell for this contour
-      vtkCellArray *lines = contourData->GetLines();
-      vtkCellArray *verts = contourData->GetVerts();
-      if (verts)
-        {
-        // verts come before lines, so adjust cell Id
-        cellId -= verts->GetNumberOfCells();
-        }
       vtkIdType npts, *pts;
-      vtkIdType l = 0;
-      vtkIdType icell = cellId + 1;
-      do
-        {
-        lines->GetCell(l, npts, pts);
-        l += npts + 1;
-        }
-      while (--icell > 0);
+      contourData->GetCellType(cellId);
+      contourData->GetCellPoints(cellId, npts, pts);
 
       // Get the pointId for insertion, and get the contourId
       subId = contourSubIds->GetValue(pts[subId + 1]);
