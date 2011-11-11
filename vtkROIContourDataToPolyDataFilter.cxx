@@ -389,16 +389,17 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
           if (!verts)
             {
             verts = vtkCellArray::New();
-            cells = verts;
             }
+          cells = verts;
           }
         else
           {
           if (!lines)
             {
             lines = vtkCellArray::New();
-            cells = lines;
             }
+          cells = lines;
+
           if (t == vtkROIContourData::CLOSED_PLANAR)
             {
             cellSize = m + 1;
@@ -469,7 +470,7 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
     }
 
   // assign colors to the output points
-  unsigned char color[3] = { 255, 0, 255 };
+  unsigned char color[3] = { 255, 0, 0 };
   vtkUnsignedCharArray *colors = vtkUnsignedCharArray::New();
   colors->SetNumberOfComponents(3);
   colors->SetName("Colors");
@@ -480,7 +481,7 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
     colors->SetTupleValue(j, color);
     }
 
-  //output->GetPointData()->SetScalars(colors);
+  output->GetPointData()->SetScalars(colors);
   colors->Delete();
 
   return 1;

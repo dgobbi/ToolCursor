@@ -71,6 +71,7 @@ protected:
   vtkMatrix4x4 *Matrix;
 
   vtkIdType CurrentPointId;
+  int CurrentContourId;
   double InitialPointPosition[3];
 
 private:

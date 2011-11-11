@@ -89,6 +89,7 @@ vtkLassoImageTool::vtkLassoImageTool()
   shapes->Delete();
 
   this->CurrentPointId = -1;
+  this->CurrentContourId = -1;
   this->InitialPointPosition[0] = 0;
   this->InitialPointPosition[1] = 1;
   this->InitialPointPosition[2] = 2;
@@ -139,9 +140,16 @@ void vtkLassoImageTool::StartAction()
   this->Superclass::StartAction();
 
   vtkToolCursor *cursor = this->GetToolCursor();
+  double position[3];
+  cursor->GetPosition(position);
 
+  // Tolerance for point selection
+  double tol = 3;
+
+  // Get the spline data and create a locator
   this->ROIDataToPolyData->Update();
-  vtkDataSet *contourData = this->ROIDataToPolyData->GetOutput();
+  vtkPolyData *contourData =
+    vtkPolyData::SafeDownCast(this->ROIDataToPolyData->GetOutput());
   vtkCellLocator *cellLocator = 0;
   if (contourData->GetNumberOfCells() > 0)
     {
@@ -150,51 +158,47 @@ void vtkLassoImageTool::StartAction()
     cellLocator->BuildLocator();
     }
 
-  double position[3];
-  cursor->GetPosition(position);
-
+  // Get the contour data
   vtkROIContourData *data = this->ROIData;
-  vtkPoints *points = 0;
-  if (data->GetNumberOfContours() == 0)
-    {
-    points = vtkPoints::New();
-    this->ROIData->SetNumberOfContours(1);
-    this->ROIData->SetContourPoints(0, points);
-    this->ROIData->SetContourType(0, vtkROIContourData::OPEN_PLANAR);
-    points->Delete();
-    }
-  else
-    {
-    points = this->ROIData->GetContourPoints(0);
-    }
-
-  // Is the mouse over a previous point?
-  double tol = 3;
+  int numContours = data->GetNumberOfContours();
   this->CurrentPointId = -1;
-  vtkIdType n = points->GetNumberOfPoints();
-  double p[3];
-  for (vtkIdType i = 0; i < n; i++)
+  this->CurrentContourId = -1;
+  double tol2 = tol*tol;
+  for (int ic = 0; ic < numContours; ic++)
     {
-    points->GetPoint(i, p);
-    if (vtkMath::Distance2BetweenPoints(position, p) < tol*tol)
+    // Check if mouse is over a point
+    vtkPoints *points = data->GetContourPoints(ic);
+    vtkIdType n = points->GetNumberOfPoints();
+    for (vtkIdType i = 0; i < n; i++)
       {
-      if (i == 0)
+      double p[3];
+      points->GetPoint(i, p);
+      double d2 = vtkMath::Distance2BetweenPoints(position, p);
+      if (d2 <= tol2)
         {
-        this->ROIData->SetContourType(0, vtkROIContourData::CLOSED_PLANAR);
+        tol2 = d2;
+        this->CurrentPointId = i;
+        this->CurrentContourId = ic;
+        this->InitialPointPosition[0] = p[0];
+        this->InitialPointPosition[1] = p[1];
+        this->InitialPointPosition[2] = p[2];
+        break;
         }
-      this->CurrentPointId = i;
-      this->InitialPointPosition[0] = p[0];
-      this->InitialPointPosition[1] = p[1];
-      this->InitialPointPosition[2] = p[2];
-      break;
       }
     }
 
-  if (this->CurrentPointId < 0)
+  if (this->CurrentPointId == 0)
+    {
+    // Clicked on first point: close the contour
+    this->ROIData->SetContourType(
+      this->CurrentContourId, vtkROIContourData::CLOSED_PLANAR);
+    }
+  else if (this->CurrentPointId < 0)
     {
     vtkIdType cellId;
     int subId;
     double d2;
+    double p[3];
     if (cellLocator &&
         (cellLocator->FindClosestPointWithinRadius(
          position, tol, p, cellId, subId, d2)))
@@ -203,25 +207,76 @@ void vtkLassoImageTool::StartAction()
         contourData->GetCellData()->GetArray("Labels"));
       vtkIntArray *contourSubIds = vtkIntArray::SafeDownCast(
         contourData->GetPointData()->GetArray("SubIds"));
-      int pointId = contourSubIds->GetValue(subId) + 1;
+
+      // Get the cell for this contour
+      vtkCellArray *lines = contourData->GetLines();
+      vtkCellArray *verts = contourData->GetVerts();
+      if (verts)
+        {
+        // verts come before lines, so adjust cell Id
+        cellId -= verts->GetNumberOfCells();
+        }
+      vtkIdType npts, *pts;
+      vtkIdType l = 0;
+      vtkIdType icell = cellId + 1;
+      do
+        {
+        lines->GetCell(l, npts, pts);
+        l += npts + 1;
+        }
+      while (--icell > 0);
+
+      // Get the pointId for insertion, and get the contourId
+      subId = contourSubIds->GetValue(pts[subId + 1]);
+      int contourId = contourIds->GetValue(cellId);
+      vtkPoints *points = data->GetContourPoints(contourId);
+
+      // Insert the point at the correct position
       int m = static_cast<int>(points->InsertNextPoint(p));
-      for (int i = m; i > pointId; --i)
+      for (int i = m; i > subId + 1; --i)
         {
         double ptmp[3];
         points->GetPoint(i-1, ptmp);
         points->SetPoint(i, ptmp); 
         }
-      points->SetPoint(pointId, p);
+      points->SetPoint(subId + 1, p);
 
-      this->CurrentPointId = pointId;
+      this->CurrentContourId = contourId;
+      this->CurrentPointId = subId + 1;
       this->InitialPointPosition[0] = p[0];
       this->InitialPointPosition[1] = p[1];
       this->InitialPointPosition[2] = p[2];
       }
-    else if (this->ROIData->GetContourType(0) !=
-             vtkROIContourData::CLOSED_PLANAR)
+
+    if (this->CurrentContourId < 0)
       {
+      // Check if there is an open contour
+      for (int i = 0; i < numContours; i++)
+        {
+        if (data->GetContourType(i) == vtkROIContourData::OPEN_PLANAR)
+          {
+          this->CurrentContourId = i;
+          }
+        }
+      }
+
+    if (this->CurrentContourId < 0)
+      {
+      // Create a new contour
+      vtkPoints *points = vtkPoints::New(VTK_DOUBLE);
       points->InsertNextPoint(position);
+      data->SetNumberOfContours(numContours+1);
+      data->SetContourPoints(numContours, points);
+      data->SetContourType(numContours, vtkROIContourData::OPEN_PLANAR);
+      }
+    else if (this->CurrentPointId < 0)
+      {
+      // Add a new point to the currently unclosed contour
+      vtkPoints *points = data->GetContourPoints(this->CurrentContourId);
+      this->CurrentPointId = points->InsertNextPoint(position);
+      this->InitialPointPosition[0] = position[0];
+      this->InitialPointPosition[1] = position[1];
+      this->InitialPointPosition[2] = position[2];
       }
 
     this->ROIData->Modified();
@@ -253,11 +308,12 @@ void vtkLassoImageTool::DoAction()
 
   double dx = position[0] - p0[0];
   double dy = position[1] - p0[1];
+  double dz = position[2] - p0[2];
 
   vtkPoints *points = 0;
-  if (this->ROIData->GetNumberOfContours() > 0)
+  if (this->CurrentContourId >= 0)
     {
-    points = this->ROIData->GetContourPoints(0);
+    points = this->ROIData->GetContourPoints(this->CurrentContourId);
     }
 
   if (points && this->CurrentPointId >= 0)
@@ -265,7 +321,7 @@ void vtkLassoImageTool::DoAction()
     double p[3];
     p[0] = this->InitialPointPosition[0] + dx;
     p[1] = this->InitialPointPosition[1] + dy;
-    p[2] = this->InitialPointPosition[2];
+    p[2] = this->InitialPointPosition[2] + dz;
     points->SetPoint(this->CurrentPointId, p);
 
     this->ROIData->Modified();
