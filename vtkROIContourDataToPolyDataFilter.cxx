@@ -181,14 +181,22 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
   // the length of the implicit segment for closed loops
   double lastd = 0;
 
-  if (closed && n > 1)
+  // verify that there are enough knots for the spline
+  if (n < 2)
+    {
+    tmax = 0;
+    dmax = 0;
+    return;
+    }
+
+  // get the first and last point
+  points->GetPoint(0, p0);
+
+  if (closed)
     {
     // require a tolerance, base it off the desired subdivision
     double tol = this->SubdivisionTarget*1e-3;
     tol *= tol;
-
-    // get the first and last point
-    points->GetPoint(0, p0);
 
     // ignore last point if same as first point
     vtkIdType m = n;
@@ -203,11 +211,12 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
     // set factor to scale the implicit segment to unity
     if (lastd > 0)
       {
-      f = 1.0/sqrt(lastd);
+      lastd = sqrt(lastd);
+      f = 1.0/lastd;
       }
     }
 
-  // verify that there are enough knots for the spline
+  // verify that there are still enough knots for the spline
   if (n < 2)
     {
     tmax = 0;
@@ -219,10 +228,6 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
   double d = 0.0;
   for (vtkIdType i = 0; i < n; i++)
     {
-    p0[0] = p[0];
-    p0[1] = p[1];
-    p0[2] = p[2];
-
     points->GetPoint(i, p);
     d += sqrt(vtkMath::Distance2BetweenPoints(p0, p));
 
@@ -232,6 +237,10 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
     yspline->AddPoint(t, p[1]);
     zspline->AddPoint(t, p[2]);
     knots->InsertNextValue(t);
+
+    p0[0] = p[0];
+    p0[1] = p[1];
+    p0[2] = p[2];
     }
 
   // do the spline precomputations
