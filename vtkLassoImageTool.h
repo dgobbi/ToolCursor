@@ -45,6 +45,12 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // The ROI data to interact with.
+  void SetROIContourData(vtkROIContourData *data);
+  vtkROIContourData *GetROIContourData() {
+    return this->ROIData; }
+
+  // Description:
   // Set the marker to use at each point.
   virtual void SetMarker(vtkPolyData *data);
   virtual vtkPolyData *GetMarker();

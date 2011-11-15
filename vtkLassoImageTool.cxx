@@ -119,6 +119,26 @@ void vtkLassoImageTool::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
+void vtkLassoImageTool::SetROIContourData(vtkROIContourData *data)
+{
+  if (data != this->ROIData)
+    {
+    if (this->ROIData)
+      {
+      this->ROIData->Delete();
+      }
+    this->ROIData = data;
+    if (this->ROIData)
+      {
+      this->ROIData->Register(this);
+      }
+    this->ROIDataToPointSet->SetInput(this->ROIData);
+    this->ROIDataToPolyData->SetInput(this->ROIData);
+    this->Modified();
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkLassoImageTool::SetMarker(vtkPolyData *data)
 {
   if (data != this->Glyph3D->GetSource())
