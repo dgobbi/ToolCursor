@@ -45,7 +45,7 @@ vtkROIContourDataToPolyDataFilter::vtkROIContourDataToPolyDataFilter()
   this->SplineX = 0;
   this->SplineY = 0;
   this->SplineZ = 0;
-  this->KnotPositions = vtkDoubleArray::New();
+  this->KnotPositions = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -145,8 +145,11 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
     if (this->Spline)
       {
       this->SplineX = this->Spline->NewInstance();
+      this->SplineX->DeepCopy(this->Spline);
       this->SplineY = this->Spline->NewInstance();
+      this->SplineY->DeepCopy(this->Spline);
       this->SplineZ = this->Spline->NewInstance();
+      this->SplineZ->DeepCopy(this->Spline);
       }
     else
       {
@@ -154,6 +157,10 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
       this->SplineY = vtkCardinalSpline::New();
       this->SplineZ = vtkCardinalSpline::New();
       }
+    }
+  if (this->KnotPositions == 0)
+    {
+    this->KnotPositions = vtkDoubleArray::New();
     }
 
   vtkSpline *xspline = this->SplineX;
@@ -416,7 +423,7 @@ int vtkROIContourDataToPolyDataFilter::RequestData(
             }
           }
 
-        if (this->Subdivision && t != vtkROIContourData::POINT)
+        if (this->Subdivision && m > 2 && t != vtkROIContourData::POINT)
           {
           // Use a spline to subdivide and smooth contour
           this->GenerateSpline(
