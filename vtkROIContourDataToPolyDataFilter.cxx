@@ -26,7 +26,7 @@
 #include "vtkCellData.h"
 #include "vtkPointData.h"
 #include "vtkPlane.h"
-#include "vtkCardinalSpline.h"
+#include "vtkKochanekSpline.h"
 #include "vtkMath.h"
 
 vtkStandardNewMacro(vtkROIContourDataToPolyDataFilter);
@@ -153,9 +153,9 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
       }
     else
       {
-      this->SplineX = vtkCardinalSpline::New();
-      this->SplineY = vtkCardinalSpline::New();
-      this->SplineZ = vtkCardinalSpline::New();
+      this->SplineX = vtkKochanekSpline::New();
+      this->SplineY = vtkKochanekSpline::New();
+      this->SplineZ = vtkKochanekSpline::New();
       }
     }
   if (this->KnotPositions == 0)
