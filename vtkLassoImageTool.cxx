@@ -207,7 +207,8 @@ void vtkLassoImageTool::StartAction()
       }
     }
 
-  if (this->CurrentPointId == 0)
+  if (this->CurrentPointId == 0 &&
+      data->GetContourPoints(this->CurrentContourId)->GetNumberOfPoints() > 2)
     {
     // Clicked on first point: close the contour
     this->ROIData->SetContourType(
