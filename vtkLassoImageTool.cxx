@@ -22,9 +22,11 @@
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkMatrix4x4.h"
+#include "vtkPlane.h"
 #include "vtkMath.h"
 #include "vtkGlyph3D.h"
 #include "vtkCellLocator.h"
+#include "vtkImageData.h"
 #include "vtkPoints.h"
 #include "vtkCellArray.h"
 #include "vtkPointData.h"
@@ -33,6 +35,7 @@
 #include "vtkPointData.h"
 #include "vtkActor.h"
 #include "vtkDataSetMapper.h"
+#include "vtkImageMapper3D.h"
 #include "vtkProperty.h"
 
 #include "vtkVolumePicker.h"
@@ -163,6 +166,29 @@ void vtkLassoImageTool::StartAction()
   double position[3];
   cursor->GetPosition(position);
 
+  double sliceTol = 0.5;
+  vtkPlane *plane = 0;
+  vtkImageMapper3D *imageMapper = this->CurrentImageMapper;
+  if (imageMapper)
+    {
+    plane = imageMapper->GetSlicePlane();
+    vtkImageData *data = imageMapper->GetInput();
+    if (data)
+      {
+      double spacing[3];
+      data->GetSpacing(spacing); 
+      // Assume contours are always drawn in the original scan orientation
+      if (0.5*spacing[2] < sliceTol)
+        {
+        sliceTol = 0.5*spacing[2];
+        }
+      }
+    this->ROIDataToPointSet->SetSelectionPlane(plane);
+    this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
+    this->ROIDataToPolyData->SetSelectionPlane(plane);
+    this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
+    }
+
   // Tolerance for point selection
   double tol = 3;
 
@@ -186,9 +212,22 @@ void vtkLassoImageTool::StartAction()
   double tol2 = tol*tol;
   for (int ic = 0; ic < numContours; ic++)
     {
-    // Check if mouse is over a point
     vtkPoints *points = data->GetContourPoints(ic);
     vtkIdType n = points->GetNumberOfPoints();
+
+    // Check if the contour is in the current slice
+    if (plane && n > 0)
+      {
+      double p[3];
+      points->GetPoint(0, p);
+      double d = fabs(plane->EvaluateFunction(p));
+      if (d >= sliceTol)
+        {
+        continue;
+        }
+      }
+
+    // Check if mouse is over a point
     for (vtkIdType i = 0; i < n; i++)
       {
       double p[3];
@@ -261,6 +300,21 @@ void vtkLassoImageTool::StartAction()
       // Check if there is an open contour
       for (int i = 0; i < numContours; i++)
         {
+        vtkPoints *points = data->GetContourPoints(i);
+        vtkIdType n = points->GetNumberOfPoints();
+
+        // Check if the contour is in the current slice
+        if (plane && n > 0)
+          {
+          double p[3];
+          points->GetPoint(0, p);
+          double d = fabs(plane->EvaluateFunction(p));
+          if (d >= sliceTol)
+            {
+            continue;
+            }
+          }
+
         if (data->GetContourType(i) == vtkROIContourData::OPEN_PLANAR)
           {
           this->CurrentContourId = i;
@@ -288,6 +342,7 @@ void vtkLassoImageTool::StartAction()
       }
 
     this->ROIData->Modified();
+
     cursor->GetRenderer()->AddViewProp(this->GlyphActor);
     cursor->GetRenderer()->AddViewProp(this->ContourActor);
     }
