@@ -14,6 +14,7 @@ SET(LIB_SRCS
   vtkFocalPlaneTool.cxx
   vtkGeometricCursorShapes.cxx
   vtkImageTool.cxx
+  vtkImageToROIContourData.cxx
   vtkLassoImageTool.cxx
   vtkOpacityTool.cxx
   vtkPanCameraTool.cxx
