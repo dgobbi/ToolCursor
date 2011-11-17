@@ -372,8 +372,6 @@ int vtkROIContourDataToPolyData::RequestData(
     vtkPoints *points = input->GetContourPoints(i);
     int t = input->GetContourType(i);
 
-    contourIds->InsertNextValue(i);
-
     if (points)
       {
       vtkIdType m = points->GetNumberOfPoints();
@@ -421,6 +419,12 @@ int vtkROIContourDataToPolyData::RequestData(
             cellSize = m + 1;
             closed = 1;
             }
+          }
+
+        // Add a scalar to allow identification of countour during picking
+        if (contourIds)
+          {
+          contourIds->InsertNextValue(i);
           }
 
         if (this->Subdivision && m > 2 && t != vtkROIContourData::POINT)
