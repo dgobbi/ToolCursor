@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ToolCursor
-  Module:    vtkROIContourDataToPolyDataFilter.h
+  Module:    vtkROIContourDataToPolyData.h
 
   Copyright (c) 2010 David Gobbi
   All rights reserved.
@@ -11,7 +11,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkROIContourDataToPolyDataFilter - Convert ROI contours to polydata
+// .NAME vtkROIContourDataToPolyData - Convert ROI contours to polydata
 // .SECTION Description
 // This filter will convert a set of contours that define an ROI into a
 // vtkPolyData consisting of verts and lines.  The resulting polydata will
@@ -19,8 +19,8 @@
 // they originated from, and will have integer point scalars called "SubIds"
 // to indicate which line segment they correspond to.
 
-#ifndef __vtkROIContourDataToPolyDataFilter_h
-#define __vtkROIContourDataToPolyDataFilter_h
+#ifndef __vtkROIContourDataToPolyData_h
+#define __vtkROIContourDataToPolyData_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -32,11 +32,11 @@ class vtkCellArray;
 class vtkDoubleArray;
 class vtkIntArray;
 
-class VTK_EXPORT vtkROIContourDataToPolyDataFilter : public vtkPolyDataAlgorithm
+class VTK_EXPORT vtkROIContourDataToPolyData : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkROIContourDataToPolyDataFilter *New();
-  vtkTypeMacro(vtkROIContourDataToPolyDataFilter,vtkPolyDataAlgorithm);
+  static vtkROIContourDataToPolyData *New();
+  vtkTypeMacro(vtkROIContourDataToPolyData,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -69,8 +69,8 @@ public:
   vtkSpline *GetSpline() { return this->Spline; }
 
 protected:
-  vtkROIContourDataToPolyDataFilter();
-  ~vtkROIContourDataToPolyDataFilter();
+  vtkROIContourDataToPolyData();
+  ~vtkROIContourDataToPolyData();
 
   virtual int ComputePipelineMTime(
     vtkInformation* request, vtkInformationVector** inputVector,
@@ -102,8 +102,8 @@ protected:
   vtkDoubleArray *KnotPositions;
 
 private:
-  vtkROIContourDataToPolyDataFilter(const vtkROIContourDataToPolyDataFilter&);  // Not implemented.
-  void operator=(const vtkROIContourDataToPolyDataFilter&);  // Not implemented.
+  vtkROIContourDataToPolyData(const vtkROIContourDataToPolyData&);  // Not implemented.
+  void operator=(const vtkROIContourDataToPolyData&);  // Not implemented.
 };
 
 #endif

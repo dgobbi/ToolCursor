@@ -16,7 +16,7 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkROIContourData.h"
-#include "vtkROIContourDataToPolyDataFilter.h"
+#include "vtkROIContourDataToPolyData.h"
 #include "vtkGeometricCursorShapes.h"
 #include "vtkToolCursor.h"
 #include "vtkCamera.h"
@@ -48,9 +48,9 @@ vtkLassoImageTool::vtkLassoImageTool()
 
   this->ROIData = vtkROIContourData::New();
 
-  this->ROIDataToPointSet = vtkROIContourDataToPolyDataFilter::New();
+  this->ROIDataToPointSet = vtkROIContourDataToPolyData::New();
   this->ROIDataToPointSet->SetInput(this->ROIData);
-  this->ROIDataToPolyData = vtkROIContourDataToPolyDataFilter::New();
+  this->ROIDataToPolyData = vtkROIContourDataToPolyData::New();
   this->ROIDataToPolyData->SetInput(this->ROIData);
   this->ROIDataToPolyData->SubdivisionOn();
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   ToolCursor
-  Module:    vtkROIContourDataToPolyDataFilter.cxx
+  Module:    vtkROIContourDataToPolyData.cxx
 
   Copyright (c) 2010 David Gobbi
   All rights reserved.
@@ -11,7 +11,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkROIContourDataToPolyDataFilter.h"
+#include "vtkROIContourDataToPolyData.h"
 
 #include "vtkROIContourData.h"
 #include "vtkInformation.h"
@@ -29,12 +29,12 @@
 #include "vtkKochanekSpline.h"
 #include "vtkMath.h"
 
-vtkStandardNewMacro(vtkROIContourDataToPolyDataFilter);
-vtkCxxSetObjectMacro(vtkROIContourDataToPolyDataFilter,SelectionPlane,vtkPlane);
-vtkCxxSetObjectMacro(vtkROIContourDataToPolyDataFilter,Spline,vtkSpline);
+vtkStandardNewMacro(vtkROIContourDataToPolyData);
+vtkCxxSetObjectMacro(vtkROIContourDataToPolyData,SelectionPlane,vtkPlane);
+vtkCxxSetObjectMacro(vtkROIContourDataToPolyData,Spline,vtkSpline);
 
 //----------------------------------------------------------------------------
-vtkROIContourDataToPolyDataFilter::vtkROIContourDataToPolyDataFilter()
+vtkROIContourDataToPolyData::vtkROIContourDataToPolyData()
 {
   this->SelectionPlane = NULL;
   this->SelectionPlaneTolerance = 0.5;
@@ -49,7 +49,7 @@ vtkROIContourDataToPolyDataFilter::vtkROIContourDataToPolyDataFilter()
 }
 
 //----------------------------------------------------------------------------
-vtkROIContourDataToPolyDataFilter::~vtkROIContourDataToPolyDataFilter()
+vtkROIContourDataToPolyData::~vtkROIContourDataToPolyData()
 {
   if (this->SelectionPlane)
     {
@@ -72,7 +72,7 @@ vtkROIContourDataToPolyDataFilter::~vtkROIContourDataToPolyDataFilter()
 }
 
 //----------------------------------------------------------------------------
-void vtkROIContourDataToPolyDataFilter::PrintSelf(ostream& os, vtkIndent indent)
+void vtkROIContourDataToPolyData::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
@@ -86,7 +86,7 @@ void vtkROIContourDataToPolyDataFilter::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-int vtkROIContourDataToPolyDataFilter::FillInputPortInformation(
+int vtkROIContourDataToPolyData::FillInputPortInformation(
   int, vtkInformation *info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkROIContourData");
@@ -94,7 +94,7 @@ int vtkROIContourDataToPolyDataFilter::FillInputPortInformation(
 }
 
 //----------------------------------------------------------------------------
-int vtkROIContourDataToPolyDataFilter::ComputePipelineMTime(
+int vtkROIContourDataToPolyData::ComputePipelineMTime(
   vtkInformation* vtkNotUsed(request),
   vtkInformationVector** vtkNotUsed(inputVector),
   vtkInformationVector* vtkNotUsed(outputVector),
@@ -126,7 +126,7 @@ int vtkROIContourDataToPolyDataFilter::ComputePipelineMTime(
 // The reference parameter tmax will be set to the maximum parameter
 // value for the spline, and dmax will be set to the full length of
 // the contour, computed by summing the lengths of the line segments.
-void vtkROIContourDataToPolyDataFilter::ComputeSpline(
+void vtkROIContourDataToPolyData::ComputeSpline(
   vtkPoints *points, int closed, double &tmax, double &dmax)
 {
   if (this->Spline && this->SplineX &&
@@ -269,7 +269,7 @@ void vtkROIContourDataToPolyDataFilter::ComputeSpline(
 
 
 //----------------------------------------------------------------------------
-void vtkROIContourDataToPolyDataFilter::GenerateSpline(
+void vtkROIContourDataToPolyData::GenerateSpline(
   vtkPoints *contourPoints, int closed,
   vtkPoints *points, vtkCellArray *lines, vtkIntArray *subIds)
 {
@@ -335,7 +335,7 @@ void vtkROIContourDataToPolyDataFilter::GenerateSpline(
 }
 
 //----------------------------------------------------------------------------
-int vtkROIContourDataToPolyDataFilter::RequestData(
+int vtkROIContourDataToPolyData::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)

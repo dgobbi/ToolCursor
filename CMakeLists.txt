@@ -19,7 +19,7 @@ SET(LIB_SRCS
   vtkPanCameraTool.cxx
   vtkPushPlaneTool.cxx
   vtkROIContourData.cxx
-  vtkROIContourDataToPolyDataFilter.cxx
+  vtkROIContourDataToPolyData.cxx
   vtkRotateCameraTool.cxx
   vtkSliceImageTool.cxx
   vtkSpinCameraTool.cxx

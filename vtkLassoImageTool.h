@@ -23,7 +23,7 @@
 
 class vtkMatrix4x4;
 class vtkROIContourData;
-class vtkROIContourDataToPolyDataFilter;
+class vtkROIContourDataToPolyData;
 class vtkGlyph3D;
 class vtkPoints;
 class vtkPolyData;
@@ -67,8 +67,8 @@ protected:
 
   vtkCellLocator *CellLocator;
   vtkROIContourData *ROIData;
-  vtkROIContourDataToPolyDataFilter *ROIDataToPointSet;
-  vtkROIContourDataToPolyDataFilter *ROIDataToPolyData;
+  vtkROIContourDataToPolyData *ROIDataToPointSet;
+  vtkROIContourDataToPolyData *ROIDataToPolyData;
   vtkGlyph3D *Glyph3D;
   vtkDataSetMapper *GlyphMapper;
   vtkActor *GlyphActor;
