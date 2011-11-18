@@ -277,6 +277,9 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
     return false;
     }
 
+  // Because InsertNextPoint is very slow
+  vtkDoubleArray *da = vtkDoubleArray::SafeDownCast(points->GetData());
+
   vtkIdType id0 = points->GetNumberOfPoints();
   double t0 = 0;
   double f = dmax/(tmax*this->SubdivisionTarget);
@@ -284,18 +287,21 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
     {
     double t1 = knots->GetValue(j);
     int n = vtkMath::Floor((t1 - t0)*f) + 1;
+    vtkIdType id = points->GetNumberOfPoints();
+    double *p = da->WritePointer(id*3, n*3);
     for (int i = 0; i < n; i++)
       {
       double t = (t0*(n-i) + t1*i)/n;
-      double p[3];
       p[0] = xspline->Evaluate(t);
       p[1] = yspline->Evaluate(t);
       p[2] = zspline->Evaluate(t);
-      points->InsertNextPoint(p);
-      if (subIds)
-        {
-        subIds->InsertNextValue(j-1);
-        }
+      p += 3;
+      }
+    if (subIds)
+      {
+      int *iptr = subIds->WritePointer(subIds->GetMaxId()+1, n);
+      int k = j-1;
+      do { *iptr++ = k; } while (--n);
       }
     t0 = t1;
     }
@@ -314,14 +320,18 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
     }
 
   vtkIdType id1 = points->GetNumberOfPoints();
-  lines->InsertNextCell(id1 - id0 + closed);
+  lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
+  vtkIdTypeArray *ia = lines->GetData();
+  vtkIdType cellSize = id1 - id0 + closed;
+  vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
+  *iptr++ = cellSize;
   for (vtkIdType id = id0; id < id1; id++)
     {
-    lines->InsertCellPoint(id);
+    *iptr++ = id;
     }
   if (closed)
     {
-    lines->InsertCellPoint(id0);
+    *iptr++ = id0;
     }
 
   // Free any memory that was used
@@ -368,6 +378,9 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
 
   // Save the initial size of the point array
   vtkIdType id0 = points->GetNumberOfPoints();
+
+  // For fast writing to point data
+  vtkDoubleArray *da = vtkDoubleArray::SafeDownCast(points->GetData());
 
   double p1[3], p0[3], p2[3];
   contourPoints->GetPoint(m-1, p2);
@@ -426,25 +439,27 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     cz[2] = 3.0*dz - dz2 - dz3;
     cz[3] = (-2.0)*dz + dz3;
 
+    vtkIdType id = points->GetNumberOfPoints();
+    double *q = da->WritePointer(3*id, 3*n);
     int i = n;
     do
       {
       double t2 = t*t;
       double t3 = t2*t;
-      double q[3];
       q[0] = cx[0] + t*cx[1] + t2*cx[2] + t3*cx[3];
       q[1] = cy[0] + t*cy[1] + t2*cy[2] + t3*cy[3];
       q[2] = cz[0] + t*cz[1] + t2*cz[2] + t3*cz[3];
 
-      points->InsertNextPoint(q);
-
+      q += 3;
       t += dt;
       }
     while (--i);
 
     if (subIds)
       {
-      do { subIds->InsertNextValue(j); } while (--n);
+      id = subIds->GetMaxId() + 1;
+      int *iptr = subIds->WritePointer(id, n);
+      do { *iptr++ = j; } while (--n);
       }
 
     p0[0] = p1[0];
@@ -474,14 +489,18 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     }
 
   vtkIdType id1 = points->GetNumberOfPoints();
-  lines->InsertNextCell(id1 - id0 + closed);
+  lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
+  vtkIdTypeArray *ia = lines->GetData();
+  vtkIdType cellSize = id1 - id0 + closed;
+  vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
+  *iptr++ = cellSize;
   for (vtkIdType id = id0; id < id1; id++)
     {
-    lines->InsertCellPoint(id);
+    *iptr++ = id;
     }
   if (closed)
     {
-    lines->InsertCellPoint(id0);
+    *iptr++ = id0;
     }
 
   return true;
@@ -593,25 +612,38 @@ int vtkROIContourDataToPolyData::RequestData(
         else
           {
           // Add the contour without subdivision
-          cells->InsertNextCell(cellSize);
+          cells->SetNumberOfCells(cells->GetNumberOfCells() + 1);
+          vtkIdTypeArray *ida = cells->GetData();
+          vtkIdType *idptr = ida->WritePointer(ida->GetMaxId()+1, cellSize+1);
+          *idptr++ = cellSize;
+
           vtkIdType firstPointId = outPoints->GetNumberOfPoints();
+
+          vtkDoubleArray *da =
+            vtkDoubleArray::SafeDownCast(outPoints->GetData());
+          vtkIdType id = firstPointId;
+          double *p = da->WritePointer(id*3, m*3);
 
           for (int j = 0; j < m; j++)
             {
-            double p[3];
             points->GetPoint(j, p);
-            vtkIdType pointId = outPoints->InsertNextPoint(p);
-            if (contourSubIds)
+            *idptr++ = id++;
+            p += 3;
+            }
+          if (contourSubIds)
+            {
+            id = contourSubIds->GetMaxId() + 1;
+            int *iptr = contourSubIds->WritePointer(id, m);
+            for (int j = 0; j < m; j++)
               {
-              contourSubIds->InsertNextValue(j);
+              *iptr++ = j;
               }
-            cells->InsertCellPoint(pointId);
             }
 
           // Close the contour, if necessary
           if (cellSize > m)
             {
-            cells->InsertCellPoint(firstPointId);
+            *idptr++ = firstPointId;
             }
           }
 
@@ -623,7 +655,6 @@ int vtkROIContourDataToPolyData::RequestData(
         }
       }
     }
-
 
   output->SetPoints(outPoints);
   output->SetLines(lines);
