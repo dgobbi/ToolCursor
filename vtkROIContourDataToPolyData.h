@@ -84,10 +84,14 @@ protected:
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
   void ComputeSpline(
-    vtkPoints *points, int closed, double &tmax, double &dmax);
+    vtkPoints *points, bool closed, double &tmax, double &dmax);
 
-  void GenerateSpline(
-    vtkPoints *contourPoints, int closed,
+  bool GenerateSpline(
+    vtkPoints *contourPoints, bool closed,
+    vtkPoints *points, vtkCellArray *lines, vtkIntArray *subIds);
+
+  bool CatmullRomSpline(
+    vtkPoints *contourPoints, bool closed,
     vtkPoints *points, vtkCellArray *lines, vtkIntArray *subIds);
 
   vtkPlane *SelectionPlane;
