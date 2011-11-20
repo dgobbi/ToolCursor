@@ -22,6 +22,8 @@
 #include "vtkAlgorithm.h"
 
 class vtkROIContourData;
+class vtkImageData;
+class vtkPolyData;
 
 class VTK_EXPORT vtkImageToROIContourData : public vtkAlgorithm
 {
@@ -72,6 +74,10 @@ protected:
 private:
   vtkImageToROIContourData(const vtkImageToROIContourData&);  // Not implemented.
   void operator=(const vtkImageToROIContourData&);  // Not implemented.
+
+  void MarchingSquares(
+    vtkImageData *input, vtkPolyData *output, int extent[6], double value);
+
 };
 
 #endif
