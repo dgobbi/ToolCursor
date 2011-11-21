@@ -364,6 +364,90 @@ void vtkImageToROIContourData::MarchingSquares(
 }
 
 //----------------------------------------------------------------------------
+void vtkReducePoints(vtkPoints *contourPoints)
+{
+  vtkPoints *points = vtkPoints::New(VTK_DOUBLE);
+  vtkIdType m = contourPoints->GetNumberOfPoints();
+
+  // Compute the curvature at each point
+  double p0[3], p1[3], p2[3], p3[3];
+  contourPoints->GetPoint(m-2, p3);
+  contourPoints->GetPoint(m-1, p0);
+  contourPoints->GetPoint(0, p1);
+  contourPoints->GetPoint(1, p2);
+  double d2 = sqrt(vtkMath::Distance2BetweenPoints(p3, p0));
+  double d0 = sqrt(vtkMath::Distance2BetweenPoints(p0, p1));
+  double d1 = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
+
+  double f = 1.0/(d2 + d0);
+  double dx0 = (p1[0] - p3[0])*f;
+  double dy0 = (p1[1] - p3[1])*f;
+  double dz0 = (p1[2] - p3[2])*f;
+
+  f = 1.0/(d0 + d1);
+  double dx1 = (p2[0] - p0[0])*f;
+  double dy1 = (p2[1] - p0[1])*f;
+  double dz1 = (p2[2] - p0[2])*f;
+
+  double dskip = d2;
+
+  for (vtkIdType j = 0; j < m; j++)
+    {
+    int jp2 = (j + 2) % m;
+    contourPoints->GetPoint(jp2, p3);
+    d2 = sqrt(vtkMath::Distance2BetweenPoints(p2, p3));
+
+    f = 1.0/(d1 + d2);
+    double dx2 = (p3[0] - p1[0])*f;
+    double dy2 = (p3[1] - p1[1])*f;
+    double dz2 = (p3[2] - p1[2])*f;
+
+    double xx = 0.5*( ( 6*p0[0] + 2*dx0 - 6*p1[0] + 4*dx1) +
+                      (-6*p1[0] - 4*dx1 + 6*p2[0] - 2*dx2) );
+
+    double yy = 0.5*( ( 6*p0[1] + 2*dy0 - 6*p1[1] + 4*dy1) +
+                      (-6*p1[1] - 4*dy1 + 6*p2[1] - 2*dy2) );
+
+    double zz = 0.5*( ( 6*p0[2] + 2*dz0 - 6*p1[2] + 4*dz1) +
+                      (-6*p1[2] - 4*dz1 + 6*p2[2] - 2*dz2) );
+
+    double curvature = sqrt(xx*xx + yy*yy + zz*zz);
+
+    dskip += d0;
+    if (curvature*dskip > 10)
+      {
+      points->InsertNextPoint(p1);
+      dskip = 0;
+      }
+
+    p0[0] = p1[0];
+    p0[1] = p1[1];
+    p0[2] = p1[2];
+
+    p1[0] = p2[0];
+    p1[1] = p2[1];
+    p1[2] = p2[2];
+
+    p2[0] = p3[0];
+    p2[1] = p3[1];
+    p2[2] = p3[2];
+
+    dx0 = dx1;
+    dy0 = dy1;
+    dz0 = dz1;
+
+    dx1 = dx2;
+    dy1 = dy2;
+    dz1 = dz2;
+
+    d0 = d1;
+    d1 = d2;
+    }
+
+  contourPoints->DeepCopy(points);
+}
+
+//----------------------------------------------------------------------------
 int vtkImageToROIContourData::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -432,6 +516,8 @@ int vtkImageToROIContourData::RequestData(
           sliceLines->GetCell(3*currentId, numPts, ptIds);
           }
         while (ptIds[0] >= 0);
+
+        vtkReducePoints(points);
 
         output->SetNumberOfContours(contourId + 1);
         output->SetContourPoints(contourId, points);
