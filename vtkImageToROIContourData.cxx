@@ -402,19 +402,30 @@ void vtkReducePoints(vtkPoints *contourPoints)
     double dy2 = (p3[1] - p1[1])*f;
     double dz2 = (p3[2] - p1[2])*f;
 
-    double xx = 0.5*( ( 6*p0[0] + 2*dx0 - 6*p1[0] + 4*dx1) +
-                      (-6*p1[0] - 4*dx1 + 6*p2[0] - 2*dx2) );
+    double f0 = 0.5/(d0*d0);
+    double f1 = 0.5/(d1*d1);
 
-    double yy = 0.5*( ( 6*p0[1] + 2*dy0 - 6*p1[1] + 4*dy1) +
-                      (-6*p1[1] - 4*dy1 + 6*p2[1] - 2*dy2) );
+    double xx = ( ( 6*p0[0] + 2*dx0*d0 - 6*p1[0] + 4*dx1*d0)*f0 +
+                  (-6*p1[0] - 4*dx1*d1 + 6*p2[0] - 2*dx2*d1)*f1 );
 
-    double zz = 0.5*( ( 6*p0[2] + 2*dz0 - 6*p1[2] + 4*dz1) +
-                      (-6*p1[2] - 4*dz1 + 6*p2[2] - 2*dz2) );
+    double yy = ( ( 6*p0[1] + 2*dy0*d0 - 6*p1[1] + 4*dy1*d0)*f0 +
+                  (-6*p1[1] - 4*dy1*d1 + 6*p2[1] - 2*dy2*d1)*f1 );
+
+    double zz = ( ( 6*p0[2] + 2*dz0*d0 - 6*p1[2] + 4*dz1*d0)*f0 +
+                  (-6*p1[2] - 4*dz1*d1 + 6*p2[2] - 2*dz2*d1)*f1 );
 
     double curvature = sqrt(xx*xx + yy*yy + zz*zz);
 
+    double f2 = 2.0/(d0 + d1);
+    double xx2 = ((p2[0] - p1[0])/d1 - (p1[0] - p0[0])/d0)*f2;
+    double yy2 = ((p2[1] - p1[1])/d1 - (p1[1] - p0[1])/d0)*f2;
+    double zz2 = ((p2[2] - p1[2])/d1 - (p1[2] - p0[2])/d0)*f2;
+
+    double curvature2 = sqrt(xx2*xx2 + yy2*yy2 + zz2*zz2);
+
     dskip += d0;
-    if (curvature*dskip > 10)
+
+    if (curvature2*dskip > 5)
       {
       points->InsertNextPoint(p1);
       dskip = 0;
@@ -445,6 +456,7 @@ void vtkReducePoints(vtkPoints *contourPoints)
     }
 
   contourPoints->DeepCopy(points);
+  points->Delete();
 }
 
 //----------------------------------------------------------------------------
