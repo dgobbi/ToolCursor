@@ -415,9 +415,9 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     double dx3 = dx2 + d0*dx1;
     double cx[4];
     cx[0] = x0;
-    cx[1] = d0*dx0;
-    cx[2] = 3.0*dx - dx2 - dx3;
-    cx[3] = (-2.0)*dx + dx3;
+    cx[1] = dx2;
+    cx[2] = dx + dx + dx - dx2 - dx3;
+    cx[3] = dx3 - dx - dx;
 
     double y0 = p0[1];
     double dy = p1[1] - y0;
@@ -425,9 +425,9 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     double dy3 = dy2 + d0*dy1;
     double cy[4];
     cy[0] = y0;
-    cy[1] = d0*dy0;
-    cy[2] = 3.0*dy - dy2 - dy3;
-    cy[3] = (-2.0)*dy + dy3;
+    cy[1] = dy2;
+    cy[2] = dy + dy + dy - dy2 - dy3;
+    cy[3] = dy3 - dy - dy;
 
     double z0 = p0[2];
     double dz = p1[2] - z0;
@@ -435,9 +435,9 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     double dz3 = dz2 + d0*dz1;
     double cz[4];
     cz[0] = z0;
-    cz[1] = d0*dz0;
-    cz[2] = 3.0*dz - dz2 - dz3;
-    cz[3] = (-2.0)*dz + dz3;
+    cz[1] = dz2;
+    cz[2] = dz + dz + dz - dz2 - dz3;
+    cz[3] = dz3 - dz - dz;
 
     vtkIdType id = points->GetNumberOfPoints();
     double *q = da->WritePointer(3*id, 3*n);
