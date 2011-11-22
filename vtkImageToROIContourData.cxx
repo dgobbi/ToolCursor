@@ -370,7 +370,7 @@ void vtkReducePoints(vtkPoints *contourPoints)
   vtkPoints *points = vtkPoints::New(VTK_DOUBLE);
   vtkIdType m = contourPoints->GetNumberOfPoints();
 
-  if (m < 5)
+  if (m <= 4)
     {
     return;
     }
@@ -387,6 +387,7 @@ void vtkReducePoints(vtkPoints *contourPoints)
 
   double dskip = d0;
 
+  vtkIdType n = 0;
   for (vtkIdType j = 0; j < m; j++)
     {
     int jp1 = (j + 1) % m;
@@ -406,13 +407,13 @@ void vtkReducePoints(vtkPoints *contourPoints)
 
     double curvature = sqrt(ddx*ddx + ddy*ddy + ddz*ddz);
 
-    if (curvature*dskip > 10)
+    dskip += d1;
+    if (dskip*curvature > 15 || (n + m - j - 1) <= 4)
       {
       points->InsertNextPoint(p0);
-      dskip = 0;
+      n++;
+      dskip = d1;
       }
-
-    dskip += d1;
 
     p0[0] = p1[0];
     p0[1] = p1[1];
