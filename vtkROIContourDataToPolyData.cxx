@@ -593,7 +593,7 @@ int vtkROIContourDataToPolyData::RequestData(
 
         // Cell requires extra point id if contour is closed
         vtkIdType cellSize = m + closed;
-        bool success = true;
+        bool success = false;
 
         if (this->Subdivision && m > 2 && t != vtkROIContourData::POINT)
           {
@@ -609,7 +609,7 @@ int vtkROIContourDataToPolyData::RequestData(
               points, closed, outPoints, lines, contourSubIds);
             }
           }
-        else
+        else if (m > 0)
           {
           // Add the contour without subdivision
           cells->SetNumberOfCells(cells->GetNumberOfCells() + 1);
@@ -645,6 +645,7 @@ int vtkROIContourDataToPolyData::RequestData(
             {
             *idptr++ = firstPointId;
             }
+          success = true;
           }
 
         // Add a scalar to allow identification of countour
