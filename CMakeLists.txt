@@ -34,6 +34,10 @@ SET(LIB_SRCS
   vtkZoomCameraTool.cxx
 )
 
+SET(EXAMPLES
+  LassoImageTool
+)
+
 # The remainder of this file can usually be left alone
 
 FIND_PACKAGE(VTK REQUIRED)
@@ -45,6 +49,11 @@ ENDIF(VTK_USE_CARBON)
 
 ADD_LIBRARY(${LIB_NAME} STATIC ${LIB_SRCS})
 TARGET_LINK_LIBRARIES(${LIB_NAME} ${LIB_VTK_LIBS})
+
+FOREACH(EXAMPLE ${EXAMPLES})
+  ADD_EXECUTABLE(${EXAMPLE} ${EXAMPLE}.cxx)
+  TARGET_LINK_LIBRARIES(${EXAMPLE} ${LIB_NAME})
+ENDFOREACH(EXAMPLE ${EXAMPLES})
 
 # Need to include class headers and the configuration header.
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})

@@ -342,10 +342,41 @@ void vtkLassoImageTool::StartAction()
       }
 
     this->ROIData->Modified();
-
-    cursor->GetRenderer()->AddViewProp(this->GlyphActor);
-    cursor->GetRenderer()->AddViewProp(this->ContourActor);
     }
+}
+
+//----------------------------------------------------------------------------
+void vtkLassoImageTool::AddViewPropsToRenderer(vtkRenderer *renderer)
+{
+  vtkPlane *plane = this->ROIDataToPointSet->GetSelectionPlane();
+
+  if (plane == NULL)
+    {
+    vtkCamera *camera = renderer->GetActiveCamera();
+
+    plane = vtkPlane::New();
+    plane->SetOrigin(camera->GetFocalPoint());
+    plane->SetNormal(camera->GetDirectionOfProjection());
+
+    double sliceTol = 0.25;
+
+    this->ROIDataToPointSet->SetSelectionPlane(plane);
+    this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
+    this->ROIDataToPolyData->SetSelectionPlane(plane);
+    this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
+
+    plane->Delete();
+    }
+
+  renderer->AddViewProp(this->GlyphActor);
+  renderer->AddViewProp(this->ContourActor);
+}
+
+//----------------------------------------------------------------------------
+void vtkLassoImageTool::RemoveViewPropsFromRenderer(vtkRenderer *renderer)
+{
+  renderer->RemoveViewProp(this->GlyphActor);
+  renderer->RemoveViewProp(this->ContourActor);
 }
 
 //----------------------------------------------------------------------------

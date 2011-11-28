@@ -31,6 +31,7 @@ class vtkPointSet;
 class vtkDataSetMapper;
 class vtkCellLocator;
 class vtkActor;
+class vtkRenderer;
 
 class VTK_EXPORT vtkLassoImageTool : public vtkImageTool
 {
@@ -60,6 +61,11 @@ public:
   virtual void StartAction();
   virtual void StopAction();
   virtual void DoAction();
+
+  // Description:
+  // Add any associated items to the renderer.
+  virtual void AddViewPropsToRenderer(vtkRenderer *renderer);
+  virtual void RemoveViewPropsFromRenderer(vtkRenderer *renderer);
 
 protected:
   vtkLassoImageTool();
