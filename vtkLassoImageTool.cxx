@@ -37,6 +37,8 @@
 #include "vtkDataSetMapper.h"
 #include "vtkImageMapper3D.h"
 #include "vtkProperty.h"
+#include "vtkAssemblyPath.h"
+#include "vtkImageSlice.h"
 
 #include "vtkVolumePicker.h"
 
@@ -348,7 +350,52 @@ void vtkLassoImageTool::StartAction()
 //----------------------------------------------------------------------------
 void vtkLassoImageTool::AddViewPropsToRenderer(vtkRenderer *renderer)
 {
-  vtkPlane *plane = this->ROIDataToPointSet->GetSelectionPlane();
+  // Search the renderer to find the currently active image
+  vtkPropCollection *props = renderer->GetViewProps();
+  vtkProp *prop = 0;
+  vtkAssemblyPath *path;
+  vtkImageMapper3D *mapper = 0;
+  vtkCollectionSimpleIterator pit;
+
+  for (props->InitTraversal(pit); (prop = props->GetNextProp(pit)); )
+    {
+    for (prop->InitPathTraversal(); (path = prop->GetNextPath()); )
+      {
+      vtkProp *tryProp = path->GetLastNode()->GetViewProp();
+      if (tryProp->GetVisibility())
+        {
+        vtkImageSlice *imageProp = 0;
+
+        if ((imageProp = vtkImageSlice::SafeDownCast(tryProp)) != 0)
+          {
+          mapper = imageProp->GetMapper();
+          }
+        }
+      }
+    }
+
+  double sliceTol = 0.5;
+  vtkPlane *plane = 0;
+
+  if (mapper)
+    {
+    plane = mapper->GetSlicePlane();
+    vtkImageData *data = mapper->GetInput();
+    if (data)
+      {
+      double spacing[3];
+      data->GetSpacing(spacing);
+      // Assume contours are always drawn in the original scan orientation
+      if (0.5*spacing[2] < sliceTol)
+        {
+        sliceTol = 0.5*spacing[2];
+        }
+      }
+    }
+  else
+    {
+    plane = this->ROIDataToPointSet->GetSelectionPlane();
+    }
 
   if (plane == NULL)
     {
@@ -357,16 +404,18 @@ void vtkLassoImageTool::AddViewPropsToRenderer(vtkRenderer *renderer)
     plane = vtkPlane::New();
     plane->SetOrigin(camera->GetFocalPoint());
     plane->SetNormal(camera->GetDirectionOfProjection());
-
-    double sliceTol = 0.25;
-
-    this->ROIDataToPointSet->SetSelectionPlane(plane);
-    this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
-    this->ROIDataToPolyData->SetSelectionPlane(plane);
-    this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
-
-    plane->Delete();
     }
+  else
+    {
+    plane->Register(this);
+    }
+
+  this->ROIDataToPointSet->SetSelectionPlane(plane);
+  this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
+  this->ROIDataToPolyData->SetSelectionPlane(plane);
+  this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
+
+  plane->Delete();
 
   renderer->AddViewProp(this->GlyphActor);
   renderer->AddViewProp(this->ContourActor);
