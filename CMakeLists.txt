@@ -9,7 +9,6 @@ SET(LIB_NAME vtk${PROJECT_NAME})
 SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
 SET(LIB_SRCS
   vtkActionCursorShapes.cxx
-  vtkClipOutlineWithPlanes.cxx
   vtkFiducialPointsTool.cxx
   vtkFocalPlaneTool.cxx
   vtkGeometricCursorShapes.cxx
@@ -29,7 +28,6 @@ SET(LIB_SRCS
   vtkToolCursorInteractorObserver.cxx
   vtkCursorShapes.cxx
   vtkSystemCursorShapes.cxx
-  vtkVolumeCroppingOutline.cxx
   vtkWindowLevelTool.cxx
   vtkZoomCameraTool.cxx
 )

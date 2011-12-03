@@ -46,8 +46,8 @@
 #include "vtkRotateCameraTool.h"
 #include "vtkSpinCameraTool.h"
 #include "vtkZoomCameraTool.h"
-#include "vtkVolumeCroppingOutline.h"
-#include "vtkClipOutlineWithPlanes.h"
+#include "vtkVolumeOutlineSource.h"
+#include "vtkClipClosedSurface.h"
 
 vtkStandardNewMacro(vtkToolCursor);
 
@@ -152,14 +152,16 @@ vtkToolCursor::vtkToolCursor()
   this->RenderCommand = vtkToolCursorRenderCommand::New(this);
 
   // Volume cropping actor items
-  this->VolumeCroppingSource = vtkVolumeCroppingOutline::New();
+  this->VolumeCroppingSource = vtkVolumeOutlineSource::New();
   this->VolumeCroppingSource->GenerateScalarsOn();
   this->VolumeCroppingSource->GenerateFacesOn();
   this->VolumeCroppingSource->SetColor(1, 0, 0);
   this->VolumeCroppingSource->SetActivePlaneColor(0, 1, 0);
 
-  this->ClipOutlineFilter = vtkClipOutlineWithPlanes::New();
-  this->ClipOutlineFilter->GenerateScalarsOn();
+  this->ClipOutlineFilter = vtkClipClosedSurface::New();
+  this->ClipOutlineFilter->SetScalarModeToColors();
+  this->ClipOutlineFilter->GenerateFacesOff();
+  this->ClipOutlineFilter->GenerateOutlineOn();
   this->ClipOutlineFilter->SetBaseColor(1, 0, 0);
   this->ClipOutlineFilter->SetActivePlaneColor(0, 1, 0);
   this->ClipOutlineFilter->SetInputConnection(
@@ -736,6 +738,7 @@ void vtkToolCursor::CheckGuideVisibility()
 {
   vtkVolumeMapper *mapper =
     vtkVolumeMapper::SafeDownCast(this->Picker->GetMapper());
+  vtkProp3D *prop = this->Picker->GetProp3D();
 
   if (mapper &&
       ((((this->PickFlags & VTK_TOOL_CROP_PLANE) &&
@@ -757,6 +760,7 @@ void vtkToolCursor::CheckGuideVisibility()
       croppingPlaneId = this->Picker->GetCroppingPlaneId();
       }
 
+    this->VolumeCroppingActor->SetUserMatrix(prop->GetMatrix());
     this->VolumeCroppingActor->SetVisibility(1);
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
     this->VolumeCroppingSource->SetActivePlaneId(croppingPlaneId);
@@ -765,6 +769,7 @@ void vtkToolCursor::CheckGuideVisibility()
     }
   else
     {
+    this->VolumeCroppingActor->SetUserMatrix(0);
     this->VolumeCroppingActor->SetVisibility(0);
     this->VolumeCroppingSource->SetVolumeMapper(0);
     this->VolumeCroppingSource->SetActivePlaneId(-1);
