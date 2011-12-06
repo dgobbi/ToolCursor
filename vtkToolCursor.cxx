@@ -36,6 +36,8 @@
 #include "vtkMath.h"
 #include "vtkVolumePicker.h"
 #include "vtkCommand.h"
+#include "vtkVolumeOutlineSource.h"
+#include "vtkClipClosedSurface.h"
 
 #include "vtkCursorShapes.h"
 #include "vtkActionCursorShapes.h"
@@ -46,8 +48,7 @@
 #include "vtkRotateCameraTool.h"
 #include "vtkSpinCameraTool.h"
 #include "vtkZoomCameraTool.h"
-#include "vtkVolumeOutlineSource.h"
-#include "vtkClipClosedSurface.h"
+#include "vtkFollowerPlane.h"
 
 vtkStandardNewMacro(vtkToolCursor);
 
@@ -760,12 +761,34 @@ void vtkToolCursor::CheckGuideVisibility()
       croppingPlaneId = this->Picker->GetCroppingPlaneId();
       }
 
+    vtkPlaneCollection *mapperPlanes = mapper->GetClippingPlanes();
+    vtkPlaneCollection *clippingPlanes = 0;
+    if (mapperPlanes)
+      {
+      clippingPlanes = vtkPlaneCollection::New();
+      int n = mapperPlanes->GetNumberOfItems();
+      for (int i = 0; i < n; i++)
+        {
+        vtkFollowerPlane *plane = vtkFollowerPlane::New();
+        plane->SetFollowPlane(mapperPlanes->GetItem(i));
+        plane->SetFollowMatrix(prop->GetMatrix());
+        plane->InvertFollowMatrixOn();
+        clippingPlanes->AddItem(plane);
+        plane->Delete();
+        }
+      }
+
     this->VolumeCroppingActor->SetUserMatrix(prop->GetMatrix());
     this->VolumeCroppingActor->SetVisibility(1);
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
     this->VolumeCroppingSource->SetActivePlaneId(croppingPlaneId);
-    this->ClipOutlineFilter->SetClippingPlanes(mapper->GetClippingPlanes());
+    this->ClipOutlineFilter->SetClippingPlanes(clippingPlanes);
     this->ClipOutlineFilter->SetActivePlaneId(clippingPlaneId);
+
+    if (clippingPlanes)
+      {
+      clippingPlanes->Delete();
+      }
     }
   else
     {

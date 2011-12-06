@@ -11,6 +11,7 @@ SET(LIB_SRCS
   vtkActionCursorShapes.cxx
   vtkFiducialPointsTool.cxx
   vtkFocalPlaneTool.cxx
+  vtkFollowerPlane.cxx
   vtkGeometricCursorShapes.cxx
   vtkImageTool.cxx
   vtkImageToROIContourData.cxx
