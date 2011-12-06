@@ -229,6 +229,7 @@ int main (int argc, char *argv[])
   sourceMapper->SetInput(sourceImage);
   sourceMapper->SliceAtFocalPointOn();
   sourceMapper->SliceFacesCameraOn();
+  sourceMapper->JumpToNearestSliceOn();
   sourceMapper->ResampleToScreenPixelsOff();
 
   double sourceRange[2];
@@ -317,8 +318,8 @@ int main (int argc, char *argv[])
   imageBlur->SetInput(sourceImage);
   imageBlur->SetStandardDeviations(4,4,4);
 
-  // set threshold to half of the data range
-  double threshold = 0.5*(sourceRange[0]+sourceRange[1]);
+  // set threshold to 10% of the data range
+  double threshold = 0.1*(sourceRange[0]+sourceRange[1]);
 
   // generate an ROI from the mask
   vtkSmartPointer<vtkImageToROIContourData> maskToROI =
@@ -334,6 +335,7 @@ int main (int argc, char *argv[])
 
   // add the ROI data to the tool
   lassoTool->SetROIContourData(roiData);
+  lassoTool->SetROIMatrix(sourceMatrix);
   lassoTool->AddViewPropsToRenderer(renderer);
 
   // convert the ROI into a new mask
@@ -359,6 +361,7 @@ int main (int argc, char *argv[])
     vtkSmartPointer<vtkImageResliceMapper>::New();
   maskMapper->SliceFacesCameraOn();
   maskMapper->SliceAtFocalPointOn();
+  maskMapper->JumpToNearestSliceOn();
   maskMapper->SetInputConnection(applyStencil->GetOutputPort());
 
   vtkSmartPointer<vtkLookupTable> maskLUT =
@@ -381,6 +384,7 @@ int main (int argc, char *argv[])
 
   vtkSmartPointer<vtkImageSlice> maskSlice =
     vtkSmartPointer<vtkImageSlice>::New();
+  maskSlice->SetUserMatrix(sourceMatrix);
   maskSlice->SetMapper(maskMapper);
   maskSlice->SetProperty(maskProperty);
 

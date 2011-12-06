@@ -22,6 +22,7 @@
 #include "vtkImageTool.h"
 
 class vtkMatrix4x4;
+class vtkTransform;
 class vtkROIContourData;
 class vtkROIContourDataToPolyData;
 class vtkGlyph3D;
@@ -32,6 +33,7 @@ class vtkDataSetMapper;
 class vtkCellLocator;
 class vtkActor;
 class vtkRenderer;
+class vtkFollowerPlane;
 
 class VTK_EXPORT vtkLassoImageTool : public vtkImageTool
 {
@@ -50,6 +52,12 @@ public:
   void SetROIContourData(vtkROIContourData *data);
   vtkROIContourData *GetROIContourData() {
     return this->ROIData; }
+
+  // Description:
+  // The matrix to use when rendering the contour data.
+  void SetROIMatrix(vtkMatrix4x4 *matrix);
+  vtkMatrix4x4 *GetROIMatrix() {
+    return this->ROIMatrix; }
 
   // Description:
   // Set the marker to use at each point.
@@ -73,6 +81,8 @@ protected:
 
   vtkCellLocator *CellLocator;
   vtkROIContourData *ROIData;
+  vtkMatrix4x4 *ROIMatrix;
+  vtkFollowerPlane *ROISelectionPlane;
   vtkROIContourDataToPolyData *ROIDataToPointSet;
   vtkROIContourDataToPolyData *ROIDataToPolyData;
   vtkGlyph3D *Glyph3D;
@@ -80,7 +90,7 @@ protected:
   vtkActor *GlyphActor;
   vtkDataSetMapper *ContourMapper;
   vtkActor *ContourActor;
-  vtkMatrix4x4 *Matrix;
+  vtkTransform *OffsetTransform;
 
   vtkIdType CurrentPointId;
   int CurrentContourId;

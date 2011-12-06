@@ -15,6 +15,7 @@
 #include "vtkLassoImageTool.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkFollowerPlane.h"
 #include "vtkROIContourData.h"
 #include "vtkROIContourDataToPolyData.h"
 #include "vtkGeometricCursorShapes.h"
@@ -22,6 +23,8 @@
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkMatrix4x4.h"
+#include "vtkTransform.h"
+#include "vtkMatrixToLinearTransform.h"
 #include "vtkPlane.h"
 #include "vtkMath.h"
 #include "vtkGlyph3D.h"
@@ -47,7 +50,16 @@ vtkStandardNewMacro(vtkLassoImageTool);
 //----------------------------------------------------------------------------
 vtkLassoImageTool::vtkLassoImageTool()
 {
-  this->Matrix = vtkMatrix4x4::New();
+  this->ROIMatrix = 0;
+  this->ROISelectionPlane = vtkFollowerPlane::New();
+  this->ROISelectionPlane->InvertFollowMatrixOn();
+
+  vtkMatrixToLinearTransform *matrixTransform =
+    vtkMatrixToLinearTransform::New();
+  this->OffsetTransform = vtkTransform::New();
+  this->OffsetTransform->SetInput(matrixTransform);
+  this->OffsetTransform->PostMultiply();
+  matrixTransform->Delete();
 
   vtkGeometricCursorShapes *shapes = vtkGeometricCursorShapes::New();
 
@@ -55,8 +67,10 @@ vtkLassoImageTool::vtkLassoImageTool()
 
   this->ROIDataToPointSet = vtkROIContourDataToPolyData::New();
   this->ROIDataToPointSet->SetInput(this->ROIData);
+  this->ROIDataToPointSet->SetSelectionPlane(this->ROISelectionPlane);
   this->ROIDataToPolyData = vtkROIContourDataToPolyData::New();
   this->ROIDataToPolyData->SetInput(this->ROIData);
+  this->ROIDataToPolyData->SetSelectionPlane(this->ROISelectionPlane);
   this->ROIDataToPolyData->SubdivisionOn();
 
   this->Glyph3D = vtkGlyph3D::New();
@@ -75,7 +89,7 @@ vtkLassoImageTool::vtkLassoImageTool()
   this->GlyphActor->SetMapper(this->GlyphMapper);
   this->GlyphActor->GetProperty()->SetColor(1,0,0);
   this->GlyphActor->GetProperty()->LightingOff();
-  this->GlyphActor->SetUserMatrix(this->Matrix);
+  this->GlyphActor->SetUserTransform(this->OffsetTransform);
 
   this->ContourMapper = vtkDataSetMapper::New();
   this->ContourMapper->SetInputConnection(this->ROIDataToPolyData->GetOutputPort());
@@ -87,7 +101,7 @@ vtkLassoImageTool::vtkLassoImageTool()
   this->ContourActor->GetProperty()->LightingOff();
   //this->ContourActor->GetProperty()->SetLineStipplePattern(0xe0e0e0e0);
   this->ContourActor->GetProperty()->SetLineStipplePattern(0xfcfcfcfc);
-  this->ContourActor->SetUserMatrix(this->Matrix);
+  this->ContourActor->SetUserTransform(this->OffsetTransform);
 
   this->CellLocator = vtkCellLocator::New();
 
@@ -107,9 +121,14 @@ vtkLassoImageTool::~vtkLassoImageTool()
     {
     this->ROIData->Delete();
     }
+  if (this->ROIMatrix)
+    {
+    this->ROIMatrix->Delete();
+    }
 
+  this->OffsetTransform->Delete();
   this->CellLocator->Delete();
-  this->Matrix->Delete();
+  this->ROISelectionPlane->Delete();
   this->ROIDataToPointSet->Delete();
   this->ROIDataToPolyData->Delete();
   this->Glyph3D->Delete();
@@ -121,6 +140,27 @@ vtkLassoImageTool::~vtkLassoImageTool()
 void vtkLassoImageTool::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkLassoImageTool::SetROIMatrix(vtkMatrix4x4 *matrix)
+{
+  if (matrix != this->ROIMatrix)
+    {
+    if (this->ROIMatrix)
+      {
+      this->ROIMatrix->Delete();
+      }
+    this->ROIMatrix = matrix;
+    if (this->ROIMatrix)
+      {
+      this->ROIMatrix->Register(this);
+      }
+    this->ROISelectionPlane->SetFollowMatrix(this->ROIMatrix);
+    static_cast<vtkMatrixToLinearTransform *>(
+      this->OffsetTransform->GetInput())->SetInput(this->ROIMatrix);
+    this->Modified();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -165,29 +205,36 @@ void vtkLassoImageTool::StartAction()
   this->Superclass::StartAction();
 
   vtkToolCursor *cursor = this->GetToolCursor();
-  double position[3];
+
+  // Get position, convert to ROI data coords
+  double position[4];
   cursor->GetPosition(position);
+  position[3] = 1.0;
+  if (this->ROIMatrix)
+    {
+    double invmatrix[16];
+    vtkMatrix4x4::Invert(*this->ROIMatrix->Element, invmatrix);
+    vtkMatrix4x4::MultiplyPoint(invmatrix, position, position);
+    }
+  this->ROISelectionPlane->ProjectPoint(position, position);
 
   double sliceTol = 0.5;
-  vtkPlane *plane = 0;
   vtkImageMapper3D *imageMapper = this->CurrentImageMapper;
   if (imageMapper)
     {
-    plane = imageMapper->GetSlicePlane();
+    this->ROISelectionPlane->SetFollowPlane(imageMapper->GetSlicePlane());
     vtkImageData *data = imageMapper->GetInput();
     if (data)
       {
       double spacing[3];
-      data->GetSpacing(spacing); 
+      data->GetSpacing(spacing);
       // Assume contours are always drawn in the original scan orientation
       if (0.5*spacing[2] < sliceTol)
         {
         sliceTol = 0.5*spacing[2];
         }
       }
-    this->ROIDataToPointSet->SetSelectionPlane(plane);
     this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
-    this->ROIDataToPolyData->SetSelectionPlane(plane);
     this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
     }
 
@@ -218,11 +265,11 @@ void vtkLassoImageTool::StartAction()
     vtkIdType n = points->GetNumberOfPoints();
 
     // Check if the contour is in the current slice
-    if (plane && n > 0)
+    if (n > 0)
       {
       double p[3];
       points->GetPoint(0, p);
-      double d = fabs(plane->EvaluateFunction(p));
+      double d = fabs(this->ROISelectionPlane->EvaluateFunction(p));
       if (d >= sliceTol)
         {
         continue;
@@ -286,7 +333,7 @@ void vtkLassoImageTool::StartAction()
         {
         double ptmp[3];
         points->GetPoint(i-1, ptmp);
-        points->SetPoint(i, ptmp); 
+        points->SetPoint(i, ptmp);
         }
       points->SetPoint(subId + 1, p);
 
@@ -306,11 +353,11 @@ void vtkLassoImageTool::StartAction()
         vtkIdType n = points->GetNumberOfPoints();
 
         // Check if the contour is in the current slice
-        if (plane && n > 0)
+        if (n > 0)
           {
           double p[3];
           points->GetPoint(0, p);
-          double d = fabs(plane->EvaluateFunction(p));
+          double d = fabs(this->ROISelectionPlane->EvaluateFunction(p));
           if (d >= sliceTol)
             {
             continue;
@@ -345,6 +392,10 @@ void vtkLassoImageTool::StartAction()
 
     this->ROIData->Modified();
     }
+
+  // Generate an offset to avoid Z buffer problems
+  this->OffsetTransform->Identity();
+  this->OffsetTransform->Translate(this->ROISelectionPlane->GetNormal());
 }
 
 //----------------------------------------------------------------------------
@@ -375,11 +426,10 @@ void vtkLassoImageTool::AddViewPropsToRenderer(vtkRenderer *renderer)
     }
 
   double sliceTol = 0.5;
-  vtkPlane *plane = 0;
 
   if (mapper)
     {
-    plane = mapper->GetSlicePlane();
+    this->ROISelectionPlane->SetFollowPlane(mapper->GetSlicePlane());
     vtkImageData *data = mapper->GetInput();
     if (data)
       {
@@ -394,28 +444,26 @@ void vtkLassoImageTool::AddViewPropsToRenderer(vtkRenderer *renderer)
     }
   else
     {
-    plane = this->ROIDataToPointSet->GetSelectionPlane();
-    }
-
-  if (plane == NULL)
-    {
     vtkCamera *camera = renderer->GetActiveCamera();
 
-    plane = vtkPlane::New();
+    vtkPlane *plane = vtkPlane::New();
     plane->SetOrigin(camera->GetFocalPoint());
-    plane->SetNormal(camera->GetDirectionOfProjection());
-    }
-  else
-    {
-    plane->Register(this);
+    double normal[3];
+    camera->GetDirectionOfProjection(normal);
+    normal[0] = -normal[0];
+    normal[1] = -normal[1];
+    normal[2] = -normal[2];
+    plane->SetNormal(normal);
+    this->ROISelectionPlane->SetFollowPlane(plane);
+    plane->Delete();
     }
 
-  this->ROIDataToPointSet->SetSelectionPlane(plane);
   this->ROIDataToPointSet->SetSelectionPlaneTolerance(sliceTol);
-  this->ROIDataToPolyData->SetSelectionPlane(plane);
   this->ROIDataToPolyData->SetSelectionPlaneTolerance(sliceTol);
 
-  plane->Delete();
+  // Generate an offset to avoid Z-buffer issues
+  this->OffsetTransform->Identity();
+  this->OffsetTransform->Translate(this->ROISelectionPlane->GetNormal());
 
   renderer->AddViewProp(this->GlyphActor);
   renderer->AddViewProp(this->ContourActor);
@@ -442,12 +490,25 @@ void vtkLassoImageTool::DoAction()
   vtkToolCursor *cursor = this->GetToolCursor();
 
   // Get the initial point.
-  double p0[3];
+  double p0[4];
   this->GetStartPosition(p0);
+  p0[3] = 1.0;
 
   // Get the current position
-  double position[3];
+  double position[4];
   cursor->GetPosition(position);
+  position[3] = 1.0;
+
+  // Convert positions from world coords to data coords
+  if (this->ROIMatrix)
+    {
+    double invmatrix[16];
+    vtkMatrix4x4::Invert(*this->ROIMatrix->Element, invmatrix);
+    vtkMatrix4x4::MultiplyPoint(invmatrix, p0, p0);
+    vtkMatrix4x4::MultiplyPoint(invmatrix, position, position);
+    }
+  this->ROISelectionPlane->ProjectPoint(p0, p0);
+  this->ROISelectionPlane->ProjectPoint(position, position);
 
   double dx = position[0] - p0[0];
   double dy = position[1] - p0[1];
