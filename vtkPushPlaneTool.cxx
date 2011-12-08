@@ -19,8 +19,10 @@
 #include "vtkVolumePicker.h"
 #include "vtkProp3DCollection.h"
 #include "vtkImageActor.h"
+#include "vtkImageStack.h"
 #include "vtkLODProp3D.h"
 #include "vtkVolumeMapper.h"
+#include "vtkImageResliceMapper.h"
 #include "vtkPlaneCollection.h"
 #include "vtkPlane.h"
 #include "vtkTransform.h"
@@ -39,6 +41,7 @@ vtkPushPlaneTool::vtkPushPlaneTool()
   this->ImageActor = 0;
   this->LODProp3D = 0;
   this->VolumeMapper = 0;
+  this->ImageMapper = 0;
   this->Mapper = 0;
   this->PlaneId = -1;
   this->PerpendicularPlane = 0;
@@ -252,12 +255,21 @@ void vtkPushPlaneTool::GetPropInformation()
   vtkVolumePicker *picker = cursor->GetPicker();
 
   vtkProp3D *prop = picker->GetProp3D();
+  this->Mapper = picker->GetMapper();
+  if (prop && !this->Mapper)
+    {
+    vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
+    if (imageStack)
+      {
+      this->Mapper = imageStack->GetMapper();
+      }
+    }
 
   this->Transform->SetMatrix(prop->GetMatrix());
   this->ImageActor = vtkImageActor::SafeDownCast(prop);
   this->LODProp3D = vtkLODProp3D::SafeDownCast(prop);
-  this->Mapper = picker->GetMapper();
   this->VolumeMapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
+  this->ImageMapper = vtkImageMapper3D::SafeDownCast(this->Mapper);
 
   // Initialize plane to "no plane" value
   this->PlaneId = -1;
@@ -268,6 +280,11 @@ void vtkPushPlaneTool::GetPropInformation()
     this->Mapper = 0;
     this->PlaneId = picker->GetCroppingPlaneId();
     }
+  else if (this->ImageMapper)
+    {
+    this->Mapper = 0;
+    this->PlaneId = 0;
+    }
   else
     {
     this->VolumeMapper = 0;
@@ -276,13 +293,13 @@ void vtkPushPlaneTool::GetPropInformation()
 
   // Create a PlaneId for image actor.
   if (this->ImageActor)
-   {
-   int extent[6];
-   this->ImageActor->GetDisplayExtent(extent);
-   this->PlaneId = 4;
-   if (extent[2] == extent[3]) { this->PlaneId = 2; }
-   else if (extent[0] == extent[1]) { this->PlaneId = 0; }
-   }
+    {
+    int extent[6];
+    this->ImageActor->GetDisplayExtent(extent);
+    this->PlaneId = 4;
+    if (extent[2] == extent[3]) { this->PlaneId = 2; }
+    else if (extent[0] == extent[1]) { this->PlaneId = 0; }
+    }
 
   if (this->PlaneId >= 0)
     {
@@ -294,12 +311,19 @@ void vtkPushPlaneTool::GetPropInformation()
 
 //----------------------------------------------------------------------------
 void vtkPushPlaneTool::GetPlaneOriginAndNormal(double origin[3],
-                                                 double normal[3])
+                                               double normal[3])
 {
   if (this->Mapper)
     {
     vtkPlane *plane =
       this->Mapper->GetClippingPlanes()->GetItem(this->PlaneId);
+
+    plane->GetNormal(normal);
+    plane->GetOrigin(origin);
+    }
+  else if (this->ImageMapper)
+    {
+    vtkPlane *plane = this->ImageMapper->GetSlicePlane();
 
     plane->GetNormal(normal);
     plane->GetOrigin(origin);
@@ -364,6 +388,14 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
     // Bounding checks needed!
 
     plane->SetOrigin(origin);
+    }
+  else if (this->ImageMapper &&
+           vtkImageResliceMapper::SafeDownCast(this->ImageMapper))
+    {
+    vtkImageResliceMapper *resliceMapper =
+      static_cast<vtkImageResliceMapper *>(this->ImageMapper);
+
+    resliceMapper->GetSlicePlane()->SetOrigin(origin);
     }
   else
     {

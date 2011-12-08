@@ -21,6 +21,8 @@
 #include "vtkVolume.h"
 #include "vtkVolumeMapper.h"
 #include "vtkImageActor.h"
+#include "vtkImageStack.h"
+#include "vtkImageMapper3D.h"
 #include "vtkProp3DCollection.h"
 #include "vtkPlaneCollection.h"
 #include "vtkPlane.h"
@@ -619,18 +621,26 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
       }
     }
 
-  if (mapper && mapper->IsA("vtkMapper"))
+  if (prop->IsA("vtkImageActor"))
+    {
+    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
+    }
+  else if (prop->IsA("vtkImageStack"))
+    {
+    mapper = static_cast<vtkImageStack *>(prop)->GetMapper();
+    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
+    }
+  else if (mapper && mapper->IsA("vtkImageMapper3D"))
+    {
+    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
+    }
+  else if (mapper && mapper->IsA("vtkMapper"))
     {
     pickFlags = (pickFlags | VTK_TOOL_ACTOR);
     }
   else if (mapper && mapper->IsA("vtkAbstractVolumeMapper"))
     {
     pickFlags = (pickFlags | VTK_TOOL_VOLUME);
-    }
-  else if (prop->IsA("vtkImageSlice") ||
-           prop->IsA("vtkImageActor"))
-    {
-    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
     }
 
   return pickFlags;

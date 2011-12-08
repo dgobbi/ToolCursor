@@ -13,7 +13,7 @@
 =========================================================================*/
 // .NAME vtkPushPlaneTool - Controls plane-pushing action.
 // .SECTION Description
-// This class controls the "push" interaction for vtkImageActor slices,
+// This class controls the "push" interaction for vtkImageSlice slices,
 // vtkVolumeMapper cropping planes, or clipping planes on all types of
 // mappers.
 
@@ -24,6 +24,7 @@
 
 class vtkImageActor;
 class vtkVolumeMapper;
+class vtkImageMapper3D;
 class vtkAbstractMapper3D;
 class vtkLODProp3D;
 class vtkTransform;
@@ -57,6 +58,7 @@ protected:
   vtkTransform *Transform;
   vtkImageActor *ImageActor;
   vtkVolumeMapper *VolumeMapper;
+  vtkImageMapper3D *ImageMapper;
   vtkAbstractMapper3D *Mapper;
   vtkLODProp3D *LODProp3D;
   int PlaneId;
