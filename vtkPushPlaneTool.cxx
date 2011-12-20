@@ -196,10 +196,36 @@ void vtkPushPlaneTool::DoAction()
     distance = (c*d - b*e)/(a*c - b*b);
     }
 
-  // Moving relative to the original position provides a more stable
-  // interaction that moving relative to the last position.
+  // Get the origin from before interaction began
   double origin[3];
   this->GetStartOrigin(origin);
+
+  // Constrain motion to the clipping bounds
+  if (this->ImageMapper)
+    {
+    int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
+    vtkPlaneCollection *planes = this->ImageMapper->GetClippingPlanes();
+    for (int i = 0; i < numClipPlanes; i++)
+      {
+      double pn[3], po[3];
+      vtkPlane *plane = planes->GetItem(i);
+      plane->GetOrigin(po);
+      plane->GetNormal(pn);
+
+      double d0 = pn[0]*po[0] + pn[1]*po[1] + pn[2]*po[2];
+      double d1 = pn[0]*origin[0] + pn[1]*origin[1] + pn[2]*origin[2] - d0;
+      double d2 = pn[0]*normal[0] + pn[1]*normal[1] + pn[2]*normal[2];
+
+      double tol = 0.1;
+      if (d1 + d2*distance < tol)
+        {
+        distance = (tol - d1)/d2;
+        }
+      }
+    }
+
+  // Moving relative to the original position provides a more stable
+  // interaction that moving relative to the last position.
   origin[0] = origin[0] + distance*normal[0];
   origin[1] = origin[1] + distance*normal[1];
   origin[2] = origin[2] + distance*normal[2];
