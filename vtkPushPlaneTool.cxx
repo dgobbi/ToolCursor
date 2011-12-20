@@ -203,6 +203,7 @@ void vtkPushPlaneTool::DoAction()
   // Constrain motion to the clipping bounds
   if (this->ImageMapper)
     {
+    // clipping planes
     int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
     vtkPlaneCollection *planes = this->ImageMapper->GetClippingPlanes();
     for (int i = 0; i < numClipPlanes; i++)
@@ -220,6 +221,40 @@ void vtkPushPlaneTool::DoAction()
       if (d1 + d2*distance < tol)
         {
         distance = (tol - d1)/d2;
+        }
+      }
+
+    // data bounds
+    vtkImageData *input = this->ImageMapper->GetInput();
+    double io[3], is[3], bounds[6];
+    int extent[6];
+    input->GetWholeExtent(extent);
+    input->GetSpacing(is);
+    input->GetOrigin(io);
+
+    // get matrix for transforming normals
+    double nmatrix[16];
+    vtkMatrix4x4::Invert(*this->Transform->GetMatrix()->Element, nmatrix);
+    vtkMatrix4x4::Transpose(nmatrix, nmatrix);
+
+    // check against all six bounds
+    for (int j = 0; j < 6; j++)
+      {
+      int k = (j>>1);
+      double plane[4] = { 0.0, 0.0, 0.0, 0.0 };
+      int ssgn = (is[k] < 0);
+      plane[k] = 1.0 - (((j&1) ^ ssgn) << 1);
+      plane[3] = -plane[k]*(extent[j]*is[k] + io[k]);
+      vtkMatrix4x4::MultiplyPoint(nmatrix, plane, plane);
+
+      double d1 = plane[3];
+      double d2 = 0.0;
+      d1 += plane[0]*origin[0] + plane[1]*origin[1] + plane[2]*origin[2];
+      d2 += plane[0]*normal[0] + plane[1]*normal[1] + plane[2]*normal[2];
+
+      if (d1 + d2*distance < 0.0)
+        {
+        distance = -d1/d2;
         }
       }
     }
