@@ -41,6 +41,8 @@ class vtkTool;
 class vtkCursorShapes;
 class vtkVolumeOutlineSource;
 class vtkClipClosedSurface;
+class vtkOutlineSource;
+class vtkCutter;
 
 // Modifier keys and mouse buttons.
 #define VTK_TOOL_SHIFT        0x0001
@@ -283,6 +285,11 @@ protected:
   vtkDataSetMapper *VolumeCroppingMapper;
   vtkVolumeOutlineSource *VolumeCroppingSource;
   vtkClipClosedSurface *ClipOutlineFilter;
+
+  vtkActor *SliceOutlineActor;
+  vtkDataSetMapper *SliceOutlineMapper;
+  vtkOutlineSource *SliceOutlineSource;
+  vtkCutter *SliceOutlineCutter;
 
   // Description:
   // Set the modifier bits.  This is protected because SetModifierBits()

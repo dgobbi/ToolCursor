@@ -40,6 +40,8 @@
 #include "vtkCommand.h"
 #include "vtkVolumeOutlineSource.h"
 #include "vtkClipClosedSurface.h"
+#include "vtkOutlineSource.h"
+#include "vtkCutter.h"
 
 #include "vtkCursorShapes.h"
 #include "vtkActionCursorShapes.h"
@@ -180,6 +182,25 @@ vtkToolCursor::vtkToolCursor()
   this->VolumeCroppingActor->SetVisibility(0);
   this->VolumeCroppingActor->GetProperty()->BackfaceCullingOn();
 
+  // Plane guide actor items
+  this->SliceOutlineSource = vtkOutlineSource::New();
+  this->SliceOutlineSource->GenerateFacesOn();
+
+  this->SliceOutlineCutter = vtkCutter::New();
+  this->SliceOutlineCutter->SetInputConnection(
+    this->SliceOutlineSource->GetOutputPort());
+
+  this->SliceOutlineMapper = vtkDataSetMapper::New();
+  this->SliceOutlineMapper->SetInputConnection(
+    this->SliceOutlineCutter->GetOutputPort());
+
+  this->SliceOutlineActor = vtkActor::New();
+  this->SliceOutlineActor->SetMapper(this->SliceOutlineMapper);
+  this->SliceOutlineActor->SetPickable(0);
+  this->SliceOutlineActor->SetVisibility(0);
+  this->SliceOutlineActor->GetProperty()->BackfaceCullingOn();
+  this->SliceOutlineActor->GetProperty()->SetColor(0,1,0);
+
   // For debugging triangularization: show poly outlines
   //this->ClipOutlineFilter->GenerateFacesOn();
   //this->VolumeCroppingActor->GetProperty()->SetRepresentationToWireframe();
@@ -194,6 +215,11 @@ vtkToolCursor::~vtkToolCursor()
   if (this->VolumeCroppingMapper) { this->VolumeCroppingMapper->Delete(); }
   if (this->ClipOutlineFilter) { this->ClipOutlineFilter->Delete(); }
   if (this->VolumeCroppingSource) { this->VolumeCroppingSource->Delete(); }
+
+  if (this->SliceOutlineActor) { this->SliceOutlineActor->Delete(); }
+  if (this->SliceOutlineMapper) { this->SliceOutlineMapper->Delete(); }
+  if (this->SliceOutlineCutter) { this->SliceOutlineCutter->Delete(); }
+  if (this->SliceOutlineSource) { this->SliceOutlineSource->Delete(); }
 
   if (this->RenderCommand) { this->RenderCommand->Delete(); }
   if (this->Matrix) { this->Matrix->Delete(); }
@@ -414,6 +440,7 @@ void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
     this->Renderer->RemoveObserver(this->RenderCommand);
     this->Renderer->RemoveActor(this->Actor);
     this->Renderer->RemoveActor(this->VolumeCroppingActor);
+    this->Renderer->RemoveActor(this->SliceOutlineActor);
     this->Renderer->Delete();
     this->Renderer = 0;
     }
@@ -424,6 +451,7 @@ void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
     this->Renderer->Register(this);
     this->Renderer->AddActor(this->Actor);
     this->Renderer->AddActor(this->VolumeCroppingActor);
+    this->Renderer->AddActor(this->SliceOutlineActor);
     this->Renderer->AddObserver(vtkCommand::StartEvent,
                                 this->RenderCommand, -1);
     }
@@ -808,6 +836,41 @@ void vtkToolCursor::CheckGuideVisibility()
     this->VolumeCroppingSource->SetActivePlaneId(-1);
     this->ClipOutlineFilter->SetActivePlaneId(-1);
     this->ClipOutlineFilter->SetClippingPlanes(0);
+    }
+
+  vtkImageMapper3D *imageMapper =
+    vtkImageMapper3D::SafeDownCast(this->Picker->GetMapper());
+  vtkImageSlice *imageSlice = vtkImageSlice::SafeDownCast(prop);
+
+  if (imageMapper == 0 && imageSlice != 0)
+    {
+    imageMapper = imageSlice->GetMapper();
+    }
+
+  if (imageMapper && this->PickFlags & VTK_TOOL_IMAGE_ACTOR)
+    {
+    vtkFollowerPlane *plane =
+      vtkFollowerPlane::SafeDownCast(
+        this->SliceOutlineCutter->GetCutFunction());
+    if (plane == NULL)
+      {
+      plane = vtkFollowerPlane::New();
+      this->SliceOutlineCutter->SetCutFunction(plane);
+      plane->Delete();
+      }
+    plane->SetFollowPlane(imageMapper->GetSlicePlane());
+    plane->SetFollowMatrix(prop->GetMatrix());
+    plane->InvertFollowMatrixOn();
+
+    this->SliceOutlineActor->SetUserMatrix(prop->GetMatrix());
+    this->SliceOutlineActor->SetVisibility(1);
+    this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
+    }
+  else
+    {
+    this->SliceOutlineActor->SetUserMatrix(0);
+    this->SliceOutlineActor->SetVisibility(0);
+    this->SliceOutlineCutter->SetCutFunction(0);
     }
 }
 
