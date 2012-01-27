@@ -840,6 +840,11 @@ void vtkToolCursor::CheckGuideVisibility()
 
   vtkImageMapper3D *imageMapper =
     vtkImageMapper3D::SafeDownCast(this->Picker->GetMapper());
+  vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
+  if (imageStack)
+    {
+    prop = imageStack->GetActiveImage();
+    }
   vtkImageSlice *imageSlice = vtkImageSlice::SafeDownCast(prop);
 
   if (imageMapper == 0 && imageSlice != 0)

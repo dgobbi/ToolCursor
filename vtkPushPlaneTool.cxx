@@ -232,6 +232,14 @@ void vtkPushPlaneTool::DoAction()
     input->GetSpacing(is);
     input->GetOrigin(io);
 
+    // get the center of the volume
+    double point[3];
+    point[0] = 0.5*(extent[0] + extent[1])*is[0] + io[0];
+    point[1] = 0.5*(extent[2] + extent[3])*is[1] + io[1];
+    point[2] = 0.5*(extent[4] + extent[5])*is[2] + io[2];
+    this->Transform->TransformPoint(point, point);
+    vtkPlane::ProjectPoint(point, origin, normal, point);
+
     // get matrix for transforming normals
     double nmatrix[16];
     vtkMatrix4x4::Invert(*this->Transform->GetMatrix()->Element, nmatrix);
@@ -243,13 +251,14 @@ void vtkPushPlaneTool::DoAction()
       int k = (j>>1);
       double plane[4] = { 0.0, 0.0, 0.0, 0.0 };
       int ssgn = (is[k] < 0);
-      plane[k] = 1.0 - (((j&1) ^ ssgn) << 1);
+      int isodd = (j&1);
+      plane[k] = 1.0 - 2*(isodd ^ ssgn);
       plane[3] = -plane[k]*(extent[j]*is[k] + io[k]);
       vtkMatrix4x4::MultiplyPoint(nmatrix, plane, plane);
 
       double d1 = plane[3];
       double d2 = 0.0;
-      d1 += plane[0]*origin[0] + plane[1]*origin[1] + plane[2]*origin[2];
+      d1 += plane[0]*point[0] + plane[1]*point[1] + plane[2]*point[2];
       d2 += plane[0]*normal[0] + plane[1]*normal[1] + plane[2]*normal[2];
 
       if (d1 + d2*distance < 0.0)
@@ -317,13 +326,11 @@ void vtkPushPlaneTool::GetPropInformation()
 
   vtkProp3D *prop = picker->GetProp3D();
   this->Mapper = picker->GetMapper();
-  if (prop && !this->Mapper)
+  vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
+  if (imageStack)
     {
-    vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
-    if (imageStack)
-      {
-      this->Mapper = imageStack->GetMapper();
-      }
+    this->Mapper = imageStack->GetMapper();
+    prop = imageStack->GetActiveImage();
     }
 
   this->Transform->SetMatrix(prop->GetMatrix());
