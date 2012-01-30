@@ -126,9 +126,6 @@ void vtkFiducialPointsTool::StartAction()
 {
   this->Superclass::StartAction();
 
-  vtkToolCursor *cursor = this->GetToolCursor();
-  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
-
   this->Transform->Identity();
 }
 
@@ -142,9 +139,6 @@ void vtkFiducialPointsTool::StopAction()
 void vtkFiducialPointsTool::DoAction()
 {
   this->Superclass::DoAction();
-
-  vtkToolCursor *cursor = this->GetToolCursor();
-  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   // Get the initial point.
   double p0[3];

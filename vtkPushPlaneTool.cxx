@@ -226,7 +226,7 @@ void vtkPushPlaneTool::DoAction()
 
     // data bounds
     vtkImageData *input = this->ImageMapper->GetInput();
-    double io[3], is[3], bounds[6];
+    double io[3], is[3];
     int extent[6];
     input->GetWholeExtent(extent);
     input->GetSpacing(is);

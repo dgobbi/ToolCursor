@@ -355,9 +355,9 @@ void vtkLassoImageTool::StartAction()
         // Check if the contour is in the current slice
         if (n > 0)
           {
-          double p[3];
-          points->GetPoint(0, p);
-          double d = fabs(this->ROISelectionPlane->EvaluateFunction(p));
+          double q[3];
+          points->GetPoint(0, q);
+          double d = fabs(this->ROISelectionPlane->EvaluateFunction(q));
           if (d >= sliceTol)
             {
             continue;

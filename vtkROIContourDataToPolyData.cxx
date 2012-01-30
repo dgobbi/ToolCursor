@@ -400,7 +400,7 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     int jp2 = (j + 2) % m;
     contourPoints->GetPoint(jp2, p2);
     d1 = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
-    double f = 1.0/(d0 + d1)*(closed | ((j+2) < m));
+    f = 1.0/(d0 + d1)*(closed | ((j+2) < m));
     double dx1 = (p2[0] - p0[0])*f;
     double dy1 = (p2[1] - p0[1])*f;
     double dz1 = (p2[2] - p0[2])*f;
