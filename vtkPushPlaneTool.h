@@ -67,6 +67,7 @@ protected:
   double StartOrigin[3];
   double Origin[3];
   double Normal[3];
+  double DistanceLimits[2];
 
   int IsPlaneValid() { return (this->PlaneId >= 0); };
 

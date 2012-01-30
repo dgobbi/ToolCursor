@@ -64,6 +64,9 @@ vtkPushPlaneTool::vtkPushPlaneTool()
   this->StartOrigin[0] = 0.0;
   this->StartOrigin[1] = 0.0;
   this->StartOrigin[2] = 0.0;
+
+  this->DistanceLimits[0] = -VTK_LARGE_FLOAT;
+  this->DistanceLimits[1] = +VTK_LARGE_FLOAT;
 }
 
 //----------------------------------------------------------------------------
@@ -85,6 +88,10 @@ void vtkPushPlaneTool::StartAction()
 
   // Get all the necessary information about the picked prop.
   this->GetPropInformation();
+
+  // Used for caching the distance limits
+  this->DistanceLimits[0] = -VTK_LARGE_FLOAT;
+  this->DistanceLimits[1] = +VTK_LARGE_FLOAT;
 
   // Check whether the normal is perpendicular to the view plane.
   // If it is, then we can't use the usual interaction calculations.
@@ -203,8 +210,16 @@ void vtkPushPlaneTool::DoAction()
   double origin[3];
   this->GetStartOrigin(origin);
 
+  if (distance < this->DistanceLimits[0])
+    {
+    distance = this->DistanceLimits[0];
+    }
+  else if (distance > this->DistanceLimits[1])
+    {
+    distance = this->DistanceLimits[1];
+    }
   // Constrain motion to the clipping bounds
-  if (this->ImageMapper)
+  else if (this->ImageMapper)
     {
     // clipping planes
     int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
@@ -332,6 +347,14 @@ void vtkPushPlaneTool::DoAction()
         {
         distance = 0;
         break;
+        }
+      if (dinc < 0)
+        {
+        this->DistanceLimits[1] = distance;
+        }
+      else
+        {
+        this->DistanceLimits[0] = distance;
         }
       }
 
