@@ -23,8 +23,11 @@
 #include "vtkLODProp3D.h"
 #include "vtkVolumeMapper.h"
 #include "vtkImageResliceMapper.h"
+#include "vtkImageReslice.h"
+#include "vtkImageHistogramStatistics.h"
 #include "vtkPlaneCollection.h"
 #include "vtkPlane.h"
+#include "vtkResliceMath.h"
 #include "vtkTransform.h"
 #include "vtkImageData.h"
 #include "vtkCamera.h"
@@ -266,6 +269,74 @@ void vtkPushPlaneTool::DoAction()
         distance = -d1/d2;
         }
       }
+    }
+  else if (this->VolumeMapper ||
+           (this->Mapper && this->Mapper->IsA("vtkVolumeMapper")))
+    {
+    // keep planes tight to the data
+    vtkVolumeMapper *mapper = this->VolumeMapper;
+    if (!mapper)
+      {
+      mapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
+      }
+
+    vtkImageData *data = mapper->GetInput();
+
+    // get matrix for transforming normals
+    double nmatrix[16];
+    vtkMatrix4x4::Transpose(*this->Transform->GetMatrix()->Element, nmatrix);
+
+    vtkImageReslice *reslice = vtkImageReslice::New();
+    reslice->SetInterpolationModeToLinear();
+    reslice->SetInput(data);
+    reslice->GenerateStencilOutputOn();
+
+    vtkImageHistogramStatistics *checker =
+      vtkImageHistogramStatistics::New();
+    checker->SetInputConnection(reslice->GetOutputPort());
+    checker->SetStencil(reslice->GetStencilOutput());
+
+    double dp = -(normal[0]*origin[0] +
+                  normal[1]*origin[1] +
+                  normal[2]*origin[2]);
+
+    double dinc = static_cast<int>(distance) - distance;
+    double dinc2 = (distance > 0 ? -1.0 : 1.0);
+
+    for (;;)
+      {
+      // convert plane into a homogenous normal4
+      double normal4[4];
+      normal4[0] = normal[0];
+      normal4[1] = normal[1];
+      normal4[2] = normal[2];
+      normal4[3] = dp - distance;
+
+      // transform normal4 from world coords to data coords
+      vtkMatrix4x4::MultiplyPoint(nmatrix, normal4, normal4);
+
+      // drive plane inwards until it hits data
+      vtkResliceMath::SetReslicePlane(reslice, normal4);
+      checker->Update();
+      double range[2];
+      range[0] = checker->GetMinimum();
+      range[1] = checker->GetMaximum();
+      if (range[1] > range[0])
+        {
+        // plane is within image
+        break;
+        }
+      distance += dinc;
+      dinc = dinc2;
+      if (distance*dinc > 0)
+        {
+        distance = 0;
+        break;
+        }
+      }
+
+    checker->Delete();
+    reslice->Delete();
     }
 
   // Moving relative to the original position provides a more stable
@@ -582,4 +653,3 @@ void vtkPushPlaneTool::SetNormal(const double n[3])
     plane->SetNormal(normal);
     }
 }
-

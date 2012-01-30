@@ -19,6 +19,7 @@ SET(LIB_SRCS
   vtkOpacityTool.cxx
   vtkPanCameraTool.cxx
   vtkPushPlaneTool.cxx
+  vtkResliceMath.cxx
   vtkROIContourData.cxx
   vtkROIContourDataToPolyData.cxx
   vtkRotateCameraTool.cxx
