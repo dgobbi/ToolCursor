@@ -200,7 +200,7 @@ public:
   // Description:
   // Bind the conditions under which the specified action will take place.
   // The "mode" is the cursor mode that the binding will apply to.
-  // The "pickInfo" is the kind of object that must be under the cursor.
+  // The "pickFlags" is the kind of object that must be under the cursor.
   // The "modifier" is the combination of modifier keys and the mouse
   // buttons that must be held down for the action to occur.
   void BindAction(int action, int mode, int pickFlags, int modifier);
@@ -208,7 +208,7 @@ public:
   // Description:
   // Bind the conditions under which the specified shape will be used.
   // The "mode" is the cursor mode that the binding will apply to.
-  // The "pickInfo" is the kind of object that must be under the cursor.
+  // The "pickFlags" is the kind of object that must be under the cursor.
   // The "modifier" is the combination of modifier keys and mouse
   // buttons that must be held down for the shape to be shown.
   void BindShape(int shape, int mode, int pickFlags, int modifier);
