@@ -18,7 +18,7 @@
 #include "vtkObjectFactory.h"
 
 #include <stddef.h>
-#include <vtkstd/vector>
+#include <vector>
 
 vtkStandardNewMacro(vtkROIContourData);
 
@@ -33,7 +33,7 @@ struct vtkROIContourElement
 };
 
 //----------------------------------------------------------------------------
-class vtkROIContourVector : public vtkstd::vector<vtkROIContourElement>
+class vtkROIContourVector : public std::vector<vtkROIContourElement>
 {
 };
 

@@ -19,8 +19,8 @@
 #include "vtkDataSet.h"
 #include "vtkSmartPointer.h"
 
-#include <vtkstd/string>
-#include <vtkstd/vector>
+#include <string>
+#include <vector>
 
 vtkStandardNewMacro(vtkCursorShapes);
 
@@ -32,7 +32,7 @@ public:
                         vtkDataSet *data,
                         int flags) : Name(name), Data(data), Flags(flags) {};
 
-  vtkstd::string Name;
+  std::string Name;
   vtkSmartPointer<vtkDataSet> Data;
   int Flags;
 };
@@ -41,7 +41,7 @@ public:
 class vtkToolCursorShapeArray
 {
 private:
-  typedef vtkstd::vector<vtkToolCursorShape> VectorType;
+  typedef std::vector<vtkToolCursorShape> VectorType;
   VectorType Vector;
 
 public:
