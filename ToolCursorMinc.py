@@ -126,7 +126,7 @@ volume.SetLODLevel(lodRC, 0.0)
 #volume.DisableLOD(lod3D)
 volume.DisableLOD(lodRC)
 
-cropOutlineSource = vtk.vtkVolumeCroppingOutline()
+cropOutlineSource = vtk.vtkVolumeOutlineSource()
 cropOutlineSource.SetVolumeMapper(volumeMapper)
 cropOutlineSource.GenerateScalarsOn()
 cropOutlineSource.SetActivePlaneId(0)

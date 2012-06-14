@@ -286,7 +286,7 @@ volume.SetInputConnection(readers[img1].GetOutputPort())
 volume.SetCroppingRegionFlags(cropflags)
 volume.SetCroppingRegion(cropping)
 
-cropOutlineSource = vtk.vtkVolumeCroppingOutline()
+cropOutlineSource = vtk.vtkVolumeOutlineSource()
 cropOutlineSource.SetVolumeMapper(volume.Mapper)
 cropOutlineSource.GenerateScalarsOn()
 cropOutlineSource.SetActivePlaneId(0)
