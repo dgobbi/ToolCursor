@@ -58,6 +58,11 @@ public:
   vtkHomogeneousTransform *GetFollowTransform() { return this->FollowTransform; };
 
   // Description:
+  // Set an offset along the normal for the new plane.
+  vtkSetMacro(OffsetAlongNormal, double);
+  vtkGetMacro(OffsetAlongNormal, double);
+
+  // Description:
   // Evaluate plane equation for point x[3].
   double EvaluateFunction(double x[3]);
   double EvaluateFunction(double x, double y, double z) {
@@ -92,6 +97,8 @@ protected:
   vtkHomogeneousTransform *FollowTransform;
   int InvertFollowMatrix;
   vtkTimeStamp UpdateTime;
+
+  double OffsetAlongNormal;
 
 private:
   vtkFollowerPlane(const vtkFollowerPlane&);  // Not implemented.

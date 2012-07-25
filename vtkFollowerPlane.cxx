@@ -29,6 +29,7 @@ vtkFollowerPlane::vtkFollowerPlane()
   this->FollowMatrix = 0;
   this->FollowTransform = 0;
   this->InvertFollowMatrix = 0;
+  this->OffsetAlongNormal = 0.0;
 }
 
 //----------------------------------------------------------------------------
@@ -113,6 +114,16 @@ void vtkFollowerPlane::Update()
       point[0] /= point[3]; point[1] /= point[3]; point[2] /= point[3];
       vtkMath::Normalize(normal);
       }
+    else
+      {
+      double d = this->OffsetAlongNormal;
+      point[0] += d*normal[0];
+      point[1] += d*normal[1];
+      point[2] += d*normal[2];
+      normal[0] = -normal[0];
+      normal[1] = -normal[1];
+      normal[2] = -normal[2];
+      }
 
     this->Normal[0] = normal[0];
     this->Normal[1] = normal[1];
@@ -191,4 +202,5 @@ void vtkFollowerPlane::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "FollowTransform: " << this->FollowTransform << "\n";
   os << indent << "InvertFollowMatrix: "
      << (this->InvertFollowMatrix ? "On\n" : "Off\n");
+  os << indent << "OffsetAlongNormal: " << this->OffsetAlongNormal << "\n";
 }
