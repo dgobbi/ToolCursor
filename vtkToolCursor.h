@@ -156,6 +156,14 @@ public:
   void GetColor(int i, double rgb[3]);
 
   // Description:
+  // Set the visibility of the outline around the object under the
+  // cursor.
+  void SetGuideVisibility(int v);
+  void GuideVisibilityOn() { this->SetGuideVisibility(1); }
+  void GuideVisibilityOff() { this->SetGuideVisibility(1); }
+  int GetGuideVisibility() { return this->GuideVisibility; }
+
+  // Description:
   // Set whether surface normals should always point towards the camera,
   // or whether they should point away if the cursor is on the backface
   // of the surface.  The default is "On".
@@ -259,6 +267,7 @@ protected:
 
   double Color[3];
 
+  int GuideVisibility;
   int PointNormalAtCamera;
   int ActionButtons;
   int Mode;

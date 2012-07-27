@@ -99,6 +99,7 @@ vtkToolCursor::vtkToolCursor()
 
   this->Renderer = 0;
 
+  this->GuideVisibility = 0;
   this->PointNormalAtCamera = 1;
   this->ActionButtons = 0;
   this->Modifier = 0;
@@ -773,6 +774,16 @@ void vtkToolCursor::OnRender()
 }
 
 //----------------------------------------------------------------------------
+void vtkToolCursor::SetGuideVisibility(int v)
+{
+  if (this->GuideVisibility != v)
+    {
+    this->GuideVisibility = v;
+    this->Modified();
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkToolCursor::CheckGuideVisibility()
 {
   vtkVolumeMapper *mapper =
@@ -817,7 +828,7 @@ void vtkToolCursor::CheckGuideVisibility()
       }
 
     this->VolumeCroppingActor->SetUserMatrix(prop->GetMatrix());
-    this->VolumeCroppingActor->SetVisibility(1);
+    this->VolumeCroppingActor->SetVisibility(this->GuideVisibility);
     this->VolumeCroppingSource->SetVolumeMapper(mapper);
     this->VolumeCroppingSource->SetActivePlaneId(croppingPlaneId);
     this->ClipOutlineFilter->SetClippingPlanes(clippingPlanes);
@@ -868,7 +879,7 @@ void vtkToolCursor::CheckGuideVisibility()
     plane->InvertFollowMatrixOn();
 
     this->SliceOutlineActor->SetUserMatrix(prop->GetMatrix());
-    this->SliceOutlineActor->SetVisibility(1);
+    this->SliceOutlineActor->SetVisibility(this->GuideVisibility);
     this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
     }
   else
