@@ -228,7 +228,6 @@ vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
   lines->InsertNextCell(outlineIds[6], &outlineIds[7]);
   lines->InsertNextCell(outlineIds[12], &outlineIds[13]);
   lines->InsertNextCell(outlineIds[18], &outlineIds[19]);
-  lines->InsertNextCell(outlineIds[24], &outlineIds[25]);
 
   // Fill the outline
   strips->InsertNextCell(stripIds[0], &stripIds[1]);
