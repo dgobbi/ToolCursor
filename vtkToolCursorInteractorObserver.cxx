@@ -51,7 +51,10 @@ vtkToolCursorInteractorObserver::vtkToolCursorInteractorObserver()
 vtkToolCursorInteractorObserver::~vtkToolCursorInteractorObserver()
 {
   this->PassiveEventCallbackCommand->Delete();
-  this->ToolCursor->Delete();
+  if (this->ToolCursor)
+    {
+    this->ToolCursor->Delete();
+    }
 }
 
 //----------------------------------------------------------------------------
