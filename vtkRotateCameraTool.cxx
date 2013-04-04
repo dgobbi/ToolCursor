@@ -11,7 +11,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-
+#include "vtkCommand.h"
 #include "vtkRotateCameraTool.h"
 #include "vtkObjectFactory.h"
 
@@ -46,6 +46,7 @@ void vtkRotateCameraTool::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkRotateCameraTool::StartAction()
 {
+  this->InvokeEvent(vtkCommand::StartInteractionEvent);
   this->Superclass::StartAction();
 
   vtkToolCursor *cursor = this->GetToolCursor();
@@ -98,6 +99,7 @@ void vtkRotateCameraTool::StartAction()
 void vtkRotateCameraTool::StopAction()
 {
   this->Superclass::StopAction();
+  this->InvokeEvent(vtkCommand::EndInteractionEvent);
 }
 
 //----------------------------------------------------------------------------
@@ -453,6 +455,8 @@ void vtkRotateCameraTool::DoAction()
 
   camera->SetPosition(cameraPos);
   camera->SetViewUp(cvy);
+
+  this->InvokeEvent(vtkCommand::InteractionEvent);
 }
 
 //----------------------------------------------------------------------------
