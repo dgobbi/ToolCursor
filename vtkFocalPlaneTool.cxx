@@ -11,7 +11,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-
+#include "vtkCommand.h"
 #include "vtkFocalPlaneTool.h"
 #include "vtkObjectFactory.h"
 
@@ -43,6 +43,8 @@ void vtkFocalPlaneTool::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkFocalPlaneTool::StartAction()
 {
+  this->InvokeEvent(vtkCommand::StartInteractionEvent);
+
   this->Superclass::StartAction();
 
   vtkToolCursor *cursor = this->GetToolCursor();
@@ -55,6 +57,8 @@ void vtkFocalPlaneTool::StartAction()
 void vtkFocalPlaneTool::StopAction()
 {
   this->Superclass::StopAction();
+
+  this->InvokeEvent(vtkCommand::EndInteractionEvent);
 }
 
 //----------------------------------------------------------------------------
@@ -107,5 +111,7 @@ void vtkFocalPlaneTool::DoAction()
   focalPoint[2] = position[2] + distance*vector[2];
 
   camera->SetFocalPoint(focalPoint);
+
+  this->InvokeEvent(vtkCommand::InteractionEvent);
 }
 

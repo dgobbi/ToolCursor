@@ -11,7 +11,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-
+#include "vtkCommand.h"
 #include "vtkPushPlaneTool.h"
 #include "vtkObjectFactory.h"
 
@@ -85,6 +85,8 @@ void vtkPushPlaneTool::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkPushPlaneTool::StartAction()
 {
+  this->InvokeEvent(vtkCommand::StartInteractionEvent);
+
   this->Superclass::StartAction();
 
   // Get all the necessary information about the picked prop.
@@ -127,6 +129,7 @@ void vtkPushPlaneTool::StartAction()
 void vtkPushPlaneTool::StopAction()
 {
   this->Superclass::StopAction();
+  this->InvokeEvent(vtkCommand::EndInteractionEvent);
 }
 
 //----------------------------------------------------------------------------
@@ -418,6 +421,7 @@ void vtkPushPlaneTool::DoAction()
   origin[2] = origin[2] + distance*normal[2];
 
   this->SetOrigin(origin);
+  this->InvokeEvent(vtkCommand::InteractionEvent);
 }
 
 //----------------------------------------------------------------------------
