@@ -65,6 +65,7 @@ class vtkCutter;
 #define VTK_TOOL_PLANE        0x3000
 #define VTK_TOOL_CLIP_PLANE   0x1000
 #define VTK_TOOL_CROP_PLANE   0x2000
+#define VTK_TOOL_PLANE_EDGE   0x4000
 
 class VTK_EXPORT vtkToolCursor : public vtkObject
 {
@@ -297,7 +298,7 @@ protected:
 
   vtkActor *SliceOutlineActor;
   vtkDataSetMapper *SliceOutlineMapper;
-  vtkOutlineSource *SliceOutlineSource;
+  vtkVolumeOutlineSource *SliceOutlineSource;
   vtkCutter *SliceOutlineCutter;
 
   // Description:

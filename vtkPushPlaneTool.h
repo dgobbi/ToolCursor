@@ -62,6 +62,7 @@ protected:
   vtkAbstractMapper3D *Mapper;
   vtkLODProp3D *LODProp3D;
   int PlaneId;
+  int EdgeId;
   int PerpendicularPlane;
   double StartNormal[3];
   double StartOrigin[3];

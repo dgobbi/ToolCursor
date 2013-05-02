@@ -46,6 +46,7 @@ vtkPushPlaneTool::vtkPushPlaneTool()
   this->VolumeMapper = 0;
   this->ImageMapper = 0;
   this->Mapper = 0;
+  this->EdgeId = -1;
   this->PlaneId = -1;
   this->PerpendicularPlane = 0;
 
@@ -219,7 +220,7 @@ void vtkPushPlaneTool::DoAction()
     distance = this->DistanceLimits[1];
     }
   // Constrain motion to the clipping bounds
-  else if (this->ImageMapper)
+  else if (this->ImageMapper && this->EdgeId < 0)
     {
     // clipping planes
     int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
@@ -362,6 +363,54 @@ void vtkPushPlaneTool::DoAction()
     reslice->Delete();
     }
 
+  // Special action for tilting the planes
+  if (this->ImageMapper && this->EdgeId >= 0)
+    {
+    double mbounds[6];
+    double mcenter[3];
+    double mvector[3];
+
+    this->ImageMapper->GetBounds(mbounds);
+    mcenter[0] = 0.5*(mbounds[0] + mbounds[1]);
+    mcenter[1] = 0.5*(mbounds[2] + mbounds[3]);
+    mcenter[2] = 0.5*(mbounds[4] + mbounds[5]);
+
+    mvector[0] = 0.0;
+    mvector[1] = 0.0;
+    mvector[2] = 0.0;
+
+    mvector[this->EdgeId/2] = 2.0*(this->EdgeId % 2) - 1.0;
+
+    this->Transform->TransformPoint(mcenter, mcenter);
+    this->Transform->TransformVector(mvector, mvector);
+
+    double u[3];
+    u[0] = p1[0] - mcenter[0];
+    u[1] = p1[1] - mcenter[1];
+    u[2] = p1[2] - mcenter[2];
+
+    // distance from axis to original point
+    double theta = atan2(distance, vtkMath::Dot(u, mvector));
+    theta = vtkMath::DegreesFromRadians(theta);
+    vtkMath::Cross(mvector, normal, mvector);
+    distance = 0.0;
+
+    vtkImageResliceMapper *resliceMapper =
+      vtkImageResliceMapper::SafeDownCast(this->ImageMapper);
+    if (resliceMapper)
+      {
+      vtkTransform *trans = vtkTransform::New();
+      trans->PostMultiply();
+      trans->Translate(-mcenter[0], -mcenter[1], -mcenter[2]);
+      trans->RotateWXYZ(theta, mvector[0], mvector[1], mvector[2]);
+      trans->Translate(mcenter[0], mcenter[1], mcenter[2]);
+      trans->TransformPoint(origin, origin);
+      trans->TransformNormal(normal, normal);
+      resliceMapper->GetSlicePlane()->SetNormal(normal);
+      trans->Delete();
+      }
+    }
+
   // Moving relative to the original position provides a more stable
   // interaction that moving relative to the last position.
   origin[0] = origin[0] + distance*normal[0];
@@ -435,6 +484,7 @@ void vtkPushPlaneTool::GetPropInformation()
 
   // Initialize plane to "no plane" value
   this->PlaneId = -1;
+  this->EdgeId = -1;
 
   // Is this a VolumeMapper cropping plane or AbstractMapper clipping plane?
   if (this->VolumeMapper && (cursor->GetPickFlags() & VTK_TOOL_CROP_PLANE))
@@ -446,6 +496,26 @@ void vtkPushPlaneTool::GetPropInformation()
     {
     this->Mapper = 0;
     this->PlaneId = 0;
+    if (cursor->GetPickFlags() & VTK_TOOL_PLANE_EDGE)
+      {
+      double mbounds[6];
+      double mpoint[3];
+
+      this->ImageMapper->GetBounds(mbounds);
+      picker->GetMapperPosition(mpoint);
+
+      // find the closest edge that is within tolerance
+      double mdist = VTK_DOUBLE_MAX;
+      for (int jj = 0; jj < 6; jj++)
+        {
+        double dd = fabs(mpoint[jj/2] - mbounds[jj]);
+        if (dd < mdist)
+          {
+          mdist = dd;
+          this->EdgeId = jj;
+          }
+        }
+      }
     }
   else
     {

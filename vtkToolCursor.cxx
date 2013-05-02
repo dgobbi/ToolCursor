@@ -30,6 +30,7 @@
 #include "vtkProperty.h"
 #include "vtkDataSetMapper.h"
 #include "vtkAbstractVolumeMapper.h"
+#include "vtkVolumeRayCastMapper.h"
 #include "vtkLookupTable.h"
 #include "vtkDataSetCollection.h"
 #include "vtkImageData.h"
@@ -184,8 +185,9 @@ vtkToolCursor::vtkToolCursor()
   this->VolumeCroppingActor->GetProperty()->BackfaceCullingOn();
 
   // Plane guide actor items
-  this->SliceOutlineSource = vtkOutlineSource::New();
+  this->SliceOutlineSource = vtkVolumeOutlineSource::New();
   this->SliceOutlineSource->GenerateFacesOn();
+  this->SliceOutlineSource->GenerateScalarsOn();
 
   this->SliceOutlineCutter = vtkCutter::New();
   this->SliceOutlineCutter->SetInputConnection(
@@ -672,6 +674,26 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     pickFlags = (pickFlags | VTK_TOOL_VOLUME);
     }
 
+  if (mapper && mapper->IsA("vtkImageMapper3D"))
+    {
+    double mbounds[6];
+    double mpoint[3];
+
+    mapper->GetBounds(mbounds);
+    picker->GetMapperPosition(mpoint);
+
+    // find the closest edge that is within tolerance
+    const double mtol = 5.0; // 5 mm
+    for (int jj = 0; jj < 6; jj++)
+      {
+      double dd = fabs(mpoint[jj/2] - mbounds[jj]);
+      if (dd < mtol)
+        {
+        pickFlags = (pickFlags | VTK_TOOL_PLANE_EDGE);
+        }
+      }
+    }
+
   return pickFlags;
 }
 
@@ -878,14 +900,48 @@ void vtkToolCursor::CheckGuideVisibility()
     plane->SetFollowMatrix(prop->GetMatrix());
     plane->InvertFollowMatrixOn();
 
+    int imageEdgeId = -1;
+    if (this->PickFlags & VTK_TOOL_PLANE_EDGE)
+      {
+      double mbounds[6];
+      double mpoint[3];
+
+      imageMapper->GetBounds(mbounds);
+      this->Picker->GetMapperPosition(mpoint);
+
+      // find the closest edge that is within tolerance
+      double mdist = VTK_DOUBLE_MAX;
+      for (int jj = 0; jj < 6; jj++)
+        {
+        double dd = fabs(mpoint[jj/2] - mbounds[jj]);
+        if (dd < mdist)
+          {
+          mdist = dd;
+          imageEdgeId = jj;
+          }
+        }
+      }
+
     this->SliceOutlineActor->SetUserMatrix(prop->GetMatrix());
     this->SliceOutlineActor->SetVisibility(this->GuideVisibility);
-    this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
+    //this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
+    // a dummy volume mapper
+    vtkVolumeRayCastMapper *vmapper = vtkVolumeRayCastMapper::New();
+    vmapper->SetInput(imageMapper->GetInput());
+    this->SliceOutlineSource->SetActivePlaneId(imageEdgeId);
+    this->SliceOutlineSource->SetVolumeMapper(vmapper);
+    vmapper->Delete();
     }
   else
     {
     this->SliceOutlineActor->SetUserMatrix(0);
     this->SliceOutlineActor->SetVisibility(0);
+    if (this->SliceOutlineSource->GetVolumeMapper())
+      {
+      this->SliceOutlineSource->GetVolumeMapper()->
+        SetInput(static_cast<vtkImageData *>(0));
+      }
+    this->SliceOutlineSource->SetVolumeMapper(0);
     this->SliceOutlineCutter->SetCutFunction(0);
     }
 }
