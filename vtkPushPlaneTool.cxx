@@ -388,9 +388,9 @@ void vtkPushPlaneTool::DoAction()
     this->Transform->TransformVector(mvector, mvector);
 
     double u[3];
-    u[0] = p1[0] - mcenter[0];
-    u[1] = p1[1] - mcenter[1];
-    u[2] = p1[2] - mcenter[2];
+    u[0] = p2[0] - mcenter[0];
+    u[1] = p2[1] - mcenter[1];
+    u[2] = p2[2] - mcenter[2];
 
     // distance from axis to original point
     double theta = atan2(distance, vtkMath::Dot(u, mvector));
