@@ -89,6 +89,11 @@ void vtkPushPlaneTool::StartAction()
 
   this->Superclass::StartAction();
 
+  if (!this->GetToolCursor()->GetPicker()->GetProp3D())
+    {
+    return;
+    }
+
   // Get all the necessary information about the picked prop.
   this->GetPropInformation();
 
@@ -136,6 +141,11 @@ void vtkPushPlaneTool::StopAction()
 void vtkPushPlaneTool::DoAction()
 {
   this->Superclass::DoAction();
+
+  if (!this->GetToolCursor()->GetPicker()->GetProp3D())
+    {
+    return;
+    }
 
   if (!this->IsPlaneValid())
     {
