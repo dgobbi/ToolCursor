@@ -15,6 +15,7 @@
 #include "vtkFiducialPointsTool.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkCommand.h"
 #include "vtkGeometricCursorShapes.h"
 #include "vtkToolCursor.h"
 #include "vtkCamera.h"
@@ -134,6 +135,8 @@ void vtkFiducialPointsTool::StartAction()
 void vtkFiducialPointsTool::StopAction()
 {
   this->Superclass::StopAction();
+
+  this->InvokeEvent(vtkCommand::InteractionEvent);
 }
 
 //----------------------------------------------------------------------------
@@ -159,21 +162,4 @@ void vtkFiducialPointsTool::DoAction()
   v[0] = p[0] - p0[0];
   v[1] = p[1] - p0[1];
   v[2] = p[2] - p0[2];
-
-  vtkPoints *point = vtkPoints::New();
-  point->SetNumberOfPoints(1);
-  point->SetPoint(0, p[0], p[1], p[2]);
-
-  // Add point to the point set
-  this->SetPoints(point);
-
-  // make sure the renderer is getting the actor
-  vtkToolCursor *cursor = this->GetToolCursor();
-  vtkRenderer *renderer = cursor->GetRenderer();
-  vtkActorCollection *actors = renderer->GetActors();
-
-  if (!actors->IsItemPresent(this->Actor))
-    {
-    renderer->AddActor(this->Actor);
-    }
 }
