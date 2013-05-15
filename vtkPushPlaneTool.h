@@ -69,6 +69,7 @@ protected:
   double Origin[3];
   double Normal[3];
   double DistanceLimits[2];
+  bool IsOffOfPlane;
 
   int IsPlaneValid() { return (this->PlaneId >= 0); };
 
