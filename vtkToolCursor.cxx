@@ -43,6 +43,8 @@
 #include "vtkClipClosedSurface.h"
 #include "vtkOutlineSource.h"
 #include "vtkCutter.h"
+#include "vtkTriangleFilter.h"
+#include "vtkTubeFilter.h"
 
 #include "vtkCursorShapes.h"
 #include "vtkActionCursorShapes.h"
@@ -193,15 +195,28 @@ vtkToolCursor::vtkToolCursor()
   this->SliceOutlineCutter->SetInputConnection(
     this->SliceOutlineSource->GetOutputPort());
 
+  this->SliceOutlineTriangleFilter = vtkTriangleFilter::New();
+  this->SliceOutlineTriangleFilter->PassVertsOff();
+  this->SliceOutlineTriangleFilter->SetInputConnection(
+    this->SliceOutlineCutter->GetOutputPort());
+
+  this->SliceOutlineTube = vtkTubeFilter::New();
+  this->SliceOutlineTube->SetRadius(0.5);
+  this->SliceOutlineTube->SetNumberOfSides(8);
+  this->SliceOutlineTube->SetInputConnection(
+    this->SliceOutlineTriangleFilter->GetOutputPort());
+
   this->SliceOutlineMapper = vtkDataSetMapper::New();
   this->SliceOutlineMapper->SetInputConnection(
-    this->SliceOutlineCutter->GetOutputPort());
+    this->SliceOutlineTube->GetOutputPort());
 
   this->SliceOutlineActor = vtkActor::New();
   this->SliceOutlineActor->SetMapper(this->SliceOutlineMapper);
   this->SliceOutlineActor->SetPickable(0);
   this->SliceOutlineActor->SetVisibility(0);
   this->SliceOutlineActor->GetProperty()->BackfaceCullingOn();
+  this->SliceOutlineActor->GetProperty()->SetAmbient(1.0);
+  this->SliceOutlineActor->GetProperty()->SetDiffuse(0.0);
   this->SliceOutlineActor->GetProperty()->SetColor(0,1,0);
 
   // For debugging triangularization: show poly outlines
@@ -221,6 +236,7 @@ vtkToolCursor::~vtkToolCursor()
 
   if (this->SliceOutlineActor) { this->SliceOutlineActor->Delete(); }
   if (this->SliceOutlineMapper) { this->SliceOutlineMapper->Delete(); }
+  if (this->SliceOutlineTube) { this->SliceOutlineTube->Delete(); }
   if (this->SliceOutlineCutter) { this->SliceOutlineCutter->Delete(); }
   if (this->SliceOutlineSource) { this->SliceOutlineSource->Delete(); }
 
