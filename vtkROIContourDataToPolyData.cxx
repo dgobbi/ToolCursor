@@ -194,7 +194,8 @@ void vtkROIContourDataToPolyData::ComputeSpline(
     double tol = this->SubdivisionTarget*1e-3;
     tol *= tol;
 
-    // ignore last point if same as first point
+    // sometimes that last point (or several last points) are almost exactly
+    // on top of the first point, we must ignore such points
     vtkIdType m = n;
     do
       {
