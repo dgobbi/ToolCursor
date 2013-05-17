@@ -42,6 +42,18 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
+  // Allow the tool to perform rotation.
+  vtkSetMacro(AllowRotation, int);
+  vtkGetMacro(AllowRotation, int);
+  vtkBooleanMacro(AllowRotation, int);
+
+  // Description:
+  // Allow the tool to perform slicing.
+  vtkSetMacro(AllowSlicing, int);
+  vtkGetMacro(AllowSlicing, int);
+  vtkBooleanMacro(AllowSlicing, int);
+
+  // Description:
   // These are the methods that are called when the action takes place.
   virtual void StartAction();
   virtual void StopAction();
@@ -70,6 +82,8 @@ protected:
   double Normal[3];
   double DistanceLimits[2];
   bool IsOffOfPlane;
+  int AllowRotation;
+  int AllowSlicing;
 
   int IsPlaneValid() { return (this->PlaneId >= 0); };
 

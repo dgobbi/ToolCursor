@@ -70,6 +70,9 @@ vtkPushPlaneTool::vtkPushPlaneTool()
   this->DistanceLimits[1] = +VTK_LARGE_FLOAT;
 
   this->IsOffOfPlane = true;
+
+  this->AllowRotation = 1;
+  this->AllowSlicing = 1;
 }
 
 //----------------------------------------------------------------------------
@@ -238,7 +241,7 @@ void vtkPushPlaneTool::DoAction()
     distance = this->DistanceLimits[1];
     }
   // Constrain motion to the clipping bounds
-  else if (this->ImageMapper && this->EdgeId < 0)
+  else if (this->AllowSlicing && this->ImageMapper && this->EdgeId < 0)
     {
     // clipping planes
     int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
@@ -382,7 +385,7 @@ void vtkPushPlaneTool::DoAction()
     }
 
   // Special action for tilting the planes
-  if (this->ImageMapper && this->EdgeId >= 0)
+  if (this->AllowRotation && this->ImageMapper && this->EdgeId >= 0)
     {
     double mbounds[6];
     double mcenter[3];
@@ -515,7 +518,7 @@ void vtkPushPlaneTool::GetPropInformation()
     {
     this->Mapper = 0;
     this->PlaneId = 0;
-    if (cursor->GetPickFlags() & VTK_TOOL_PLANE_EDGE)
+    if ((cursor->GetPickFlags() & VTK_TOOL_PLANE_EDGE) != 0)
       {
       double mbounds[6];
       double mpoint[3];
