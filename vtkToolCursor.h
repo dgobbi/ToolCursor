@@ -163,7 +163,7 @@ public:
   // cursor.
   void SetGuideVisibility(int v);
   void GuideVisibilityOn() { this->SetGuideVisibility(1); }
-  void GuideVisibilityOff() { this->SetGuideVisibility(1); }
+  void GuideVisibilityOff() { this->SetGuideVisibility(0); }
   int GetGuideVisibility() { return this->GuideVisibility; }
 
   // Description:
