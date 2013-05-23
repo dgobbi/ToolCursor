@@ -314,6 +314,13 @@ void vtkToolCursor::BindDefaultActions()
   this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_B2);
   this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_B2);
 
+  // Also bind to the mouse wheel
+  modifier = 0;
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_WHEEL_BWD);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_WHEEL_BWD);
+  this->BindShape(shape, mode, pickInfo, modifier | VTK_TOOL_WHEEL_FWD);
+  this->BindAction(action, mode, pickInfo, modifier | VTK_TOOL_WHEEL_FWD);
+
   // ------------ Default Prop3D Bindings-------------
   pickInfo = VTK_TOOL_PROP3D;
 
@@ -427,7 +434,7 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
   // for those actions.
 
   int modifierMask = 0;
-  modifier |= VTK_TOOL_BUTTON_MASK;
+  modifier |= (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK);
 
   int tuple[4];
   int j = 0;
@@ -443,7 +450,7 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
     j = i + 1;
     }
 
-  return (modifierMask & VTK_TOOL_BUTTON_MASK);
+  return (modifierMask & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK));
 }
 
 //----------------------------------------------------------------------------
@@ -761,7 +768,8 @@ void vtkToolCursor::ComputePosition()
   // Check to see if the PickFlags have changed
   int pickFlags = this->ComputePickFlags(this->Picker);
 
-  if ((this->Modifier & VTK_TOOL_BUTTON_MASK) == 0 && !this->Action)
+  if ((this->Modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0 &&
+      !this->Action)
     {
     if (pickFlags != this->PickFlags)
       {
@@ -1020,8 +1028,8 @@ void vtkToolCursor::SetIsInViewport(int inside)
 //----------------------------------------------------------------------------
 int vtkToolCursor::ButtonBit(int button)
 {
-  static int buttonmap[6] = { 0, VTK_TOOL_B1, VTK_TOOL_B2,
-    VTK_TOOL_B3, VTK_TOOL_B4, VTK_TOOL_B5 };
+  static int buttonmap[6] = { 0, VTK_TOOL_B1, VTK_TOOL_B2, VTK_TOOL_B3,
+    VTK_TOOL_WHEEL_BWD, VTK_TOOL_WHEEL_FWD };
 
   if (button <= 0 || button > 5)
     {
@@ -1081,8 +1089,8 @@ void vtkToolCursor::SetModifier(int modifier)
     return;
     }
 
-  if ( ((this->Modifier & VTK_TOOL_BUTTON_MASK) == 0 ||
-        (modifier & VTK_TOOL_BUTTON_MASK) == 0) &&
+  if ( ((this->Modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0 ||
+        (modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0) &&
        !this->Action)
     {
     // Compute the cursor shape from the state.

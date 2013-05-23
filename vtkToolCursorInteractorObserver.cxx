@@ -114,6 +114,8 @@ void vtkToolCursorInteractorObserver::SetEnabled(int enable)
     iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, command, priority);
     iren->AddObserver(vtkCommand::RightButtonReleaseEvent, command, priority);
     iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, command, priority);
+    iren->AddObserver(vtkCommand::MouseWheelForwardEvent, command, priority);
+    iren->AddObserver(vtkCommand::MouseWheelBackwardEvent, command, priority);
 
     command = this->PassiveEventCallbackCommand;
     renwin->AddObserver(vtkCommand::StartEvent, command);
@@ -127,6 +129,8 @@ void vtkToolCursorInteractorObserver::SetEnabled(int enable)
     iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, command);
     iren->AddObserver(vtkCommand::RightButtonReleaseEvent, command);
     iren->AddObserver(vtkCommand::MiddleButtonReleaseEvent, command);
+    iren->AddObserver(vtkCommand::MouseWheelForwardEvent, command);
+    iren->AddObserver(vtkCommand::MouseWheelBackwardEvent, command);
     iren->AddObserver(vtkCommand::KeyPressEvent, command);
     iren->AddObserver(vtkCommand::KeyReleaseEvent, command);
 
@@ -231,6 +235,14 @@ void vtkToolCursorInteractorObserver::ProcessPassiveEvents(
       else if (event == vtkCommand::MiddleButtonReleaseEvent)
         {
         modifierMask = VTK_TOOL_B3;
+        }
+      else if (event == vtkCommand::MouseWheelBackwardEvent)
+        {
+        modifierMask = VTK_TOOL_WHEEL_BWD;
+        }
+      else if (event == vtkCommand::MouseWheelForwardEvent)
+        {
+        modifierMask = VTK_TOOL_WHEEL_FWD;
         }
 
       // Set the modifier with the button and key information
@@ -381,8 +393,52 @@ void vtkToolCursorInteractorObserver::ProcessEvents(vtkObject *object,
           {
           self->ReleaseFocus();
           }
-        }
         iren->GetRenderWindow()->SetDesiredUpdateRate(0.0001);
+        }
+      }
+      break;
+
+    case vtkCommand::MouseWheelBackwardEvent:
+    case vtkCommand::MouseWheelForwardEvent:
+      {
+      int button = 0;
+      if (event == vtkCommand::MouseWheelBackwardEvent)
+        {
+        button = 4;
+        }
+      else if (event == vtkCommand::MouseWheelForwardEvent)
+        {
+        button = 5;
+        }
+
+      // Need to do ComputePosition to force a pick so that the cursor
+      // knows if any focus-worthy object is under the mouse
+      int x, y;
+      iren->GetEventPosition(x, y);
+      cursor->MoveToDisplayPosition(x, y);
+      cursor->ComputePosition();
+
+      if (allowTakeFocus)
+        {
+        iren->GetRenderWindow()->SetDesiredUpdateRate(100);
+        if (cursor->PressButton(button))
+          {
+          self->GrabFocus(self->EventCallbackCommand,
+                          self->EventCallbackCommand);
+
+          // Make sure that no other observers see the event
+          self->EventCallbackCommand->SetAbortFlag(1);
+          }
+        }
+
+      if (allowReleaseFocus)
+        {
+        if (cursor->ReleaseButton(button))
+          {
+          self->ReleaseFocus();
+          }
+        iren->GetRenderWindow()->SetDesiredUpdateRate(0.0001);
+        }
       }
       break;
 

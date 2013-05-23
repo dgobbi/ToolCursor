@@ -63,6 +63,20 @@ void vtkSliceImageTool::StartAction()
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
 
   this->StartDistance = camera->GetDistance();
+
+  // code for handling the mouse wheel interaction
+  if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
+    {
+    double d = 0.0;
+    if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)
+      {
+      d = -1.0;
+      }
+    else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
+      {
+      d = +1.0;
+      }
+    }
 }
 
 //----------------------------------------------------------------------------

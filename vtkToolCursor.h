@@ -52,12 +52,13 @@ class vtkTubeFilter;
 #define VTK_TOOL_CONTROL      0x0004
 #define VTK_TOOL_META         0x0008
 #define VTK_TOOL_ALT          0x0010
-#define VTK_TOOL_BUTTON_MASK  0x1F00
+#define VTK_TOOL_BUTTON_MASK  0x0700
 #define VTK_TOOL_B1           0x0100
 #define VTK_TOOL_B2           0x0200
 #define VTK_TOOL_B3           0x0400
-#define VTK_TOOL_B4           0x0800
-#define VTK_TOOL_B5           0x1000
+#define VTK_TOOL_WHEEL_MASK   0x1800
+#define VTK_TOOL_WHEEL_BWD    0x0800
+#define VTK_TOOL_WHEEL_FWD    0x1000
 
 // Pick flags, these describe what is under the cursor.
 #define VTK_TOOL_PROP3D       0x0F00
@@ -257,6 +258,10 @@ public:
   // Get the button modifier bitmask corresponding to the mouse button.
   static int ButtonBit(int button);
 
+  // Description:
+  // Get the current modifier bits.
+  int GetModifier() { return this->Modifier; };
+
 protected:
   vtkToolCursor();
   ~vtkToolCursor();
@@ -309,7 +314,6 @@ protected:
   // Set the modifier bits.  This is protected because SetModifierBits()
   // is the method that should be used to set the modifier.
   virtual void SetModifier(int modifier);
-  int GetModifier() { return this->Modifier; };
 
   // Description:
   // Set the current action.  This is protected because the action depends

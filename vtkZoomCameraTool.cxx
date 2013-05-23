@@ -66,6 +66,60 @@ void vtkZoomCameraTool::StartAction()
   this->ZoomFactor = 1.0;
 
   this->Transform->Identity();
+
+  // code for handling the mouse whee interaction
+  if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
+    {
+    if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)
+      {
+      this->ZoomFactor = 1.1;
+      }
+    else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
+      {
+      this->ZoomFactor = 1.0/1.1;
+      }
+    if (camera->GetParallelProjection())
+      {
+      camera->SetParallelScale(this->StartParallelScale/this->ZoomFactor);
+      }
+    else
+      {
+      if (this->ZoomByDolly)
+        {
+        double p1[3], p2[3];
+        camera->GetPosition(p1);
+        camera->Dolly(this->ZoomFactor);
+        camera->GetPosition(p2);
+        // find the distance moved
+        double d = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
+        d = (this->ZoomFactor < 1 ? d : -d);
+        // adjust the clipping range by this distance
+        double tol = cursor->GetRenderer()->GetNearClippingPlaneTolerance();
+        double d1, d2;
+        camera->GetClippingRange(d1, d2);
+        if (d1 < 2*d2*tol)
+          { // too close to camera, reset the near range
+          cursor->GetRenderer()->ResetCameraClippingRange();
+          double d3; // dummy variable
+          camera->GetClippingRange(d1, d3);
+          }
+        else
+          {
+          d1 += d;
+          }
+        d2 += d;
+        if (d1 < d2*tol) { d1 = d2*tol; }
+        camera->SetClippingRange(d1, d2);
+        }
+      else // Zoom by changing the height of the scene
+        {
+        double h = 2*tan(0.5*vtkMath::RadiansFromDegrees(this->StartViewAngle));
+        h /= this->ZoomFactor;
+        double viewAngle = 2*vtkMath::DegreesFromRadians(atan(0.5*h));
+        camera->SetViewAngle(viewAngle);
+        }
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
