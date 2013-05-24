@@ -67,7 +67,7 @@ void vtkZoomCameraTool::StartAction()
 
   this->Transform->Identity();
 
-  // code for handling the mouse whee interaction
+  // code for handling the mouse wheel interaction
   if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
     {
     if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)

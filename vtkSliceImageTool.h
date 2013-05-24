@@ -50,6 +50,12 @@ public:
   virtual void StopAction();
   virtual void DoAction();
 
+  // Description:
+  // This is useful methods for moving back or forth by one slice.
+  // The delta is the number of slices to advance by, use negative
+  // values to move backwards.
+  virtual void AdvanceSlice(int delta);
+
 protected:
   vtkSliceImageTool();
   ~vtkSliceImageTool();

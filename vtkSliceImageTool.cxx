@@ -64,18 +64,19 @@ void vtkSliceImageTool::StartAction()
 
   this->StartDistance = camera->GetDistance();
 
-  // code for handling the mouse wheel interaction
+    // code for handling the mouse wheel interaction
   if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
     {
-    double d = 0.0;
+    int delta = 0;
     if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)
       {
-      d = -1.0;
+      delta = -1;
       }
     else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
       {
-      d = +1.0;
+      delta = 1;
       }
+    this->AdvanceSlice(delta);
     }
 }
 
@@ -206,3 +207,77 @@ void vtkSliceImageTool::DoAction()
   camera->SetFocalPoint(focalPoint);
 }
 
+//----------------------------------------------------------------------------
+void vtkSliceImageTool::AdvanceSlice(int delta)
+{
+  vtkToolCursor *cursor = this->GetToolCursor();
+  vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
+
+  // Get the camera information
+  double point[4], normal[4], position[3];
+  camera->GetFocalPoint(point);
+  camera->GetPosition(position);
+  normal[0] = point[0] - position[0];
+  normal[1] = point[1] - position[1];
+  normal[2] = point[2] - position[2];
+  vtkMath::Normalize(normal);
+  normal[3] = -vtkMath::Dot(point, normal);
+
+  // Convert the normal to data coordinates
+  if (this->CurrentImageMatrix)
+    {
+    double matrix[16];
+    vtkMatrix4x4::Transpose(*this->CurrentImageMatrix->Element, matrix);
+    vtkMatrix4x4::MultiplyPoint(matrix, normal, normal);
+    }
+
+  // Get the image information
+  vtkImageData *data = 0;
+  if (this->CurrentImageMapper)
+    {
+    data = vtkImageData::SafeDownCast(this->CurrentImageMapper->GetInput());
+    }
+  if (data)
+    {
+    // Compute the distance from the origin to the slice
+    double origin[3];
+    data->GetOrigin(origin);
+    double d = vtkMath::Dot(origin, normal) + normal[3];
+    // Compute the spacing to use
+    double spacing[3];
+    data->GetSpacing(spacing);
+    double wx = normal[0]*normal[0];
+    double wy = normal[1]*normal[1];
+    double wz = normal[2]*normal[2];
+    double s = fabs(spacing[0])*wx + fabs(spacing[1])*wy + fabs(spacing[2])*wz;
+    // Round to get the nearest slice index
+    int n = vtkMath::Floor(d/s + 0.5);
+    n += delta;
+    // Apply some limits
+    int extent[6];
+    data->GetWholeExtent(extent);
+    int lo = vtkMath::Floor(extent[0]*wx + extent[2]*wy + extent[4]*wz + 0.5);
+    int hi = vtkMath::Floor(extent[1]*wx + extent[3]*wy + extent[5]*wz + 0.5);
+    n = (n < lo ? lo : n);
+    n = (n > hi ? hi : n);
+    // Adjust the plane
+    normal[3] -= n*s - d;
+    }
+
+  // Convert the plane back to world coordinates
+  if (this->CurrentImageMatrix)
+    {
+    double matrix[16];
+    vtkMatrix4x4::Invert(*this->CurrentImageMatrix->Element, matrix);
+    vtkMatrix4x4::Transpose(matrix, matrix);
+    vtkMatrix4x4::MultiplyPoint(matrix, normal, normal);
+    }
+
+  // project the focal point onto this new plane
+  double f = vtkMath::Dot(normal, point) + normal[3];
+  point[0] += f*normal[0];
+  point[1] += f*normal[1];
+  point[2] += f*normal[2];
+
+  camera->SetFocalPoint(point);
+}
