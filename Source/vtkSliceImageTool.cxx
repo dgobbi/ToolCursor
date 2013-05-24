@@ -15,6 +15,7 @@
 #include "vtkSliceImageTool.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkCommand.h"
 #include "vtkToolCursor.h"
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
@@ -86,6 +87,7 @@ void vtkSliceImageTool::StartAction()
 void vtkSliceImageTool::StopAction()
 {
   this->Superclass::StopAction();
+  this->InvokeEvent(vtkCommand::InteractionEvent);
 }
 
 //----------------------------------------------------------------------------
