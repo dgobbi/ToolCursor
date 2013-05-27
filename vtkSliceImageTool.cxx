@@ -239,29 +239,54 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     }
   if (data)
     {
-    // Compute the distance from the origin to the slice
-    double origin[3];
+    // Compute the data bounds
+    double origin[3], spacing[3], bounds[6];
+    int extent[6];
     data->GetOrigin(origin);
-    double d = vtkMath::Dot(origin, normal) + normal[3];
-    // Compute the spacing to use
-    double spacing[3];
     data->GetSpacing(spacing);
+    data->GetWholeExtent(extent);
+
+    bounds[0] = origin[0] + spacing[0]*extent[0];
+    bounds[1] = origin[0] + spacing[0]*extent[1];
+    bounds[2] = origin[1] + spacing[1]*extent[2];
+    bounds[3] = origin[1] + spacing[1]*extent[3];
+    bounds[4] = origin[2] + spacing[2]*extent[4];
+    bounds[5] = origin[2] + spacing[2]*extent[5];
+
+    // Compute the distance to each of the 8 corners of the data cube
+    int maxc = 0;
+    double maxdist = VTK_DOUBLE_MIN;
+    for (int c = 0; c < 8; c++)
+      {
+      double dist = (normal[0]*bounds[c&1] +
+                     normal[1]*bounds[2+((c&2)>>1)] +
+                     normal[2]*bounds[4+((c&4)>>2)] + normal[3]);
+      if (dist > maxdist)
+        {
+        maxdist = dist;
+        maxc = c;
+        }
+      }
+    // Compute the distance to the opposite corner
+    int minc = (maxc ^ 7);
+    double mindist = (normal[0]*bounds[minc&1] +
+                      normal[1]*bounds[2+((minc&2)>>1)] +
+                      normal[2]*bounds[4+((minc&4)>>2)] + normal[3]);
+
+    // Compute the spacing to use
     double wx = normal[0]*normal[0];
     double wy = normal[1]*normal[1];
     double wz = normal[2]*normal[2];
     double s = fabs(spacing[0])*wx + fabs(spacing[1])*wy + fabs(spacing[2])*wz;
     // Round to get the nearest slice index
-    int n = vtkMath::Floor(d/s + 0.5);
+    int n = vtkMath::Floor(maxdist/s + 0.5);
+    int nmax = vtkMath::Floor((maxdist - mindist)/s + 0.5);
     n += delta;
     // Apply some limits
-    int extent[6];
-    data->GetWholeExtent(extent);
-    int lo = vtkMath::Floor(extent[0]*wx + extent[2]*wy + extent[4]*wz + 0.5);
-    int hi = vtkMath::Floor(extent[1]*wx + extent[3]*wy + extent[5]*wz + 0.5);
-    n = (n < lo ? lo : n);
-    n = (n > hi ? hi : n);
+    n = (n < 0 ? 0 : n);
+    n = (n > nmax ? nmax : n);
     // Adjust the plane
-    normal[3] -= n*s - d;
+    normal[3] -= n*s - maxdist;
     }
 
   // Convert the plane back to world coordinates
