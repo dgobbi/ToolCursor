@@ -55,6 +55,11 @@ public:
   vtkBooleanMacro(AllowSlicing, int);
 
   // Description:
+  // The maximum rotation to allow, from the start of the action.
+  vtkSetMacro(MaximumRotationDegree, double);
+  vtkGetMacro(MaximumRotationDegree, double);
+
+  // Description:
   // These are the methods that are called when the action takes place.
   void StartAction() override;
   void StopAction() override;
@@ -85,6 +90,7 @@ protected:
   bool IsOffOfPlane;
   int AllowRotation;
   int AllowSlicing;
+  double MaximumRotationDegree;
 
   int IsPlaneValid() { return (this->PlaneId >= 0); };
 
