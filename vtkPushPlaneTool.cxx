@@ -418,8 +418,6 @@ void vtkPushPlaneTool::DoAction()
     vtkMath::Cross(mvector, normal, mvector);
     distance = 0.0;
 
-    std::cout << "theta: " << theta << std::endl;
-
     double max_theta = this->GetMaximumRotationDegree();
     if (theta < max_theta && theta > -1.0*max_theta)
       {
