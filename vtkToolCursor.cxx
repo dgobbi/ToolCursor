@@ -699,20 +699,42 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
 
   if (mapper && mapper->IsA("vtkImageMapper3D"))
     {
+    // check if pick point is close to edge of slice plane
+    // by intersecting the slice plane with each of the bounding planes
+    // (to get the slice plane edge) and then computing the
+    // distantance of the pick point to that edge.
     double mbounds[6];
+    double mat[3][3];
+    double vec[3];
     double mpoint[3];
 
     mapper->GetBounds(mbounds);
     picker->GetMapperPosition(mpoint);
+    picker->GetMapperNormal(mat[0]);
+    vec[0] = vtkMath::Dot(mat[0], mpoint);
 
     // find the closest edge that is within tolerance
-    const double mtol = 5.0; // 5 mm
+    const double mtol = 7.0; // 7 mm
     for (int jj = 0; jj < 6; jj++)
       {
       double dd = fabs(mpoint[jj/2] - mbounds[jj]);
       if (dd < mtol)
         {
-        pickFlags = (pickFlags | VTK_TOOL_PLANE_EDGE);
+        mat[1][0] = mat[1][1] = mat[1][2] = 0.0;
+        mat[1][jj/2] = 1.0;
+        vec[1] = mbounds[jj];
+        vtkMath::Cross(mat[0], mat[1], mat[2]);
+        // make sure the planes aren't parallel to each other
+        if (vtkMath::Norm(mat[2]) > 0.001)
+          {
+          vec[2] = vtkMath::Dot(mat[2], mpoint);
+          double point[3];
+          vtkMath::LinearSolve3x3(mat, vec, point);
+          if (vtkMath::Distance2BetweenPoints(mpoint, point) < mtol*mtol)
+            {
+            pickFlags = (pickFlags | VTK_TOOL_PLANE_EDGE);
+            }
+          }
         }
       }
     }
