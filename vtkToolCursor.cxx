@@ -684,6 +684,11 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     mapper = static_cast<vtkImageStack *>(prop)->GetMapper();
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
     }
+  else if (prop->IsA("vtkImageSlice"))
+    {
+    mapper = static_cast<vtkImageSlice *>(prop)->GetMapper();
+    pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
+    }
   else if (mapper && mapper->IsA("vtkImageMapper3D"))
     {
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);

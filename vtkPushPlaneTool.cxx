@@ -492,10 +492,15 @@ void vtkPushPlaneTool::GetPropInformation()
   vtkProp3D *prop = picker->GetProp3D();
   this->Mapper = picker->GetMapper();
   vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
+  vtkImageSlice *imageSlice = vtkImageSlice::SafeDownCast(prop);
   if (imageStack)
     {
     this->Mapper = imageStack->GetMapper();
     prop = imageStack->GetActiveImage();
+    }
+  else if (imageSlice)
+    {
+    this->Mapper = imageSlice->GetMapper();
     }
 
   this->Transform->SetMatrix(prop->GetMatrix());
