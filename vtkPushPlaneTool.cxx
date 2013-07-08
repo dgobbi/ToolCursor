@@ -102,6 +102,14 @@ void vtkPushPlaneTool::StartAction()
     return;
     }
 
+  if (!this->GetToolCursor()->GetPicker()->GetProp3D()->GetVisibility())
+    {
+    std::cout << "Shouldn't be able to pick an invisible prop" << std::endl;
+    this->GetToolCursor()->GetPicker()->GetProp3D()->Print(std::cout);
+    this->IsOffOfPlane = true;
+    return;
+    }
+
   this->IsOffOfPlane = false;
 
   // Get all the necessary information about the picked prop.
