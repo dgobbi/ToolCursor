@@ -98,7 +98,8 @@ void vtkPushPlaneTool::StartAction()
 
   this->Superclass::StartAction();
 
-  if (!this->GetToolCursor()->GetPicker()->GetProp3D())
+  if (!this->GetToolCursor()->GetPicker()->GetProp3D() ||
+      !this->GetToolCursor()->GetPicker()->GetProp3D()->GetVisibility())
   {
     this->IsOffOfPlane = true;
     return;
