@@ -96,16 +96,9 @@ void vtkPushPlaneTool::StartAction()
 
   this->Superclass::StartAction();
 
-  if (!this->GetToolCursor()->GetPicker()->GetProp3D())
+  if (!this->GetToolCursor()->GetPicker()->GetProp3D() ||
+      !this->GetToolCursor()->GetPicker()->GetProp3D()->GetVisibility())
     {
-    this->IsOffOfPlane = true;
-    return;
-    }
-
-  if (!this->GetToolCursor()->GetPicker()->GetProp3D()->GetVisibility())
-    {
-    std::cout << "Shouldn't be able to pick an invisible prop" << std::endl;
-    this->GetToolCursor()->GetPicker()->GetProp3D()->Print(std::cout);
     this->IsOffOfPlane = true;
     return;
     }
