@@ -205,7 +205,7 @@ void vtkZoomCameraTool::DoAction()
 
     // Constrain the values when they are close to the center, in order to
     // avoid magifications of zero or infinity
-    double halfpi = 0.5*vtkMath::DoublePi();
+    double halfpi = 0.5*vtkMath::Pi();
     double r0 = 0.1*height;
     if (r1 < r0)
       {

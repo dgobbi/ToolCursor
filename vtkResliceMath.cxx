@@ -19,6 +19,8 @@
 #include "vtkImageData.h"
 #include "vtkMath.h"
 #include "vtkMatrix4x4.h"
+#include "vtkInformation.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
 vtkStandardNewMacro(vtkResliceMath);
 
@@ -33,12 +35,24 @@ void vtkResliceMath::SetReslicePlane(
 
   // Update the data
   vtkImageData *input = static_cast<vtkImageData *>(reslice->GetInput());
+#if VTK_MAJOR_VERSION >= 6
+  reslice->Update();
+  int extent[6];
+  input->GetExtent(extent);
+  vtkInformation *inInfo = reslice->GetInputInformation(0, 0);
+  if (inInfo &&
+      inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
+    {
+    inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+    }
+#else
   input->Update();
+  int extent[6];
+  input->GetWholeExtent(extent);
+#endif
   double spacing[3], origin[3];
   input->GetSpacing(spacing);
   input->GetOrigin(origin);
-  int extent[6];
-  input->GetWholeExtent(extent);
 
   // Compute center
   double center[4], radius[3];

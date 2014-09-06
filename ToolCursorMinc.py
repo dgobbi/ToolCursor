@@ -39,23 +39,24 @@ reader.SetFileName(filename)
 # prep the volume for rendering at 128x128x128
 
 shiftScale = vtk.vtkImageShiftScale()
-shiftScale.SetInput(reader.GetOutput())
+shiftScale.SetInputConnection(reader.GetOutputPort())
 shiftScale.SetOutputScalarTypeToUnsignedShort()
+shiftScale.Update()
 
-shiftScale.GetOutput().UpdateInformation()
 origin = shiftScale.GetOutput().GetOrigin()
 spacing = shiftScale.GetOutput().GetSpacing()
-extent = shiftScale.GetOutput().GetWholeExtent()
+extent = shiftScale.GetOutput().GetExtent()
 spacing = (spacing[0]*(extent[1] - extent[0])/127.0,
            spacing[1]*(extent[3] - extent[2])/127.0,
            spacing[2]*(extent[5] - extent[4])/127.0)
 
 reslice = vtk.vtkImageReslice()
-reslice.SetInput(shiftScale.GetOutput())
+reslice.SetInputConnection(shiftScale.GetOutputPort())
 reslice.SetOutputExtent(0, 127, 0, 127, 0, 127)
 reslice.SetOutputOrigin(origin)
 reslice.SetOutputSpacing(spacing)
 reslice.SetInterpolationModeToCubic()
+reslice.Update()
 
 #---------------------------------------------------------
 # set up the volume rendering
@@ -69,7 +70,7 @@ cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0]))
 cropflags = (0x07ffffff & ~cropblockbit);
 
 volumeMapper = vtk.vtkVolumeRayCastMapper()
-volumeMapper.SetInput(reslice.GetOutput())
+volumeMapper.SetInputConnection(reslice.GetOutputPort())
 volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
 volumeMapper.SetVolumeRayCastFunction(volumeFunction)
 volumeMapper.CroppingOn()
@@ -77,13 +78,13 @@ volumeMapper.SetCroppingRegionPlanes(cropping)
 volumeMapper.SetCroppingRegionFlags(cropflags)
 
 volumeMapper3D = vtk.vtkVolumeTextureMapper3D()
-volumeMapper3D.SetInput(reslice.GetOutput())
+volumeMapper3D.SetInputConnection(reslice.GetOutputPort())
 volumeMapper3D.CroppingOn()
 volumeMapper3D.SetCroppingRegionPlanes(cropping)
 volumeMapper3D.SetCroppingRegionFlags(cropflags)
 
 volumeMapper2D = vtk.vtkVolumeTextureMapper2D()
-volumeMapper2D.SetInput(reslice.GetOutput())
+volumeMapper2D.SetInputConnection(reslice.GetOutputPort())
 volumeMapper2D.CroppingOn()
 volumeMapper2D.SetCroppingRegionPlanes(cropping)
 volumeMapper2D.SetCroppingRegionFlags(cropflags)
@@ -150,6 +151,7 @@ skinNormals.SetFeatureAngle(60.0)
 skinStripper = vtk.vtkStripper()
 skinStripper.SetMaximumLength(10)
 skinStripper.SetInputConnection(skinNormals.GetOutputPort())
+skinStripper.Update()
 
 skinLocator = vtk.vtkCellLocator()
 skinLocator.SetDataSet(skinStripper.GetOutput())
@@ -178,27 +180,36 @@ table.SetSaturationRange(0,0)
 mapToColors = vtk.vtkImageMapToColors()
 mapToColors.SetInputConnection(reader.GetOutputPort())
 mapToColors.SetLookupTable(table)
-mapToColors.GetOutput().Update()
+mapToColors.Update()
 
-extent = mapToColors.GetOutput().GetWholeExtent()
+extent = mapToColors.GetOutput().GetExtent()
 xslice = int((extent[0] + extent[1])/2)
 yslice = int((extent[2] + extent[3])/2)
 zslice = int((extent[4] + extent[5])/2)
 
 imageActorX = vtk.vtkImageActor()
-imageActorX.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorX.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorX.SetInput(mapToColors.GetOutput())
 imageActorX.SetDisplayExtent(xslice, xslice,
                              extent[2], extent[3],
                              extent[4], extent[5])
 
 imageActorY = vtk.vtkImageActor()
-imageActorY.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorY.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorY.SetInput(mapToColors.GetOutput())
 imageActorY.SetDisplayExtent(extent[0], extent[1],
                              yslice, yslice,
                              extent[4], extent[5])
 
 imageActorZ = vtk.vtkImageActor()
-imageActorZ.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorZ.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorZ.SetInput(mapToColors.GetOutput())
 imageActorZ.SetDisplayExtent(extent[0], extent[1],
                              extent[2], extent[3],
                              zslice, zslice)

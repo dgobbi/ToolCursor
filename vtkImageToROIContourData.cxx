@@ -73,6 +73,9 @@ vtkDataObject* vtkImageToROIContourData::GetInput()
 //----------------------------------------------------------------------------
 void vtkImageToROIContourData::SetInput(vtkDataObject* input)
 {
+#if VTK_MAJOR_VERSION >= 6
+  this->SetInputDataInternal(0, input);
+#else
   vtkAlgorithmOutput *producerPort = 0;
 
   if (input)
@@ -81,6 +84,7 @@ void vtkImageToROIContourData::SetInput(vtkDataObject* input)
     }
 
   this->SetInputConnection(0, producerPort);
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -129,7 +133,11 @@ int vtkImageToROIContourData::ProcessRequest(
     if (!data)
       {
       data = vtkROIContourData::New();
+#if VTK_MAJOR_VERSION >= 6
+      info->Set(vtkDataObject::DATA_OBJECT(), data);
+#else
       data->SetPipelineInformation(info);
+#endif
       data->Delete();
       }
     return 1;
@@ -449,7 +457,7 @@ int vtkImageToROIContourData::RequestData(
 
   // Go through the input slice by slice
   int extent[6];
-  input->GetWholeExtent(extent);
+  inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
   int zMin = extent[4];
   int zMax = extent[5];
 

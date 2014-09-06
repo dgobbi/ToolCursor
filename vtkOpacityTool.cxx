@@ -95,11 +95,11 @@ void vtkOpacityTool::DoAction()
   double delta = (opacity - 0.5);
   double theta = atan2(delta, sqrt(1.0 - delta*delta));
   theta += (x - x0)*2.0/(size[1] + 1);
-  if (theta < -0.5*vtkMath::DoublePi())
+  if (theta < -0.5*vtkMath::Pi())
     {
     opacity = 0.0;
     }
-  else if (theta > 0.5*vtkMath::DoublePi())
+  else if (theta > 0.5*vtkMath::Pi())
     {
     opacity = 1.0;
     }

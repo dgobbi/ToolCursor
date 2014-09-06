@@ -6,7 +6,6 @@ IF(COMMAND CMAKE_POLICY)
 ENDIF(COMMAND CMAKE_POLICY)
 
 SET(LIB_NAME vtk${PROJECT_NAME})
-SET(LIB_VTK_LIBS vtkVolumeRendering vtkHybrid)
 SET(LIB_SRCS
   vtkActionCursorShapes.cxx
   vtkFiducialPointsTool.cxx
@@ -47,8 +46,24 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch i386")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -arch i386")
 ENDIF(VTK_USE_CARBON)
 
+if("${VTK_MAJOR_VERSION}" GREATER 5)
+  set(VTK_LIBS vtkCommonCore vtkCommonDataModel vtkImagingCore
+      vtkImagingGeneral vtkImagingStencil vtkImagingStatistics
+      vtkFiltersGeneral vtkIOImage vtkIOMINC vtkRenderingImage
+      vtkRenderingVolume vtkInteractionStyle vtkRenderingOpenGL
+      vtkRenderingVolumeOpenGL vtkRenderingFreeTypeOpenGL)
+  # If vtkIOMPIImage is present, it has factories for vtkIOImage
+  list(FIND VTK_LIBRARIES vtkIOMPIImage TMP_INDEX)
+  if(TMP_INDEX GREATER -1)
+    set(VTK_LIBS ${VTK_LIBS} vtkIOMPIImage)
+  endif()
+else()
+  set(VTK_LIBS vtkCommon vtkFiltering vtkImaging vtkIO
+      vtkRendering vtkVolumeRendering vtkHybrid) # VTK 5.x
+endif()
+
 ADD_LIBRARY(${LIB_NAME} STATIC ${LIB_SRCS})
-TARGET_LINK_LIBRARIES(${LIB_NAME} ${LIB_VTK_LIBS})
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${VTK_LIBS})
 
 FOREACH(EXAMPLE ${EXAMPLES})
   ADD_EXECUTABLE(${EXAMPLE} ${EXAMPLE}.cxx)
@@ -87,8 +102,8 @@ IF(VTK_WRAP_PYTHON)
                  @ONLY IMMEDIATE)
   INCLUDE(${VTK_CMAKE_DIR}/vtkWrapPython.cmake)
   VTK_WRAP_PYTHON3(${LIB_NAME}Python vtkLocalPYTHON_SRCS "${LIB_SRCS}")
-  ADD_LIBRARY(${LIB_NAME}Python MODULE ${vtkLocalPYTHON_SRCS})
-  FOREACH(c ${LIB_VTK_LIBS})
+  ADD_LIBRARY(${LIB_NAME}Python MODULE ${vtkLocalPYTHON_SRCS} ${LIB_NAME}PythonInit.cxx)
+  FOREACH(c ${VTK_LIBS})
     TARGET_LINK_LIBRARIES(${LIB_NAME}Python ${c}PythonD)
   ENDFOREACH(c)
   TARGET_LINK_LIBRARIES(${LIB_NAME}Python ${LIB_NAME})

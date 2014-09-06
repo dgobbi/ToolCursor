@@ -34,6 +34,13 @@
 #include "vtkTransform.h"
 #include "vtkPerspectiveTransform.h"
 
+// A macro to assist VTK 5 backwards compatibility
+#if VTK_MAJOR_VERSION >= 6
+#define SET_INPUT_DATA SetInputData
+#else
+#define SET_INPUT_DATA SetInput
+#endif
+
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -111,7 +118,7 @@ vtkPolyData *vtkActionCursorShapes::MakeArrow()
   polys->Delete();
 
   vtkImplicitModeller *modeller = vtkImplicitModeller::New();
-  modeller->SetInput(arrow);
+  modeller->SET_INPUT_DATA(arrow);
   modeller->SetSampleDimensions(32, 16, 8);
 
   vtkContourFilter *contour = vtkContourFilter::New();
@@ -141,7 +148,7 @@ vtkPolyData *vtkActionCursorShapes::MakeWarpedArrow(vtkPolyData *arrow,
   double warpX, double warpY, double warpZ, double warpScale)
 {
   vtkWarpTo *warp = vtkWarpTo::New();
-  warp->SetInput(arrow);
+  warp->SET_INPUT_DATA(arrow);
   warp->SetPosition(warpX, warpY, warpZ);
   warp->SetScaleFactor(warpScale);
   warp->AbsoluteOn();
@@ -324,7 +331,7 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
       lines->InsertNextCell(polylen);
       for (int ii = 0; ii < polylen; ii++)
         {
-        double angle = 2*vtkMath::DoublePi()*(k*(polylen-1)+ii)/lineResolution;
+        double angle = 2*vtkMath::Pi()*(k*(polylen-1)+ii)/lineResolution;
         points->InsertNextPoint(lineRadius*cos(angle),
                                 lineRadius*sin(angle),
                                 0.1*(1 - 2*j));

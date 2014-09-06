@@ -45,6 +45,8 @@
 #include "vtkCutter.h"
 #include "vtkTriangleFilter.h"
 #include "vtkTubeFilter.h"
+#include "vtkInformation.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
 #include "vtkCursorShapes.h"
 #include "vtkActionCursorShapes.h"
@@ -56,6 +58,13 @@
 #include "vtkSpinCameraTool.h"
 #include "vtkZoomCameraTool.h"
 #include "vtkFollowerPlane.h"
+
+// A macro to assist VTK 5 backwards compatibility
+#if VTK_MAJOR_VERSION >= 6
+#define SET_INPUT_DATA SetInputData
+#else
+#define SET_INPUT_DATA SetInput
+#endif
 
 vtkStandardNewMacro(vtkToolCursor);
 
@@ -555,7 +564,11 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         vtkDataSet *data = actor->GetMapper()->GetInput();
         if (data)
           {
+#if VTK_MAJOR_VERSION >= 6
+          actor->GetMapper()->Update();
+#else
           data->Update();
+#endif
           }
         }
       else if ( (volume = vtkVolume::SafeDownCast(anyProp)) )
@@ -563,9 +576,15 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         vtkDataSet *data = volume->GetMapper()->GetDataSetInput();
         if (data)
           {
+#if VTK_MAJOR_VERSION >= 6
+          volume->GetMapper()->UpdateInformation();
+          volume->GetMapper()->SetUpdateExtentToWholeExtent();
+          volume->GetMapper()->Update();
+#else
           data->UpdateInformation();
           data->SetUpdateExtentToWholeExtent();
           data->Update();
+#endif
           }
         }
       else if ( (imageActor = vtkImageActor::SafeDownCast(anyProp)) )
@@ -573,10 +592,24 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         vtkImageData *data = imageActor->GetInput();
         if (data)
           {
-          data->UpdateInformation();
           int extent[6], wextent[6], dextent[6];
+#if VTK_MAJOR_VERSION >= 6
+          imageActor->GetMapper()->UpdateInformation();
+          data->GetExtent(extent);
+          data->GetExtent(wextent);
+          vtkInformation *info =
+            imageActor->GetMapper()->GetInputInformation(0, 0);
+          if (info &&
+              info->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
+            {
+            info->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
+                      wextent);
+            }
+#else
+          data->UpdateInformation();
           data->GetExtent(extent);
           data->GetWholeExtent(wextent);
+#endif
           imageActor->GetDisplayExtent(dextent);
           if (dextent[0] == -1)
             {
@@ -600,9 +633,15 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
               if (extent[h] < dextent[h]) { extent[h] = dextent[h]; }
               }
             }
+#if VTK_MAJOR_VERSION >= 6
+          imageActor->GetMapper()->SetUpdateExtent(extent);
+          //imageActor->GetMapper()->PropagateUpdateExtent();
+          imageActor->GetMapper()->Update();
+#else
           data->SetUpdateExtent(extent);
           data->PropagateUpdateExtent();
           data->UpdateData();
+#endif
           }
         }
       }
@@ -978,7 +1017,7 @@ void vtkToolCursor::CheckGuideVisibility()
     //this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
     // a dummy volume mapper
     vtkVolumeRayCastMapper *vmapper = vtkVolumeRayCastMapper::New();
-    vmapper->SetInput(imageMapper->GetInput());
+    vmapper->SET_INPUT_DATA(imageMapper->GetInput());
     this->SliceOutlineSource->SetActivePlaneId(imageEdgeId);
     this->SliceOutlineSource->SetVolumeMapper(vmapper);
     vmapper->Delete();
@@ -990,7 +1029,7 @@ void vtkToolCursor::CheckGuideVisibility()
     if (this->SliceOutlineSource->GetVolumeMapper())
       {
       this->SliceOutlineSource->GetVolumeMapper()->
-        SetInput(static_cast<vtkImageData *>(0));
+        SET_INPUT_DATA(static_cast<vtkImageData *>(0));
       }
     this->SliceOutlineSource->SetVolumeMapper(0);
     this->SliceOutlineCutter->SetCutFunction(0);
@@ -1215,7 +1254,7 @@ void vtkToolCursor::SetShape(int shape)
 
   if (data)
     {
-    this->Mapper->SetInput(data);
+    this->Mapper->SET_INPUT_DATA(data);
     this->Shape = shape;
     }
 }

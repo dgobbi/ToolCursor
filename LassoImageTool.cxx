@@ -57,6 +57,13 @@ Module:    LassoImageTool.cxx
 
 #include "vtkToolCursorInteractorObserver.h"
 
+// A macro to assist VTK 5 backwards compatibility
+#if VTK_MAJOR_VERSION >= 6
+#define SET_INPUT_DATA SetInputData
+#else
+#define SET_INPUT_DATA SetInput
+#endif
+
 // internal methods for reading images, these methods read the image
 // into the specified data object and also provide a matrix for converting
 // the data coordinates into patient coordinates.
@@ -226,7 +233,7 @@ int main (int argc, char *argv[])
   vtkSmartPointer<vtkImageProperty> sourceProperty =
     vtkSmartPointer<vtkImageProperty>::New();
 
-  sourceMapper->SetInput(sourceImage);
+  sourceMapper->SET_INPUT_DATA(sourceImage);
   sourceMapper->SliceAtFocalPointOn();
   sourceMapper->SliceFacesCameraOn();
   sourceMapper->JumpToNearestSliceOn();
@@ -315,7 +322,7 @@ int main (int argc, char *argv[])
   // blur the image to make a smoother mask
   vtkSmartPointer<vtkImageGaussianSmooth> imageBlur =
     vtkSmartPointer<vtkImageGaussianSmooth>::New();
-  imageBlur->SetInput(sourceImage);
+  imageBlur->SET_INPUT_DATA(sourceImage);
   imageBlur->SetStandardDeviations(4,4,4);
 
   // set threshold to 10% of the data range
@@ -341,7 +348,7 @@ int main (int argc, char *argv[])
   // convert the ROI into a new mask
   vtkSmartPointer<vtkROIContourDataToPolyData> roiDataToPolyData =
     vtkSmartPointer<vtkROIContourDataToPolyData>::New();
-  roiDataToPolyData->SetInput(roiData);
+  roiDataToPolyData->SET_INPUT_DATA(roiData);
   roiDataToPolyData->SubdivisionOn();
 
   vtkSmartPointer<vtkPolyDataToImageStencil> makeStencil =
@@ -349,11 +356,12 @@ int main (int argc, char *argv[])
   makeStencil->SetTolerance(0.0);
   makeStencil->SetInputConnection(roiDataToPolyData->GetOutputPort());
   makeStencil->SetInformationInput(sourceImage);
+  makeStencil->Update();
 
   vtkSmartPointer<vtkImageReslice> applyStencil =
     vtkSmartPointer<vtkImageReslice>::New();
-  applyStencil->SetInput(sourceImage);
-  applyStencil->SetStencil(makeStencil->GetOutput());
+  applyStencil->SET_INPUT_DATA(sourceImage);
+  applyStencil->SetInputConnection(1, makeStencil->GetOutputPort());
   applyStencil->Update();
 
   // display the new mask

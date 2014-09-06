@@ -33,6 +33,15 @@
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 #include "vtkMath.h"
+#include "vtkInformation.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+
+// A macro to assist VTK 5 backwards compatibility
+#if VTK_MAJOR_VERSION >= 6
+#define SET_INPUT_DATA SetInputData
+#else
+#define SET_INPUT_DATA SetInput
+#endif
 
 vtkStandardNewMacro(vtkPushPlaneTool);
 
@@ -268,9 +277,19 @@ void vtkPushPlaneTool::DoAction()
     vtkImageData *input = this->ImageMapper->GetInput();
     double io[3], is[3];
     int extent[6];
-    input->GetWholeExtent(extent);
     input->GetSpacing(is);
     input->GetOrigin(io);
+#if VTK_MAJOR_VERSION >= 6
+    input->GetExtent(extent);
+    vtkInformation *inInfo = this->ImageMapper->GetInputInformation(0, 0);
+    if (inInfo &&
+        inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
+      {
+      inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+      }
+#else
+    input->GetWholeExtent(extent);
+#endif
 
     // get the center of the volume
     double point[3];
@@ -325,13 +344,17 @@ void vtkPushPlaneTool::DoAction()
 
     vtkImageReslice *reslice = vtkImageReslice::New();
     reslice->SetInterpolationModeToLinear();
-    reslice->SetInput(data);
+    reslice->SET_INPUT_DATA(data);
     reslice->GenerateStencilOutputOn();
 
     vtkImageHistogramStatistics *checker =
       vtkImageHistogramStatistics::New();
     checker->SetInputConnection(reslice->GetOutputPort());
+#if VTK_MAJOR_VERSION >= 6
+    checker->SetStencilConnection(reslice->GetStencilOutputPort());
+#else
     checker->SetStencil(reslice->GetStencilOutput());
+#endif
 
     double dp = -(normal[0]*origin[0] +
                   normal[1]*origin[1] +
@@ -669,10 +692,23 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
       this->ImageActor->GetInput()->GetOrigin(dataOrigin);
       double dataSpacing[3];
       this->ImageActor->GetInput()->GetSpacing(dataSpacing);
-      int wholeExtent[6];
-      this->ImageActor->GetInput()->GetWholeExtent(wholeExtent);
       int displayExtent[6];
       this->ImageActor->GetDisplayExtent(displayExtent);
+#if VTK_MAJOR_VERSION >= 6
+      int wholeExtent[6];
+      this->ImageActor->GetInput()->GetExtent(wholeExtent);
+      vtkInformation *inInfo =
+        this->ImageActor->GetMapper()->GetInputInformation(0, 0);
+      if (inInfo &&
+          inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
+        {
+        inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
+                    wholeExtent);
+        }
+#else
+      int wholeExtent[6];
+      this->ImageActor->GetInput()->GetWholeExtent(wholeExtent);
+#endif
 
       double x = (origin[i] - dataOrigin[i])/dataSpacing[i];
       if (x < wholeExtent[2*i]) { x = wholeExtent[2*i]; }

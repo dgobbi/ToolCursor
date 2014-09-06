@@ -142,7 +142,7 @@ class VolumeLOD(vtk.vtkLODProp3D):
         self.ShiftScale.SetOutputScalarTypeToUnsignedShort()
 
         self.Reslice = vtk.vtkImageReslice()
-        self.Reslice.SetInput(self.ShiftScale.GetOutput())
+        self.Reslice.SetInputConnection(self.ShiftScale.GetOutputPort())
         self.Reslice.SetOutputExtent(0, 127, 0, 127, 0, 127)
         self.Reslice.SetInterpolationModeToCubic()
 
@@ -150,15 +150,15 @@ class VolumeLOD(vtk.vtkLODProp3D):
         # set up the volume rendering
 
         self.Mapper = vtk.vtkVolumeRayCastMapper()
-        self.Mapper.SetInput(self.Reslice.GetOutput())
+        self.Mapper.SetInputConnection(self.Reslice.GetOutputPort())
         volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
         self.Mapper.SetVolumeRayCastFunction(volumeFunction)
 
         self.Mapper3D = vtk.vtkVolumeTextureMapper3D()
-        self.Mapper3D.SetInput(self.Reslice.GetOutput())
+        self.Mapper3D.SetInputConnection(self.Reslice.GetOutputPort())
 
         self.Mapper2D = vtk.vtkVolumeTextureMapper2D()
-        self.Mapper2D.SetInput(self.Reslice.GetOutput())
+        self.Mapper2D.SetInputConnection(self.Reslice.GetOutputPort())
 
         self.Color = vtk.vtkColorTransferFunction()
         self.Color.AddRGBPoint(0,0.0,0.0,0.0)
@@ -219,6 +219,10 @@ class VolumeLOD(vtk.vtkLODProp3D):
         self.ShiftScale.SetInputConnection(algorithmOutput)
         self.UpdatePipelineIvars()
 
+    def SetInputData(self, input):
+        self.ShiftScale.SetInputData(input)
+        self.UpdatePipelineIvars()
+
     def SetInput(self, input):
         self.ShiftScale.SetInput(input)
         self.UpdatePipelineIvars()
@@ -227,15 +231,16 @@ class VolumeLOD(vtk.vtkLODProp3D):
         return self.ShiftScale.GetInput()
 
     def UpdatePipelineIvars(self):
-        self.ShiftScale.GetOutput().UpdateInformation()
+        self.ShiftScale.Update()
         origin = self.ShiftScale.GetOutput().GetOrigin()
         spacing = self.ShiftScale.GetOutput().GetSpacing()
-        extent = self.ShiftScale.GetOutput().GetWholeExtent()
+        extent = self.ShiftScale.GetOutput().GetExtent()
         newspacing = (spacing[0]*(extent[1] - extent[0])/127.0,
                       spacing[1]*(extent[3] - extent[2])/127.0,
                       spacing[2]*(extent[5] - extent[4])/127.0)
         self.Reslice.SetOutputOrigin(origin)
         self.Reslice.SetOutputSpacing(newspacing)
+        self.Reslice.Update()
 
     def SetCroppingRegionFlags(self, cropflags):
         self.Mapper.CroppingOn()
@@ -361,14 +366,14 @@ table2.Build()
 mapToColors = vtk.vtkImageMapToColors()
 mapToColors.SetInputConnection(readers[img1].GetOutputPort())
 mapToColors.SetLookupTable(table)
-mapToColors.GetOutput().Update()
+mapToColors.Update()
 
 mapToColors2 = vtk.vtkImageMapToColors()
 mapToColors2.SetInputConnection(readers[img1].GetOutputPort())
 mapToColors2.SetLookupTable(table2)
-mapToColors2.GetOutput().Update()
+mapToColors2.Update()
 
-extent = mapToColors.GetOutput().GetWholeExtent()
+extent = mapToColors.GetOutput().GetExtent()
 xslice = int((extent[0] + extent[1])/2)
 yslice = int((extent[2] + extent[3])/2)
 zslice = int((extent[4] + extent[5])/2)
@@ -376,7 +381,10 @@ zslice = int((extent[4] + extent[5])/2)
 imageActorX = vtk.vtkImageActor()
 imageActorX.PickableOff()
 #imageActorX.SetOpacity(253/255.0)
-imageActorX.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorX.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorX.SetInput(mapToColors.GetOutput())
 imageActorX.SetDisplayExtent(xslice, xslice,
                              extent[2], extent[3],
                              extent[4], extent[5])
@@ -384,7 +392,10 @@ imageActorX.SetDisplayExtent(xslice, xslice,
 imageActorY = vtk.vtkImageActor()
 imageActorY.PickableOff()
 #imageActorY.SetOpacity(253/255.0)
-imageActorY.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorY.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorY.SetInput(mapToColors.GetOutput())
 imageActorY.SetDisplayExtent(extent[0], extent[1],
                              yslice, yslice,
                              extent[4], extent[5])
@@ -392,25 +403,37 @@ imageActorY.SetDisplayExtent(extent[0], extent[1],
 imageActorZ = vtk.vtkImageActor()
 imageActorZ.PickableOff()
 #imageActorZ.SetOpacity(253/255.0)
-imageActorZ.SetInput(mapToColors.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorZ.SetInputData(mapToColors.GetOutput())
+else:
+    imageActorZ.SetInput(mapToColors.GetOutput())
 imageActorZ.SetDisplayExtent(extent[0], extent[1],
                              extent[2], extent[3],
                              zslice, zslice)
 
 imageActorX2 = vtk.vtkImageActor()
-imageActorX2.SetInput(mapToColors2.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorX2.SetInputData(mapToColors2.GetOutput())
+else:
+    imageActorX2.SetInput(mapToColors2.GetOutput())
 imageActorX2.SetDisplayExtent(xslice, xslice,
                              extent[2], extent[3],
                              extent[4], extent[5])
 
 imageActorY2 = vtk.vtkImageActor()
-imageActorY2.SetInput(mapToColors2.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorY2.SetInputData(mapToColors2.GetOutput())
+else:
+    imageActorY2.SetInput(mapToColors2.GetOutput())
 imageActorY2.SetDisplayExtent(extent[0], extent[1],
                              yslice, yslice,
                              extent[4], extent[5])
 
 imageActorZ2 = vtk.vtkImageActor()
-imageActorZ2.SetInput(mapToColors2.GetOutput())
+if vtk.vtkVersion.GetVTKMajorVersion() >= 6:
+    imageActorZ2.SetInputData(mapToColors2.GetOutput())
+else:
+    imageActorZ2.SetInput(mapToColors2.GetOutput())
 imageActorZ2.SetDisplayExtent(extent[0], extent[1],
                              extent[2], extent[3],
                              zslice, zslice)
@@ -514,7 +537,7 @@ def OnRender(o, e):
     data = volume.GetInput()
     origin = data.GetOrigin()
     spacing = data.GetSpacing()
-    extent = data.GetWholeExtent()
+    extent = data.GetExtent()
 
     xslice = int(math.floor((planes[0] - origin[0])/spacing[0] - 0.1))
     yslice = int(math.ceil((planes[3] - origin[1])/spacing[1] + 0.1))

@@ -164,7 +164,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
 //----------------------------------------------------------------------------
 vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
 {
-  double pi = vtkMath::DoublePi();
+  double pi = vtkMath::Pi();
   double radius = 5.0;
   int resolution = 9;
 
@@ -270,7 +270,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
 //----------------------------------------------------------------------------
 vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
 {
-  double pi = vtkMath::DoublePi();
+  double pi = vtkMath::Pi();
   double radius = 8.0;
   double height = 15.0;
   int resolution = 20;
