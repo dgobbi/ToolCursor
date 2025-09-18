@@ -74,11 +74,11 @@ void vtkSpinCameraTool::DoAction()
   // Get the camera's x, y, and z axes
   double cvx[3], cvy[3], cvz[3];
   for (int i = 0; i < 3; i++)
-    {
+  {
     cvx[i] = viewMatrix->GetElement(0, i);
     cvy[i] = viewMatrix->GetElement(1, i);
     cvz[i] = viewMatrix->GetElement(2, i);
-    }
+  }
 
   double f[3];
   camera->GetFocalPoint(f);

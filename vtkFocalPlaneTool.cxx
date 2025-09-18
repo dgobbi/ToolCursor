@@ -77,14 +77,14 @@ void vtkFocalPlaneTool::DoAction()
   // Get viewport height at the current depth
   double height = 1;
   if (camera->GetParallelProjection())
-    {
+  {
     height = camera->GetParallelScale();
-    }
+  }
   else
-    {
+  {
     double angle = vtkMath::RadiansFromDegrees(camera->GetViewAngle());
     height = 2*this->StartDistance*sin(angle*0.5);
-    }
+  }
 
   // Get the viewport size in pixels
   vtkRenderer *renderer = cursor->GetRenderer();

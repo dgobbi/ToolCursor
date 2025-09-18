@@ -41,9 +41,9 @@ vtkWindowLevelTool::vtkWindowLevelTool()
 vtkWindowLevelTool::~vtkWindowLevelTool()
 {
   if (this->CurrentImageProperty)
-    {
+  {
     this->CurrentImageProperty->Delete();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -60,11 +60,11 @@ void vtkWindowLevelTool::StartAction()
   this->SetCurrentImageToNthImage(-1);
 
   if (this->CurrentImageProperty)
-    {
+  {
     vtkImageProperty *property = this->CurrentImageProperty;
     this->StartWindowLevel[0] = property->GetColorWindow();
     this->StartWindowLevel[1] = property->GetColorLevel();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -95,10 +95,10 @@ void vtkWindowLevelTool::DoAction()
   window *= pow(10.0, (x - x0)*2.0/(size[1] + 1));
 
   if (this->CurrentImageProperty)
-    {
+  {
     this->CurrentImageProperty->SetColorWindow(window);
     this->CurrentImageProperty->SetColorLevel(level);
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -113,53 +113,53 @@ void vtkWindowLevelTool::SetCurrentImageToNthImage(int i)
   vtkCollectionSimpleIterator pit;
 
   for (int k = 0; k < 2; k++)
-    {
+  {
     int j = 0;
     for (props->InitTraversal(pit); (prop = props->GetNextProp(pit)); )
-      {
+    {
       for (prop->InitPathTraversal(); (path = prop->GetNextPath()); )
-        {
+      {
         vtkProp *tryProp = path->GetLastNode()->GetViewProp();
         if ( tryProp && tryProp->GetPickable() &&
              (imageProp = vtkImageSlice::SafeDownCast(tryProp)) != 0 )
-          {
+        {
           if (j == i)
-            {
+          {
             break;
-            }
+          }
           imageProp = 0;
           j++;
-          }
-        }
-      if (imageProp)
-        {
-        break;
         }
       }
-    if (i < 0)
+      if (imageProp)
       {
-      i += j;
+        break;
       }
     }
+    if (i < 0)
+    {
+      i += j;
+    }
+  }
 
   vtkImageProperty *property = 0;
   if (imageProp)
-    {
+  {
     property = imageProp->GetProperty();
-    }
+  }
 
   if (property != this->CurrentImageProperty)
-    {
+  {
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Delete();
-      }
+    }
 
     this->CurrentImageProperty = property;
 
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Register(this);
-      }
     }
+  }
 }

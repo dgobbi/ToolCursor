@@ -106,9 +106,9 @@ vtkPolyData *vtkActionCursorShapes::MakeArrow()
   };
 
   for (int i = 0; i < 7; i++)
-    {
+  {
     points->InsertNextPoint(coords[i]);
-    }
+  }
   polys->InsertNextCell(polyIds[0], &polyIds[1]);
 
   vtkPolyData *arrow = vtkPolyData::New();
@@ -200,20 +200,20 @@ vtkDataSet *vtkActionCursorShapes::MakeMoveShape(
   };
 
   if (warped)
-    {
+  {
     transform->RotateY(36);
     transform->Scale(1.5, 1.0, 1.0);
     transform->Translate(0, 0, 14);
-    }
+  }
   else
-    {
+  {
     transform->Translate(0, 0, 2.22);
-    }
+  }
 
   int color = 0;
 
   for (int j = 0; j < 4; j++)
-    {
+  {
     vtkIdType nPoints = points->GetNumberOfPoints();
     transform->TransformPoints(leafPoints, points);
     transform->TransformNormals(leafNormals, normals);
@@ -221,21 +221,21 @@ vtkDataSet *vtkActionCursorShapes::MakeMoveShape(
     vtkIdType *pts;
     leafStrips->InitTraversal();
     while (leafStrips->GetNextCell(npts, pts))
-      {
+    {
       strips->InsertNextCell(npts);
       for (vtkIdType k = 0; k < npts; k++)
-        {
+      {
         strips->InsertCellPoint(pts[k] + nPoints);
-        }
       }
+    }
     vtkIdType n = leafPoints->GetNumberOfPoints();
     for (int ii = 0; ii < n; ii++)
-      {
+    {
       scalars->InsertNextTupleValue(&color);
-      }
+    }
     transform->Concatenate(rotate90);
     color = !color;
-    }
+  }
   transform->Delete();
 
   leafData->Delete();
@@ -286,7 +286,7 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
   int color = 0;
 
   for (int i = 0; i < 2; i++)
-    {
+  {
     vtkIdType nPoints = points->GetNumberOfPoints();
     transform->TransformPoints(leafPoints, points);
     transform->TransformNormals(leafNormals, normals);
@@ -294,23 +294,23 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
     vtkIdType *pts;
     leafStrips->InitTraversal();
     while (leafStrips->GetNextCell(npts, pts))
-      {
+    {
       strips->InsertNextCell(npts);
       for (vtkIdType j = 0; j < npts; j++)
-        {
+      {
         strips->InsertCellPoint(pts[j] + nPoints);
-        }
       }
+    }
     vtkIdType nn = leafPoints->GetNumberOfPoints();
     for (int ii = 0; ii < nn; ii++)
-      {
+    {
       scalars->InsertNextTupleValue(&color);
-      }
+    }
     // This transform puts the arrows tail-to-tail, instead of tip-to-tip
     transform->Translate(0, 0, -44);
     transform->Scale(-1,1,-1);
     color = !color;
-    }
+  }
   transform->Delete();
 
   leafData->Delete();
@@ -323,14 +323,14 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
   normal[0] = normal[1] = 0.0;
   normal[2] = 1.0;
   for (int j = 0; j < 2; j++)
-    {
+  {
     color = 0;
     for (int k = 0; k < 8; k++)
-      {
+    {
       vtkIdType nPoints = points->GetNumberOfPoints();
       lines->InsertNextCell(polylen);
       for (int ii = 0; ii < polylen; ii++)
-        {
+      {
         double angle = 2*vtkMath::Pi()*(k*(polylen-1)+ii)/lineResolution;
         points->InsertNextPoint(lineRadius*cos(angle),
                                 lineRadius*sin(angle),
@@ -338,11 +338,11 @@ vtkDataSet *vtkActionCursorShapes::MakePushShape(vtkPolyData *arrow)
         scalars->InsertNextTupleValue(&color);
         normals->InsertNextTupleValue(normal);
         lines->InsertCellPoint(ii + nPoints);
-        }
+      }
       normal[2] = -normal[2];
       color = !color;
-      }
     }
+  }
 
   data->SetPoints(points);
   points->Delete();
@@ -391,7 +391,7 @@ vtkDataSet *vtkActionCursorShapes::MakeSpinShape(vtkPolyData *arrow)
   int color = 0;
 
   for (int j = 0; j < 2; j++)
-    {
+  {
     vtkIdType nPoints = points->GetNumberOfPoints();
     transform->TransformPoints(leafPoints, points);
     transform->TransformNormals(leafNormals, normals);
@@ -399,21 +399,21 @@ vtkDataSet *vtkActionCursorShapes::MakeSpinShape(vtkPolyData *arrow)
     vtkIdType *pts;
     leafStrips->InitTraversal();
     while (leafStrips->GetNextCell(npts, pts))
-      {
+    {
       strips->InsertNextCell(npts);
       for (vtkIdType k = 0; k < npts; k++)
-        {
+      {
         strips->InsertCellPoint(pts[k] + nPoints);
-        }
       }
+    }
     vtkIdType n = leafPoints->GetNumberOfPoints();
     for (int ii = 0; ii < n; ii++)
-      {
+    {
       scalars->InsertNextTupleValue(&color);
-      }
+    }
     transform->Scale(-1, -1, 1);
     color = !color;
-    }
+  }
   transform->Delete();
 
   leafData->Delete();
@@ -460,7 +460,7 @@ vtkDataSet *vtkActionCursorShapes::MakeZoomShape(vtkPolyData *arrow)
   int color = 1;
 
   for (int j = 0; j < 2; j++)
-    {
+  {
     vtkIdType nPoints = points->GetNumberOfPoints();
     transform->TransformPointsNormalsVectors(leafPoints, points,
                                              leafNormals, normals,
@@ -469,21 +469,21 @@ vtkDataSet *vtkActionCursorShapes::MakeZoomShape(vtkPolyData *arrow)
     vtkIdType *pts;
     leafStrips->InitTraversal();
     while (leafStrips->GetNextCell(npts, pts))
-      {
+    {
       strips->InsertNextCell(npts);
       for (vtkIdType k = 0; k < npts; k++)
-        {
+      {
         strips->InsertCellPoint(pts[k] + nPoints);
-        }
       }
+    }
     vtkIdType n = leafPoints->GetNumberOfPoints();
     for (int ii = 0; ii < n; ii++)
-      {
+    {
       scalars->InsertNextTupleValue(&color);
-      }
+    }
     transform->Concatenate(rotate180);
     color = !color;
-    }
+  }
 
   static double rotate90[16] = {
      0, -1,  0,  0,

@@ -408,9 +408,9 @@ int vtkToolCursor::FindShape(int mode, int pickFlags, int modifier)
   int i = this->ResolveBinding(this->ShapeBindings, 0,
                                mode, pickFlags, modifier);
   if (i < 0)
-    {
+  {
     return 0;
-    }
+  }
 
   int tuple[4];
   this->ShapeBindings->GetTupleValue(i, tuple);
@@ -426,9 +426,9 @@ int vtkToolCursor::FindAction(int mode, int pickFlags, int modifier)
   int i = this->ResolveBinding(this->ActionBindings, 0,
                                mode, pickFlags, modifier);
   if (i < 0)
-    {
+  {
     return 0;
-    }
+  }
 
   int tuple[4];
   this->ActionBindings->GetTupleValue(i, tuple);
@@ -448,7 +448,7 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
   int tuple[4];
   int j = 0;
   for (;;)
-    {
+  {
     int i = this->ResolveBinding(this->ActionBindings, j,
                                  mode, pickFlags, modifier);
     if (i < 0) { break; }
@@ -457,7 +457,7 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
     modifierMask |= tuple[2];
 
     j = i + 1;
-    }
+  }
 
   return (modifierMask & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK));
 }
@@ -466,22 +466,22 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
 void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
 {
   if (renderer == this->Renderer)
-    {
+  {
     return;
-    }
+  }
 
   if (this->Renderer)
-    {
+  {
     this->Renderer->RemoveObserver(this->RenderCommand);
     this->Renderer->RemoveActor(this->Actor);
     this->Renderer->RemoveActor(this->VolumeCroppingActor);
     this->Renderer->RemoveActor(this->SliceOutlineActor);
     this->Renderer->Delete();
     this->Renderer = 0;
-    }
+  }
 
   if (renderer)
-    {
+  {
     this->Renderer = renderer;
     this->Renderer->Register(this);
     this->Renderer->AddActor(this->Actor);
@@ -489,7 +489,7 @@ void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
     this->Renderer->AddActor(this->SliceOutlineActor);
     this->Renderer->AddObserver(vtkCommand::StartEvent,
                                 this->RenderCommand, -1);
-    }
+  }
 
   this->Modified();
 }
@@ -498,15 +498,15 @@ void vtkToolCursor::SetRenderer(vtkRenderer *renderer)
 void vtkToolCursor::SetColor(int i, double r, double b, double g)
 {
   if (i >= 0 && i <= 255)
-    {
+  {
     double rgba[4];
     this->LookupTable->GetTableValue(i, rgba);
     if (rgba[0] != r || rgba[1] != g || rgba[2] != b)
-      {
+    {
       this->LookupTable->SetTableValue(i, r, g, b, 1.0);
       this->Modified();
-      }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -532,27 +532,27 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
 
   vtkPropCollection *props;
   if ( picker->GetPickFromList() )
-    {
+  {
     props = picker->GetPickList();
-    }
+  }
   else
-    {
+  {
     props = renderer->GetViewProps();
-    }
+  }
 
   vtkProp *prop;
   vtkCollectionSimpleIterator pit;
   props->InitTraversal(pit);
   while ( (prop = props->GetNextProp(pit)) )
-    {
+  {
     vtkAssemblyPath *path;
     prop->InitPathTraversal();
     while ( (path = prop->GetNextPath()) )
-      {
+    {
       if (!prop->GetPickable() || !prop->GetVisibility())
-        {
+      {
         break;
-        }
+      }
 
       vtkProp *anyProp = path->GetLastNode()->GetViewProp();
       vtkActor *actor;
@@ -560,22 +560,22 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
       vtkImageActor *imageActor;
 
       if ( (actor = vtkActor::SafeDownCast(anyProp)) )
-        {
+      {
         vtkDataSet *data = actor->GetMapper()->GetInput();
         if (data)
-          {
+        {
 #if VTK_MAJOR_VERSION >= 6
           actor->GetMapper()->Update();
 #else
           data->Update();
 #endif
-          }
         }
+      }
       else if ( (volume = vtkVolume::SafeDownCast(anyProp)) )
-        {
+      {
         vtkDataSet *data = volume->GetMapper()->GetDataSetInput();
         if (data)
-          {
+        {
 #if VTK_MAJOR_VERSION >= 6
           volume->GetMapper()->UpdateInformation();
           volume->GetMapper()->SetUpdateExtentToWholeExtent();
@@ -585,13 +585,13 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
           data->SetUpdateExtentToWholeExtent();
           data->Update();
 #endif
-          }
         }
+      }
       else if ( (imageActor = vtkImageActor::SafeDownCast(anyProp)) )
-        {
+      {
         vtkImageData *data = imageActor->GetInput();
         if (data)
-          {
+        {
           int extent[6], wextent[6], dextent[6];
 #if VTK_MAJOR_VERSION >= 6
           imageActor->GetMapper()->UpdateInformation();
@@ -601,10 +601,10 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
             imageActor->GetMapper()->GetInputInformation(0, 0);
           if (info &&
               info->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
-            {
+          {
             info->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
                       wextent);
-            }
+          }
 #else
           data->UpdateInformation();
           data->GetExtent(extent);
@@ -612,17 +612,17 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
 #endif
           imageActor->GetDisplayExtent(dextent);
           if (dextent[0] == -1)
-            {
+          {
             for (int i = 0; i < 6; i++) { extent[i] = wextent[i]; }
             if (extent[5] < extent[4])
-              {
-              extent[5] = extent[4];
-              }
-            }
-          else
             {
+              extent[5] = extent[4];
+            }
+          }
+          else
+          {
             for (int i = 0; i < 3; i++)
-              {
+            {
               int l = 2*i;
               int h = l+1;
               // Clip the display extent with the whole extent
@@ -631,8 +631,8 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
               // Expand the extent to include the display extent
               if (extent[l] > dextent[l]) { extent[l] = dextent[l]; }
               if (extent[h] < dextent[h]) { extent[h] = dextent[h]; }
-              }
             }
+          }
 #if VTK_MAJOR_VERSION >= 6
           imageActor->GetMapper()->SetUpdateExtent(extent);
           //imageActor->GetMapper()->PropagateUpdateExtent();
@@ -642,10 +642,10 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
           data->PropagateUpdateExtent();
           data->UpdateData();
 #endif
-          }
         }
       }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -660,13 +660,13 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
   vtkAbstractMapper3D *mapper = picker->GetMapper();
 
   if (!prop)
-    {
+  {
     // No prop, nothing to do
     return 0;
-    }
+  }
 
   if (mapper && picker->GetClippingPlaneId() >= 0)
-    {
+  {
     // Make sure that our Position lies on the plane and that our Normal
     // is perpendicular to the plane.
 
@@ -681,14 +681,14 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     if (fabs(plane->EvaluateFunction(picker->GetPickPosition())) < planeTol &&
         (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
         dcheck < 0)
-      {
+    {
       pickFlags = (pickFlags | VTK_TOOL_CLIP_PLANE);
-      }
     }
+  }
 
   if (mapper && mapper->IsA("vtkVolumeMapper") &&
       picker->GetCroppingPlaneId() >= 0)
-    {
+  {
     // Also ensure that our Position lies on the cropping plane
     int planeId = picker->GetCroppingPlaneId();
     vtkVolumeMapper *volumeMapper = static_cast<vtkVolumeMapper *>(mapper);
@@ -709,40 +709,40 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     if (fabs(mapperPos[planeId>>1] - bounds[planeId]) < planeTol &&
         (u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) < normalTol &&
         dcheck < 0)
-      {
+    {
       pickFlags = (pickFlags | VTK_TOOL_CROP_PLANE);
-      }
     }
+  }
 
   if (prop->IsA("vtkImageActor"))
-    {
+  {
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
-    }
+  }
   else if (prop->IsA("vtkImageStack"))
-    {
+  {
     mapper = static_cast<vtkImageStack *>(prop)->GetMapper();
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
-    }
+  }
   else if (prop->IsA("vtkImageSlice"))
-    {
+  {
     mapper = static_cast<vtkImageSlice *>(prop)->GetMapper();
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
-    }
+  }
   else if (mapper && mapper->IsA("vtkImageMapper3D"))
-    {
+  {
     pickFlags = (pickFlags | VTK_TOOL_IMAGE_ACTOR);
-    }
+  }
   else if (mapper && mapper->IsA("vtkMapper"))
-    {
+  {
     pickFlags = (pickFlags | VTK_TOOL_ACTOR);
-    }
+  }
   else if (mapper && mapper->IsA("vtkAbstractVolumeMapper"))
-    {
+  {
     pickFlags = (pickFlags | VTK_TOOL_VOLUME);
-    }
+  }
 
   if (mapper && mapper->IsA("vtkImageMapper3D"))
-    {
+  {
     // check if pick point is close to edge of slice plane
     // by intersecting the slice plane with each of the bounding planes
     // (to get the slice plane edge) and then computing the
@@ -760,28 +760,28 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
     // find the closest edge that is within tolerance
     const double mtol = 7.0; // 7 mm
     for (int jj = 0; jj < 6; jj++)
-      {
+    {
       double dd = fabs(mpoint[jj/2] - mbounds[jj]);
       if (dd < mtol)
-        {
+      {
         mat[1][0] = mat[1][1] = mat[1][2] = 0.0;
         mat[1][jj/2] = 1.0;
         vec[1] = mbounds[jj];
         vtkMath::Cross(mat[0], mat[1], mat[2]);
         // make sure the planes aren't parallel to each other
         if (vtkMath::Norm(mat[2]) > 0.001)
-          {
+        {
           vec[2] = vtkMath::Dot(mat[2], mpoint);
           double point[3];
           vtkMath::LinearSolve3x3(mat, vec, point);
           if (vtkMath::Distance2BetweenPoints(mpoint, point) < mtol*mtol)
-            {
+          {
             pickFlags = (pickFlags | VTK_TOOL_PLANE_EDGE);
-            }
           }
         }
       }
     }
+  }
 
   return pickFlags;
 }
@@ -790,9 +790,9 @@ int vtkToolCursor::ComputePickFlags(vtkVolumePicker *picker)
 void vtkToolCursor::ComputePosition()
 {
   if (!this->Renderer)
-    {
+  {
     return;
-    }
+  }
 
   int x = this->DisplayPosition[0];
   int y = this->DisplayPosition[1];
@@ -809,48 +809,48 @@ void vtkToolCursor::ComputePosition()
 
   // Allow the action to constrain the cursor
   if (this->Action)
-    {
+  {
     vtkTool *actionObject =
       static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
-      {
+    {
       actionObject->ConstrainCursor(this->Position, this->Normal);
-      }
     }
+  }
 
   // Direct the normal towards the camera if PointNormalAtCamera is On
   if (this->PointNormalAtCamera &&
       vtkMath::Dot(this->Renderer->GetActiveCamera()
                    ->GetDirectionOfProjection(),
                    this->Normal) > 0)
-    {
+  {
     this->Normal[0] = -this->Normal[0];
     this->Normal[1] = -this->Normal[1];
     this->Normal[2] = -this->Normal[2];
-    }
+  }
 
   // Check to see if the PickFlags have changed
   int pickFlags = this->ComputePickFlags(this->Picker);
 
   if ((this->Modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0 &&
       !this->Action)
-    {
+  {
     if (pickFlags != this->PickFlags)
-      {
+    {
       // Compute the cursor shape from the state.
       this->SetShape(this->FindShape(this->Mode, pickFlags, this->Modifier));
 
       // See if we need focus for potential button actions
       this->ActionButtons = this->FindActionButtons(this->Mode, pickFlags,
                                                     this->Modifier);
-      }
+    }
     this->PickFlags = pickFlags;
 
     // Check to see if guide visibility should be changed
     this->CheckGuideVisibility();
-    }
+  }
 
   // Compute an "up" vector for the cursor.
   this->ComputeVectorFromNormal(this->Position, this->Normal, this->Vector,
@@ -889,10 +889,10 @@ void vtkToolCursor::OnRender()
 void vtkToolCursor::SetGuideVisibility(int v)
 {
   if (this->GuideVisibility != v)
-    {
+  {
     this->GuideVisibility = v;
     this->Modified();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -909,35 +909,35 @@ void vtkToolCursor::CheckGuideVisibility()
        (((this->PickFlags & VTK_TOOL_CLIP_PLANE) &&
           this->Picker->GetClippingPlaneId() >= 0) ||
           this->Picker->GetPickClippingPlanes())))
-    {
+  {
     int clippingPlaneId = -1;
     if (this->PickFlags & VTK_TOOL_CLIP_PLANE)
-      {
+    {
       clippingPlaneId = this->Picker->GetClippingPlaneId();
-      }
+    }
 
     int croppingPlaneId = -1;
     if (this->PickFlags & VTK_TOOL_CROP_PLANE)
-      {
+    {
       croppingPlaneId = this->Picker->GetCroppingPlaneId();
-      }
+    }
 
     vtkPlaneCollection *mapperPlanes = mapper->GetClippingPlanes();
     vtkPlaneCollection *clippingPlanes = 0;
     if (mapperPlanes)
-      {
+    {
       clippingPlanes = vtkPlaneCollection::New();
       int n = mapperPlanes->GetNumberOfItems();
       for (int i = 0; i < n; i++)
-        {
+      {
         vtkFollowerPlane *plane = vtkFollowerPlane::New();
         plane->SetFollowPlane(mapperPlanes->GetItem(i));
         plane->SetFollowMatrix(prop->GetMatrix());
         plane->InvertFollowMatrixOn();
         clippingPlanes->AddItem(plane);
         plane->Delete();
-        }
       }
+    }
 
     this->VolumeCroppingActor->SetUserMatrix(prop->GetMatrix());
     this->VolumeCroppingActor->SetVisibility(this->GuideVisibility);
@@ -947,52 +947,52 @@ void vtkToolCursor::CheckGuideVisibility()
     this->ClipOutlineFilter->SetActivePlaneId(clippingPlaneId);
 
     if (clippingPlanes)
-      {
-      clippingPlanes->Delete();
-      }
-    }
-  else
     {
+      clippingPlanes->Delete();
+    }
+  }
+  else
+  {
     this->VolumeCroppingActor->SetUserMatrix(0);
     this->VolumeCroppingActor->SetVisibility(0);
     this->VolumeCroppingSource->SetVolumeMapper(0);
     this->VolumeCroppingSource->SetActivePlaneId(-1);
     this->ClipOutlineFilter->SetActivePlaneId(-1);
     this->ClipOutlineFilter->SetClippingPlanes(0);
-    }
+  }
 
   vtkImageMapper3D *imageMapper =
     vtkImageMapper3D::SafeDownCast(this->Picker->GetMapper());
   vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
   if (imageStack)
-    {
+  {
     prop = imageStack->GetActiveImage();
-    }
+  }
   vtkImageSlice *imageSlice = vtkImageSlice::SafeDownCast(prop);
 
   if (imageMapper == 0 && imageSlice != 0)
-    {
+  {
     imageMapper = imageSlice->GetMapper();
-    }
+  }
 
   if (imageMapper && this->PickFlags & VTK_TOOL_IMAGE_ACTOR)
-    {
+  {
     vtkFollowerPlane *plane =
       vtkFollowerPlane::SafeDownCast(
         this->SliceOutlineCutter->GetCutFunction());
     if (plane == NULL)
-      {
+    {
       plane = vtkFollowerPlane::New();
       this->SliceOutlineCutter->SetCutFunction(plane);
       plane->Delete();
-      }
+    }
     plane->SetFollowPlane(imageMapper->GetSlicePlane());
     plane->SetFollowMatrix(prop->GetMatrix());
     plane->InvertFollowMatrixOn();
 
     int imageEdgeId = -1;
     if (this->PickFlags & VTK_TOOL_PLANE_EDGE)
-      {
+    {
       double mbounds[6];
       double mpoint[3];
 
@@ -1002,15 +1002,15 @@ void vtkToolCursor::CheckGuideVisibility()
       // find the closest edge that is within tolerance
       double mdist = VTK_DOUBLE_MAX;
       for (int jj = 0; jj < 6; jj++)
-        {
+      {
         double dd = fabs(mpoint[jj/2] - mbounds[jj]);
         if (dd < mdist)
-          {
+        {
           mdist = dd;
           imageEdgeId = jj;
-          }
         }
       }
+    }
 
     this->SliceOutlineActor->SetUserMatrix(prop->GetMatrix());
     this->SliceOutlineActor->SetVisibility(this->GuideVisibility);
@@ -1021,28 +1021,28 @@ void vtkToolCursor::CheckGuideVisibility()
     this->SliceOutlineSource->SetActivePlaneId(imageEdgeId);
     this->SliceOutlineSource->SetVolumeMapper(vmapper);
     vmapper->Delete();
-    }
+  }
   else
-    {
+  {
     this->SliceOutlineActor->SetUserMatrix(0);
     this->SliceOutlineActor->SetVisibility(0);
     if (this->SliceOutlineSource->GetVolumeMapper())
-      {
+    {
       this->SliceOutlineSource->GetVolumeMapper()->
         SET_INPUT_DATA(static_cast<vtkImageData *>(0));
-      }
+    }
     this->SliceOutlineSource->SetVolumeMapper(0);
     this->SliceOutlineCutter->SetCutFunction(0);
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
 void vtkToolCursor::SetDisplayPosition(double x, double y)
 {
   if (this->DisplayPosition[0] == x && this->DisplayPosition[1] == y)
-    {
+  {
     return;
-    }
+  }
 
   this->DisplayPosition[0] = x;
   this->DisplayPosition[1] = y;
@@ -1056,21 +1056,21 @@ void vtkToolCursor::MoveToDisplayPosition(double x, double y)
   this->SetDisplayPosition(x, y);
 
   if (this->Renderer)
-    {
+  {
     this->SetIsInViewport(this->Renderer->IsInViewport(x, y));
-    }
+  }
 
   if (this->Action)
-    {
+  {
     vtkTool *actionObject =
       static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
-      {
+    {
       actionObject->DoAction();
-      }
-   }
+    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -1083,9 +1083,9 @@ int vtkToolCursor::GetVisibility()
 void vtkToolCursor::SetIsInViewport(int inside)
 {
   if (this->IsInViewport == inside)
-    {
+  {
     return;
-    }
+  }
 
   this->IsInViewport = inside;
   this->Modified();
@@ -1098,9 +1098,9 @@ int vtkToolCursor::ButtonBit(int button)
     VTK_TOOL_WHEEL_BWD, VTK_TOOL_WHEEL_FWD };
 
   if (button <= 0 || button > 5)
-    {
+  {
     return 0;
-    }
+  }
 
   return buttonmap[button];
 }
@@ -1114,15 +1114,15 @@ int vtkToolCursor::PressButton(int button)
   this->SetModifier(this->Modifier | buttonBit);
 
   if (buttonBit && !this->Action)
-    {
+  {
     this->SetAction(this->FindAction(this->Mode, this->PickFlags,
                                      this->Modifier));
     if (this->Action)
-      {
+    {
       this->ActionButton = button;
       started = 1;
-      }
     }
+  }
 
   return started;
 }
@@ -1134,11 +1134,11 @@ int vtkToolCursor::ReleaseButton(int button)
   int concluded = 0;
 
   if (this->Action && button == this->ActionButton)
-    {
+  {
     this->SetAction(0);
     this->ActionButton = 0;
     concluded = 1;
-    }
+  }
 
   // Force SetModifier to see a change
   this->Modifier = (this->Modifier | buttonBit);
@@ -1151,21 +1151,21 @@ int vtkToolCursor::ReleaseButton(int button)
 void vtkToolCursor::SetModifier(int modifier)
 {
   if (this->Modifier == modifier)
-    {
+  {
     return;
-    }
+  }
 
   if ( ((this->Modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0 ||
         (modifier & (VTK_TOOL_BUTTON_MASK | VTK_TOOL_WHEEL_MASK)) == 0) &&
        !this->Action)
-    {
+  {
     // Compute the cursor shape from the state.
     this->SetShape(this->FindShape(this->Mode, this->PickFlags, modifier));
 
     // See if we need focus for potential button actions
     this->ActionButtons = this->FindActionButtons(this->Mode, this->PickFlags,
                                                   modifier);
-    }
+  }
 
   this->Modifier = modifier;
   this->Modified();
@@ -1175,38 +1175,38 @@ void vtkToolCursor::SetModifier(int modifier)
 void vtkToolCursor::SetAction(int action)
 {
   if (action == this->Action)
-    {
+  {
     return;
-    }
+  }
 
   if (this->Action)
-    {
+  {
     vtkTool *actionObject =
       static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
-      {
+    {
       actionObject->StopAction();
       actionObject->SetToolCursor(0);
-      }
     }
+  }
 
   this->Action = action;
   this->Modified();
 
   if (action)
-    {
+  {
     vtkTool *actionObject =
       static_cast<vtkTool *>(
         this->Actions->GetItemAsObject(this->Action));
 
     if (actionObject)
-      {
+    {
       actionObject->SetToolCursor(this);
       actionObject->StartAction();
-      }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -1215,11 +1215,11 @@ int vtkToolCursor::AddShape(vtkCursorShapes *shapes,
 {
   int i = shapes->GetShapeIndex(name);
   if (i < 0)
-    {
+  {
     vtkErrorMacro("The specified shape \"" << name << "\" is not in "
                    << shapes->GetClassName());
     return -1;
-    }
+  }
 
   this->Shapes->AddShape(name, shapes->GetShapeData(i),
                          shapes->GetShapeFlags(i));
@@ -1239,9 +1239,9 @@ int vtkToolCursor::AddAction(vtkTool *action)
 void vtkToolCursor::SetMode(int mode)
 {
   if (this->Mode == mode)
-    {
+  {
     return;
-    }
+  }
 
   this->Mode = mode;
   this->Modified();
@@ -1253,10 +1253,10 @@ void vtkToolCursor::SetShape(int shape)
   vtkDataSet *data = this->Shapes->GetShapeData(shape);
 
   if (data)
-    {
+  {
     this->Mapper->SET_INPUT_DATA(data);
     this->Shape = shape;
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -1269,11 +1269,11 @@ double vtkToolCursor::ComputeScale(const double position[3],
   double worldHeight = 1.0;
   vtkCamera *camera = renderer->GetActiveCamera();
   if (camera->GetParallelProjection())
-    {
+  {
     worldHeight = 2*camera->GetParallelScale();
-    }
+  }
   else
-    {
+  {
     vtkMatrix4x4 *matrix = camera->GetViewTransformMatrix();
     // Get a 3x3 matrix with the camera orientation
     double cvz[3];
@@ -1291,15 +1291,15 @@ double vtkToolCursor::ComputeScale(const double position[3],
 
     worldHeight = 2*(vtkMath::Dot(v,cvz)
                      * tan(0.5*camera->GetViewAngle()/57.296));
-    }
+  }
 
   // Compare world height to window height.
   int windowHeight = renderer->GetSize()[1];
   double scale = 1.0;
   if (windowHeight > 0)
-    {
+  {
     scale = worldHeight/windowHeight;
-    }
+  }
 
   return scale;
 }
@@ -1312,12 +1312,12 @@ void vtkToolCursor::ComputeMatrix(const double p[3], const double n[3],
   vtkMath::Cross(v, n, u);
 
   for (int j = 0; j < 3; j++)
-    {
+  {
     matrix->SetElement(j, 0, u[j]);
     matrix->SetElement(j, 1, v[j]);
     matrix->SetElement(j, 2, n[j]);
     matrix->SetElement(j, 3, p[j]);
-    }
+  }
   matrix->Modified();
 }
 
@@ -1338,15 +1338,15 @@ void vtkToolCursor::ComputeVectorFromNormal(const double position[3],
   // Get a 3x3 matrix with the camera orientation
   double mat[3][3];
   for (int i = 0; i < 3; i++)
-    {
+  {
     mat[i][0] = matrix->GetElement(i, 0);
     mat[i][1] = matrix->GetElement(i, 1);
     mat[i][2] = matrix->GetElement(i, 2);
-    }
+  }
 
   if (cursorFlags == VTK_TOOL_RADIALX ||
       cursorFlags == VTK_TOOL_RADIALY)
-    {
+  {
     // Make "y" point away from camera axis
     double f[3];
     camera->GetFocalPoint(f);
@@ -1363,7 +1363,7 @@ void vtkToolCursor::ComputeVectorFromNormal(const double position[3],
     // Orthogonalize "y" wrt to camera axis
     vtkMath::Cross(mat[2], mat[0], mat[1]);
     vtkMath::Normalize(mat[1]);
-    }
+  }
 
   // These ints say how we want to create the vector
   int direction = 1; // We want to align the cursor y vector with...
@@ -1373,29 +1373,29 @@ void vtkToolCursor::ComputeVectorFromNormal(const double position[3],
   // If the data is "flat" and the flat dimension is not the z dimension,
   // then point the flat side at the camera.
   if (cursorFlags == VTK_TOOL_FLATX)
-    {
+  {
     direction = 0;
     primary = 2;
     secondary = 1;
-    }
+  }
   else if (cursorFlags == VTK_TOOL_FLATY)
-    {
+  {
     direction = 1;
     primary = 2;
     secondary = 1;
-    }
+  }
   else if (cursorFlags == VTK_TOOL_RADIALX)
-    {
+  {
     direction = 0;
     primary = 1;
     secondary = 0;
-    }
+  }
   else if (cursorFlags == VTK_TOOL_RADIALY)
-    {
+  {
     direction = 1;
     primary = 1;
     secondary = 0;
-    }
+  }
 
   // Get primary direction from camera, orthogonalize to the normal.
   double u[3];
@@ -1407,18 +1407,18 @@ void vtkToolCursor::ComputeVectorFromNormal(const double position[3],
   double dot = vtkMath::Dot(normal, u);
 
   if (dot > 0.999)
-    {
+  {
     // blend the vector with the secondary for stability
     u[0] += mat[secondary][0] * (dot - 0.999);
     u[1] += mat[secondary][1] * (dot - 0.999);
     u[2] += mat[secondary][2] * (dot - 0.999);
-    }
+  }
 
   vtkMath::Cross(normal, u, u);
   if (direction == 1)
-    {
+  {
     vtkMath::Cross(u, normal, u);
-    }
+  }
 
   double norm = vtkMath::Norm(u);
   vector[0] = u[0]/norm;
@@ -1457,21 +1457,21 @@ void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
   tuple[3] = 0;
 
   if (i >= 0)
-    {
+  {
     // If it's an exact match, then replace
     array->GetTupleValue(i, tuple);
     if (tuple[0] == mode && tuple[1] == pickFlags && tuple[2] == modifier)
-      {
+    {
       tuple[3] = item;
       array->SetTupleValue(i, tuple);
       return;
-      }
     }
+  }
   else
-    {
+  {
     // If it wasn't resolved, then we append to the end of the list
     i = n;
-    }
+  }
 
   //cerr << "inserting ";
   //cerr << item << " (" << i << " of " << (n+1) << "): " << mode << " ";
@@ -1487,10 +1487,10 @@ void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
   //cerr << "n = " << n << " i = " << i << "\n";
   // Shuffle values up by one
   for (int j = n; j > i; j--)
-    {
+  {
     array->GetTupleValue(j-1, tuple);
     array->SetTupleValue(j, tuple);
-    }
+  }
 
   // Set the tuple at the desired index
   tuple[0] = mode;
@@ -1527,7 +1527,7 @@ int vtkToolCursor::ResolveBinding(vtkIntArray *array, int start,
   int tuple[4];
   int n = array->GetNumberOfTuples();
   for (int i = start; i < n; i++)
-    {
+  {
     array->GetTupleValue(i, tuple);
 
     //cerr << "item " << i << " of " << n << ": " << tuple[0] << " ";
@@ -1537,24 +1537,24 @@ int vtkToolCursor::ResolveBinding(vtkIntArray *array, int start,
     //cerr << "\n";
 
     if (tuple[0] == mode)
-      {
+    {
       if (((tuple[1] & VTK_TOOL_PROP3D) == 0 ||
            (propType != 0 && (tuple[1] & propType) == propType)) &&
           ((tuple[1] & VTK_TOOL_PLANE) == 0 ||
            (planeType != 0 && (tuple[1] & planeType) == planeType)))
-        {
+      {
         if ((tuple[2] & modifier) == tuple[2])
-          {
+        {
           //cerr << "resolved " << tuple[3] << "\n";
           return i;
-          }
         }
       }
-    else if (tuple[0] > mode)
-      {
-      break;
-      }
     }
+    else if (tuple[0] > mode)
+    {
+      break;
+    }
+  }
 
   //cerr << "not resolved\n";
   return -1;

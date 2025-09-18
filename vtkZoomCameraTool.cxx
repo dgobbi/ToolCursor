@@ -69,23 +69,23 @@ void vtkZoomCameraTool::StartAction()
 
   // code for handling the mouse wheel interaction
   if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
-    {
+  {
     if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)
-      {
+    {
       this->ZoomFactor = 1.1;
-      }
+    }
     else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
-      {
+    {
       this->ZoomFactor = 1.0/1.1;
-      }
+    }
     if (camera->GetParallelProjection())
-      {
+    {
       camera->SetParallelScale(this->StartParallelScale/this->ZoomFactor);
-      }
+    }
     else
-      {
+    {
       if (this->ZoomByDolly)
-        {
+      {
         double p1[3], p2[3];
         camera->GetPosition(p1);
         camera->Dolly(this->ZoomFactor);
@@ -98,28 +98,28 @@ void vtkZoomCameraTool::StartAction()
         double d1, d2;
         camera->GetClippingRange(d1, d2);
         if (d1 < 2*d2*tol)
-          { // too close to camera, reset the near range
+        { // too close to camera, reset the near range
           cursor->GetRenderer()->ResetCameraClippingRange();
           double d3; // dummy variable
           camera->GetClippingRange(d1, d3);
-          }
+        }
         else
-          {
+        {
           d1 += d;
-          }
+        }
         d2 += d;
         if (d1 < d2*tol) { d1 = d2*tol; }
         camera->SetClippingRange(d1, d2);
-        }
+      }
       else // Zoom by changing the height of the scene
-        {
+      {
         double h = 2*tan(0.5*vtkMath::RadiansFromDegrees(this->StartViewAngle));
         h /= this->ZoomFactor;
         double viewAngle = 2*vtkMath::DegreesFromRadians(atan(0.5*h));
         camera->SetViewAngle(viewAngle);
-        }
       }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -141,12 +141,12 @@ void vtkZoomCameraTool::DoAction()
   // Get the camera's z axis
   double cvz[3];
   for (int i = 0; i < 3; i++)
-    {
+  {
     cvz[i] = viewMatrix->GetElement(2, i);
-    }
+  }
 
   if (this->RadialInteraction)
-    {
+  {
     double f[3];
     camera->GetFocalPoint(f);
 
@@ -194,27 +194,27 @@ void vtkZoomCameraTool::DoAction()
     // Get viewport height at the current depth
     double height = 1;
     if (camera->GetParallelProjection())
-      {
+    {
       height = camera->GetParallelScale();
-      }
+    }
     else
-      {
+    {
       double angle = vtkMath::RadiansFromDegrees(camera->GetViewAngle());
       height = 2*dp*sin(angle/2);
-      }
+    }
 
     // Constrain the values when they are close to the center, in order to
     // avoid magifications of zero or infinity
     double halfpi = 0.5*vtkMath::Pi();
     double r0 = 0.1*height;
     if (r1 < r0)
-      {
+    {
       r1 = r0*(1.0 - sin((1.0 - r1/r0)*halfpi)/halfpi);
-      }
+    }
     if (r2 < r0)
-      {
+    {
       r2 = r0*(1.0 - sin((1.0 - r2/r0)*halfpi)/halfpi);
-      }
+    }
 
     // Compute magnification and corresponding camera motion
     double mag = r2/r1;
@@ -224,9 +224,9 @@ void vtkZoomCameraTool::DoAction()
     this->Transform->Translate(-delta*cvz[0], -delta*cvz[1], -delta*cvz[2]);
 
     this->ZoomFactor *= mag;
-    }
+  }
   else
-    {
+  {
     // This is called if RadialInteraction is off (it's much simpler):
     // moving the mouse by half the viewport height will zoom by 10
     vtkRenderer *renderer = cursor->GetRenderer();
@@ -241,22 +241,22 @@ void vtkZoomCameraTool::DoAction()
     camera->GetFocalPoint(f);
     double *p0 = this->StartCameraPosition;
 
-    p[0] = p0[0]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[0]; 
-    p[1] = p0[1]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[1]; 
-    p[2] = p0[2]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[2]; 
+    p[0] = p0[0]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[0];
+    p[1] = p0[1]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[1];
+    p[2] = p0[2]/this->ZoomFactor + (1.0 - 1.0/this->ZoomFactor)*f[2];
 
     this->Transform->Identity();
     this->Transform->Translate(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2]);
-    }
+  }
 
   if (camera->GetParallelProjection())
-    {
+  {
     camera->SetParallelScale(this->StartParallelScale/this->ZoomFactor);
-    }
+  }
   else
-    {
+  {
     if (this->ZoomByDolly)
-      {
+    {
       double cameraPos[3];
       this->Transform->TransformPoint(this->StartCameraPosition, cameraPos);
 
@@ -276,29 +276,29 @@ void vtkZoomCameraTool::DoAction()
 
       // was near clipping plane close to tolerance?
       if (d1 < 2*d2*tol)
-        {
+      {
         // need to recompute the near clipping range
         cursor->GetRenderer()->ResetCameraClippingRange();
         camera->GetClippingRange(d1, d2);
         d2 = this->StartClippingRange[1] + dist;
-        }
+      }
       else
-        {
+      {
         // no problems, just adjust clipping range by dolly distance
         d1 += dist;
         d2 += dist;
-        }
+      }
 
       // ensure that front plane is not too close to camera
       if (d1 < d2*tol)
-        {
+      {
         d1 = d2*tol;
-        }
+      }
 
       camera->SetClippingRange(d1, d2);
-      }
+    }
     else
-      {
+    {
       // Zoom by changing the view angle
 
       double h = 2*tan(0.5*vtkMath::RadiansFromDegrees(this->StartViewAngle));
@@ -306,8 +306,8 @@ void vtkZoomCameraTool::DoAction()
       double viewAngle = 2*vtkMath::DegreesFromRadians(atan(0.5*h));
 
       camera->SetViewAngle(viewAngle);
-      }
     }
+  }
 }
 
 //----------------------------------------------------------------------------

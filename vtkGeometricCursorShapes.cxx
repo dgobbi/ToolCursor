@@ -96,12 +96,12 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
   int colorIndex = 0;
 
   for (int i = 0; i < 2; i++)
-    {
+  {
     for (int j = 0; j < 4; j++)
-      {
+    {
       double z = zmax;
       for (int k = 0; k < 2; k++)
-        {
+      {
         points->InsertNextPoint(xmin, ymin, z);
         points->InsertNextPoint(xmin, ymax, z);
         points->InsertNextPoint(xmax, ymax, z);
@@ -111,7 +111,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
         scalars->InsertNextTupleValue(&colorIndex);
         scalars->InsertNextTupleValue(&colorIndex);
         z = zmin;
-        }
+      }
 
       static vtkIdType rectIds[5][4] = { { 1, 0, 2, 3 },
                                          { 4, 0, 5, 1 },
@@ -120,13 +120,13 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
                                          { 7, 3, 4, 0 } };
       vtkIdType pointIds[4];
       for (int ii = 0; ii < 5; ii++)
-        {
+      {
         for (int jj = 0; jj < 4; jj++)
-          {
+        {
           pointIds[jj] = rectIds[ii][jj]+nPoints;
-          }
-        strips->InsertNextCell(4, pointIds);
         }
+        strips->InsertNextCell(4, pointIds);
+      }
       nPoints += 8;
 
       // do a rotation of 90 degrees for next piece
@@ -136,7 +136,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
       ymax = -xmin;
       xmin = tmp1;
       xmax = tmp2;
-      }
+    }
 
     // do the other side
     zmin = -zmin;
@@ -145,10 +145,10 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
     xmax = -xmax;
 
     if (dual)
-      {
+    {
       colorIndex = 1;
-      }
     }
+  }
 
   vtkPolyData *data = vtkPolyData::New();
   data->SetPoints(points);
@@ -180,7 +180,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
   int colorIndex = 0;
 
   for (int i = 0; i < 2; i++)
-    {
+  {
     // The sign (i.e. for top or bottom) is stored in s
     double s = 1 - 2*i;
 
@@ -198,59 +198,59 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
     int m = 2*resolution;
 
     for (int j = 1; j <= n; j++)
-      {
+    {
       double phi = pi*j/resolution;
       double r = sin(phi);
       v[2] = cos(phi)*s;
       if (2*j >= resolution)
-        {
+      {
         v[2] = 0;
-        }
+      }
 
       for (int k = 0; k < m; k++)
-        {
+      {
         double theta = pi*k/resolution;
         v[0] = r*cos(theta);
         v[1] = r*sin(theta)*s;
         points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
         normals->InsertNextTupleValue(v);
         scalars->InsertNextTupleValue(&colorIndex);
-        }
       }
+    }
 
     // Make the fan for the top
     pointIds[0] = nPoints++;
     for (int ii = 0; ii < (m-1); ii++)
-      {
+    {
       pointIds[1] = nPoints + ii;
       pointIds[2] = nPoints + ii + 1;
       strips->InsertNextCell(3, pointIds);
-      }
+    }
     pointIds[1] = nPoints + m - 1;
     pointIds[2] = nPoints;
     strips->InsertNextCell(3, pointIds);
 
     // Make the strips for the rest
     for (int jj = 1; jj < n; jj++)
-      {
+    {
       for (int kk = 0; kk < m; kk++)
-        {
+      {
         pointIds[2*kk] = nPoints + kk;
         pointIds[2*kk+1] = nPoints + kk + m;
-        }
+      }
       pointIds[2*m] = nPoints;
       pointIds[2*m+1] = nPoints + m;
       strips->InsertNextCell(2*(m+1), pointIds);
       nPoints += m;
-      }
+    }
 
     nPoints += m;
 
     if (dual)
-      {
+    {
       colorIndex = 1;
-      }
     }
+  }
 
   delete [] pointIds;
 
@@ -287,7 +287,7 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
   int sides = (dual ? 2 : 1);
 
   for (int colorIndex = 0; colorIndex < sides; colorIndex++)
-    {
+  {
     // The sign (i.e. for top or bottom) is stored in s
     double s = 1 - 2*colorIndex;
 
@@ -301,13 +301,13 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
 
     // The point of the cone
     for (int i = 0; i < 2; i++)
-      {
+    {
       double r = radius*i;
       double z = height*i;
       double offset = 0.5*(1 - i);
 
       for (int j = 0; j < resolution; j++)
-        {
+      {
         double theta = 2*pi*(j + offset)/resolution;
         double ct = cos(theta);
         double st = sin(theta);
@@ -317,8 +317,8 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
         points->InsertNextPoint(r*ct, r*st*s, z*s);
         normals->InsertNextTupleValue(v);
         scalars->InsertNextTupleValue(&colorIndex);
-        }
       }
+    }
 
     // The base of the cone
     v[0] = 0;
@@ -329,21 +329,21 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
     scalars->InsertNextTupleValue(&colorIndex);
 
     for (int k = 0; k < resolution; k++)
-      {
+    {
       double theta = 2*pi*k/resolution;
       points->InsertNextPoint(radius*cos(theta), radius*sin(theta)*s, height*s);
       normals->InsertNextTupleValue(v);
       scalars->InsertNextTupleValue(&colorIndex);
-      }
+    }
 
     // Make the fan for the top
     for (int ii = 0; ii < (resolution-1); ii++)
-      {
+    {
       pointIds[0] = nPoints + ii;
       pointIds[1] = nPoints + ii + resolution + 1;
       pointIds[2] = nPoints + ii + resolution;
       strips->InsertNextCell(3, pointIds);
-      }
+    }
     pointIds[0] = nPoints + 2*resolution - 1;
     pointIds[1] = nPoints + resolution - 1;
     pointIds[2] = nPoints + resolution;
@@ -353,16 +353,16 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
     // Make the fan for the base
     pointIds[0] = nPoints++;
     for (int jj = 0; jj < (resolution-1); jj++)
-      {
+    {
       pointIds[1] = nPoints + jj;
       pointIds[2] = nPoints + jj + 1;
       strips->InsertNextCell(3, pointIds);
-      }
+    }
     pointIds[1] = nPoints + resolution - 1;
     pointIds[2] = nPoints;
     strips->InsertNextCell(3, pointIds);
     nPoints += resolution;
-    }
+  }
 
   delete [] pointIds;
 

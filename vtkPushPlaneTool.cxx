@@ -104,10 +104,10 @@ void vtkPushPlaneTool::StartAction()
   this->Superclass::StartAction();
 
   if (!this->GetToolCursor()->GetPicker()->GetProp3D())
-    {
+  {
     this->IsOffOfPlane = true;
     return;
-    }
+  }
 
   this->IsOffOfPlane = false;
 
@@ -142,9 +142,9 @@ void vtkPushPlaneTool::StartAction()
   // This gives the sin() of the angle between the vectors.
   vtkMath::Cross(normal, v, v);
   if (vtkMath::Dot(v, v) < 0.2)
-    {
+  {
     this->PerpendicularPlane = 1;
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -160,14 +160,14 @@ void vtkPushPlaneTool::DoAction()
   this->Superclass::DoAction();
 
   if (!this->IsPlaneValid())
-    {
+  {
     return;
-    }
+  }
 
   if (this->IsOffOfPlane)
-    {
+  {
     return;
-    }
+  }
 
   // Get and normalize the plane normal.
   double normal[3];
@@ -201,22 +201,22 @@ void vtkPushPlaneTool::DoAction()
 
   // Special action if the plane is perpendicular to view normal.
   if (this->PerpendicularPlane)
-    {
+  {
     // Calculate distance moved in world coordinates.
     distance = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
     if (x - ox < 0)
-      {
+    {
       distance = -distance;
-      }
+    }
 
     // Check whether the normal is towards or away from the camera.
     if (vtkMath::Dot(viewRay, normal) < 0)
-      {
-      distance = -distance;
-      }
-    }
-  else
     {
+      distance = -distance;
+    }
+  }
+  else
+  {
     // Get the vector between origin world point and current world point.
     double u[3];
     u[0] = p2[0] - p1[0];
@@ -235,28 +235,28 @@ void vtkPushPlaneTool::DoAction()
     double e = vtkMath::Dot(viewRay, u);
 
     distance = (c*d - b*e)/(a*c - b*b);
-    }
+  }
 
   // Get the origin from before interaction began
   double origin[3];
   this->GetStartOrigin(origin);
 
   if (distance < this->DistanceLimits[0])
-    {
+  {
     distance = this->DistanceLimits[0];
-    }
+  }
   else if (distance > this->DistanceLimits[1])
-    {
+  {
     distance = this->DistanceLimits[1];
-    }
+  }
   // Constrain motion to the clipping bounds
   else if (this->AllowSlicing && this->ImageMapper && this->EdgeId < 0)
-    {
+  {
     // clipping planes
     int numClipPlanes = this->ImageMapper->GetNumberOfClippingPlanes();
     vtkPlaneCollection *planes = this->ImageMapper->GetClippingPlanes();
     for (int i = 0; i < numClipPlanes; i++)
-      {
+    {
       double pn[3], po[3];
       vtkPlane *plane = planes->GetItem(i);
       plane->GetOrigin(po);
@@ -268,10 +268,10 @@ void vtkPushPlaneTool::DoAction()
 
       double tol = 0.1;
       if (d1 + d2*distance < tol)
-        {
+      {
         distance = (tol - d1)/d2;
-        }
       }
+    }
 
     // data bounds
     vtkImageData *input = this->ImageMapper->GetInput();
@@ -284,9 +284,9 @@ void vtkPushPlaneTool::DoAction()
     vtkInformation *inInfo = this->ImageMapper->GetInputInformation(0, 0);
     if (inInfo &&
         inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
-      {
+    {
       inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
-      }
+    }
 #else
     input->GetWholeExtent(extent);
 #endif
@@ -306,7 +306,7 @@ void vtkPushPlaneTool::DoAction()
 
     // check against all six bounds
     for (int j = 0; j < 6; j++)
-      {
+    {
       int k = (j>>1);
       double plane[4] = { 0.0, 0.0, 0.0, 0.0 };
       int ssgn = (is[k] < 0);
@@ -321,20 +321,20 @@ void vtkPushPlaneTool::DoAction()
       d2 += plane[0]*normal[0] + plane[1]*normal[1] + plane[2]*normal[2];
 
       if (d1 + d2*distance < 0.0)
-        {
+      {
         distance = -d1/d2;
-        }
       }
     }
+  }
   else if (this->VolumeMapper ||
            (this->Mapper && this->Mapper->IsA("vtkVolumeMapper")))
-    {
+  {
     // keep planes tight to the data
     vtkVolumeMapper *mapper = this->VolumeMapper;
     if (!mapper)
-      {
+    {
       mapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
-      }
+    }
 
     vtkImageData *data = mapper->GetInput();
 
@@ -364,7 +364,7 @@ void vtkPushPlaneTool::DoAction()
     double dinc2 = (distance > 0 ? -1.0 : 1.0);
 
     for (;;)
-      {
+    {
       // convert plane into a homogenous normal4
       double normal4[4];
       normal4[0] = normal[0];
@@ -382,34 +382,34 @@ void vtkPushPlaneTool::DoAction()
       range[0] = checker->GetMinimum();
       range[1] = checker->GetMaximum();
       if (range[1] > range[0])
-        {
+      {
         // plane is within image
         break;
-        }
+      }
       distance += dinc;
       dinc = dinc2;
       if (distance*dinc > 0)
-        {
+      {
         distance = 0;
         break;
-        }
-      if (dinc < 0)
-        {
-        this->DistanceLimits[1] = distance;
-        }
-      else
-        {
-        this->DistanceLimits[0] = distance;
-        }
       }
+      if (dinc < 0)
+      {
+        this->DistanceLimits[1] = distance;
+      }
+      else
+      {
+        this->DistanceLimits[0] = distance;
+      }
+    }
 
     checker->Delete();
     reslice->Delete();
-    }
+  }
 
   // Special action for tilting the planes
   if (this->AllowRotation && this->ImageMapper && this->EdgeId >= 0)
-    {
+  {
     double mbounds[6];
     double mcenter[3];
     double mvector[3];
@@ -442,7 +442,7 @@ void vtkPushPlaneTool::DoAction()
     vtkImageResliceMapper *resliceMapper =
       vtkImageResliceMapper::SafeDownCast(this->ImageMapper);
     if (resliceMapper)
-      {
+    {
       vtkTransform *trans = vtkTransform::New();
       trans->PostMultiply();
       trans->Translate(-mcenter[0], -mcenter[1], -mcenter[2]);
@@ -452,8 +452,8 @@ void vtkPushPlaneTool::DoAction()
       trans->TransformNormal(normal, normal);
       resliceMapper->GetSlicePlane()->SetNormal(normal);
       trans->Delete();
-      }
     }
+  }
 
   // Moving relative to the original position provides a more stable
   // interaction that moving relative to the last position.
@@ -485,7 +485,7 @@ void vtkPushPlaneTool::ConstrainCursor(double position[3], double normal[3])
   double p[3];
   double t;
   if (vtkPlane::IntersectWithLine(p1, p2, normal, this->Origin, t, p))
-    {
+  {
     // Only move the position if it is closer to the camera, to ensure that
     // the cursor doesn't become hidden under other objects.  Include a
     // tolerance to ensure the distance is significant, otherwise just
@@ -497,12 +497,12 @@ void vtkPushPlaneTool::ConstrainCursor(double position[3], double normal[3])
 
     // Compare to the square of the distace for the constrained position.
     if (t*t < t2 - 5e-20)
-      {
+    {
       position[0] = p[0];
       position[1] = p[1];
       position[2] = p[2];
-      }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -517,14 +517,14 @@ void vtkPushPlaneTool::GetPropInformation()
   vtkImageStack *imageStack = vtkImageStack::SafeDownCast(prop);
   vtkImageSlice *imageSlice = vtkImageSlice::SafeDownCast(prop);
   if (imageStack)
-    {
+  {
     this->Mapper = imageStack->GetMapper();
     prop = imageStack->GetActiveImage();
-    }
+  }
   else if (imageSlice)
-    {
+  {
     this->Mapper = imageSlice->GetMapper();
-    }
+  }
 
   this->Transform->SetMatrix(prop->GetMatrix());
   this->ImageActor = vtkImageActor::SafeDownCast(prop);
@@ -538,16 +538,16 @@ void vtkPushPlaneTool::GetPropInformation()
 
   // Is this a VolumeMapper cropping plane or AbstractMapper clipping plane?
   if (this->VolumeMapper && (cursor->GetPickFlags() & VTK_TOOL_CROP_PLANE))
-    {
+  {
     this->Mapper = 0;
     this->PlaneId = picker->GetCroppingPlaneId();
-    }
+  }
   else if (this->ImageMapper)
-    {
+  {
     this->Mapper = 0;
     this->PlaneId = 0;
     if ((cursor->GetPickFlags() & VTK_TOOL_PLANE_EDGE) != 0)
-      {
+    {
       double mbounds[6];
       double mpoint[3];
 
@@ -557,38 +557,38 @@ void vtkPushPlaneTool::GetPropInformation()
       // find the closest edge that is within tolerance
       double mdist = VTK_DOUBLE_MAX;
       for (int jj = 0; jj < 6; jj++)
-        {
+      {
         double dd = fabs(mpoint[jj/2] - mbounds[jj]);
         if (dd < mdist)
-          {
+        {
           mdist = dd;
           this->EdgeId = jj;
-          }
         }
       }
     }
+  }
   else
-    {
+  {
     this->VolumeMapper = 0;
     this->PlaneId = picker->GetClippingPlaneId();
-    }
+  }
 
   // Create a PlaneId for image actor.
   if (this->ImageActor)
-    {
+  {
     int extent[6];
     this->ImageActor->GetDisplayExtent(extent);
     this->PlaneId = 4;
     if (extent[2] == extent[3]) { this->PlaneId = 2; }
     else if (extent[0] == extent[1]) { this->PlaneId = 0; }
-    }
+  }
 
   if (this->PlaneId >= 0)
-    {
+  {
     this->GetPlaneOriginAndNormal(this->Origin, this->Normal);
     this->SetStartOrigin(this->Origin);
     this->SetStartNormal(this->Normal);
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -596,36 +596,36 @@ void vtkPushPlaneTool::GetPlaneOriginAndNormal(double origin[3],
                                                double normal[3])
 {
   if (this->Mapper)
-    {
+  {
     vtkPlane *plane =
       this->Mapper->GetClippingPlanes()->GetItem(this->PlaneId);
 
     plane->GetNormal(normal);
     plane->GetOrigin(origin);
-    }
+  }
   else if (this->ImageMapper)
-    {
+  {
     vtkPlane *plane = this->ImageMapper->GetSlicePlane();
 
     plane->GetNormal(normal);
     plane->GetOrigin(origin);
-    }
+  }
   else
-    {
+  {
     double bounds[6];
 
     if (this->ImageActor)
-      {
+    {
       this->ImageActor->GetDisplayBounds(bounds);
-      }
+    }
     else if (this->VolumeMapper)
-      {
+    {
       this->VolumeMapper->GetCroppingRegionPlanes(bounds);
-      }
+    }
     else
-      {
+    {
       return;
-      }
+    }
 
     int i = this->PlaneId/2;
 
@@ -640,7 +640,7 @@ void vtkPushPlaneTool::GetPlaneOriginAndNormal(double origin[3],
     // Transform from data coords to world coords.
     this->Transform->TransformNormal(normal, normal);
     this->Transform->TransformPoint(origin, origin);
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -652,9 +652,9 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
   this->Origin[2] = o[2];
 
   if (this->PlaneId < 0)
-    {
+  {
     return;
-    }
+  }
 
   // Respect constness: make a copy that we can modify.
   double origin[3];
@@ -663,31 +663,31 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
   origin[2] = o[2];
 
   if (this->Mapper)
-    {
+  {
     vtkPlane *plane =
       this->Mapper->GetClippingPlanes()->GetItem(this->PlaneId);
 
     // Bounding checks needed!
 
     plane->SetOrigin(origin);
-    }
+  }
   else if (this->ImageMapper &&
            vtkImageResliceMapper::SafeDownCast(this->ImageMapper))
-    {
+  {
     vtkImageResliceMapper *resliceMapper =
       static_cast<vtkImageResliceMapper *>(this->ImageMapper);
 
     resliceMapper->GetSlicePlane()->SetOrigin(origin);
-    }
+  }
   else
-    {
+  {
     // Go from world coords to data coords
     this->Transform->GetInverse()->TransformPoint(origin, origin);
 
     int i = this->PlaneId/2;
 
     if (this->ImageActor)
-      {
+    {
       double dataOrigin[3];
       this->ImageActor->GetInput()->GetOrigin(dataOrigin);
       double dataSpacing[3];
@@ -701,10 +701,10 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
         this->ImageActor->GetMapper()->GetInputInformation(0, 0);
       if (inInfo &&
           inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
-        {
+      {
         inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
                     wholeExtent);
-        }
+      }
 #else
       int wholeExtent[6];
       this->ImageActor->GetInput()->GetWholeExtent(wholeExtent);
@@ -719,9 +719,9 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
 
       displayExtent[2*i] = displayExtent[2*i+1] = xi;
       this->ImageActor->SetDisplayExtent(displayExtent);
-      }
+    }
     else if (this->VolumeMapper)
-      {
+    {
       double region[6];
       this->VolumeMapper->GetCroppingRegionPlanes(region);
       double bounds[6];
@@ -734,23 +734,23 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
       double t = 1.0;
       vtkImageData *data = this->VolumeMapper->GetInput();
       if (data)
-        {
+      {
         double spacing[3];
         data->GetSpacing(spacing);
         t = spacing[i];
-        }
+      }
 
       // Check for collissions with the opposing plane
       if (this->PlaneId == 2*i)
-        {
+      {
         if (x > region[2*i+1] - t) { x = region[2*i+1] - t; }
         if (x > bounds[2*i+1] - t) { x = bounds[2*i+1] - t; }
-        }
+      }
       else
-        {
+      {
         if (x < region[2*i] + t) { x = region[2*i] + t; }
         if (x < bounds[2*i] + t) { x = bounds[2*i] + t; }
-        }
+      }
 
       // Bounding box check
       if (x < bounds[2*i]) { x = bounds[2*i]; }
@@ -761,22 +761,22 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
 
       // Do the same for all other volumes in the LOD
       if (this->LODProp3D)
-        {
+      {
         int n = this->LODProp3D->GetNumberOfLODs();
         for (int j = 0; j < n; j++)
-          {
+        {
           vtkAbstractVolumeMapper *aMapper = 0;
           // LOD Ids start at 1000, I don't know why
           this->LODProp3D->GetLODMapper(1000+j, &aMapper);
           vtkVolumeMapper *mapper = vtkVolumeMapper::SafeDownCast(aMapper);
           if (mapper && mapper != this->VolumeMapper)
-            {
+          {
             mapper->SetCroppingRegionPlanes(region);
-            }
           }
         }
       }
     }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -788,9 +788,9 @@ void vtkPushPlaneTool::SetNormal(const double n[3])
   this->Normal[2] = n[2];
 
   if (this->PlaneId < 0)
-    {
+  {
     return;
-    }
+  }
 
   // Respect constness: make a copy rather than using ugly const cast.
   double normal[3];
@@ -800,12 +800,12 @@ void vtkPushPlaneTool::SetNormal(const double n[3])
 
   // Setting the normal is only valid for the mapper clipping planes.
   if (this->Mapper)
-    {
+  {
     vtkPlane *plane =
       this->Mapper->GetClippingPlanes()->GetItem(this->PlaneId);
 
     // Sanity checks needed!
 
     plane->SetNormal(normal);
-    }
+  }
 }

@@ -44,10 +44,10 @@ vtkSliceImageTool::~vtkSliceImageTool()
 void vtkSliceImageTool::SetJumpToNearestSlice(int val)
 {
   if (val != this->JumpToNearestSlice)
-    {
+  {
     this->JumpToNearestSlice = val;
     this->Modified();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -68,18 +68,18 @@ void vtkSliceImageTool::StartAction()
 
     // code for handling the mouse wheel interaction
   if ((cursor->GetModifier() & VTK_TOOL_WHEEL_MASK) != 0)
-    {
+  {
     int delta = 0;
     if ((cursor->GetModifier() & VTK_TOOL_WHEEL_BWD) != 0)
-      {
+    {
       delta = -1;
-      }
-    else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
-      {
-      delta = 1;
-      }
-    this->AdvanceSlice(delta);
     }
+    else if ((cursor->GetModifier() & VTK_TOOL_WHEEL_FWD) != 0)
+    {
+      delta = 1;
+    }
+    this->AdvanceSlice(delta);
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -104,14 +104,14 @@ void vtkSliceImageTool::DoAction()
   // Get viewport height at the current depth
   double height = 1;
   if (camera->GetParallelProjection())
-    {
+  {
     height = camera->GetParallelScale();
-    }
+  }
   else
-    {
+  {
     double angle = vtkMath::RadiansFromDegrees(camera->GetViewAngle());
     height = 2*this->StartDistance*sin(angle*0.5);
-    }
+  }
 
   // Get the viewport size in pixels
   vtkRenderer *renderer = cursor->GetRenderer();
@@ -142,7 +142,7 @@ void vtkSliceImageTool::DoAction()
       this->CurrentImageMatrix &&
       this->CurrentImageMapper &&
       (data = vtkImageData::SafeDownCast(this->CurrentImageMapper->GetInput())))
-    {
+  {
     double point[4];
     point[0] = focalPoint[0];
     point[1] = focalPoint[1];
@@ -166,19 +166,19 @@ void vtkSliceImageTool::DoAction()
     double maxsq = 0;
     double sumsq = 0;
     for (int i = 0; i < 3; i++)
-      {
+    {
       double tmpsq = normal[i]*normal[i];
       sumsq += tmpsq;
       if (tmpsq > maxsq)
-        {
+      {
         maxsq = tmpsq;
         k = i;
-        }
       }
+    }
 
     // if the slice is not oblique
     if ((1.0 - maxsq/sumsq) < 1e-12)
-      {
+    {
       // get the point in data coordinates
       vtkMatrix4x4::Invert(*dataToWorld->Element, worldToData);
       vtkMatrix4x4::MultiplyPoint(worldToData, point, point);
@@ -189,22 +189,22 @@ void vtkSliceImageTool::DoAction()
       // set the point to lie exactly on a slice
       double z = (point[k] - origin[k])/spacing[k];
       if (z > VTK_INT_MIN && z < VTK_INT_MAX)
-        {
+      {
         int j = vtkMath::Floor(z + 0.5);
         point[k] = j*spacing[k] + origin[k];
-        }
+      }
 
       // convert back to world coordinates
       dataToWorld->MultiplyPoint(point, point);
 
       if (point[3] != 0)
-        {
+      {
         focalPoint[0] = point[0]/point[3];
         focalPoint[1] = point[1]/point[3];
         focalPoint[2] = point[2]/point[3];
-        }
       }
     }
+  }
 
   camera->SetFocalPoint(focalPoint);
 }
@@ -227,20 +227,20 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
 
   // Convert the normal to data coordinates
   if (this->CurrentImageMatrix)
-    {
+  {
     double matrix[16];
     vtkMatrix4x4::Transpose(*this->CurrentImageMatrix->Element, matrix);
     vtkMatrix4x4::MultiplyPoint(matrix, normal, normal);
-    }
+  }
 
   // Get the image information
   vtkImageData *data = 0;
   if (this->CurrentImageMapper)
-    {
+  {
     data = vtkImageData::SafeDownCast(this->CurrentImageMapper->GetInput());
-    }
+  }
   if (data)
-    {
+  {
     // Compute the data bounds
     double origin[3], spacing[3], bounds[6];
     int extent[6];
@@ -251,9 +251,9 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     vtkInformation *info = this->CurrentImageMapper->GetInputInformation(0, 0);
     if (info &&
         info->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
-      {
+    {
       info->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
-      }
+    }
 #else
     data->GetWholeExtent(extent);
 #endif
@@ -269,16 +269,16 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     int maxc = 0;
     double maxdist = VTK_DOUBLE_MIN;
     for (int c = 0; c < 8; c++)
-      {
+    {
       double dist = (normal[0]*bounds[c&1] +
                      normal[1]*bounds[2+((c&2)>>1)] +
                      normal[2]*bounds[4+((c&4)>>2)] + normal[3]);
       if (dist > maxdist)
-        {
+      {
         maxdist = dist;
         maxc = c;
-        }
       }
+    }
     // Compute the distance to the opposite corner
     int minc = (maxc ^ 7);
     double mindist = (normal[0]*bounds[minc&1] +
@@ -299,16 +299,16 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     n = (n > nmax ? nmax : n);
     // Adjust the plane
     normal[3] -= n*s - maxdist;
-    }
+  }
 
   // Convert the plane back to world coordinates
   if (this->CurrentImageMatrix)
-    {
+  {
     double matrix[16];
     vtkMatrix4x4::Invert(*this->CurrentImageMatrix->Element, matrix);
     vtkMatrix4x4::Transpose(matrix, matrix);
     vtkMatrix4x4::MultiplyPoint(matrix, normal, normal);
-    }
+  }
 
   // project the focal point onto this new plane
   double f = vtkMath::Dot(normal, point) + normal[3];

@@ -95,25 +95,25 @@ vtkDataSet *vtkSystemCursorShapes::MakePointerShape()
 
   // Add the points three times: white, then black, and black again
   for (int i = 0; i < 7; i++)
-    {
+  {
     points->InsertNextPoint(coords[i][0] - hotspot[0],
                             coords[i][1] - hotspot[1], 0.0);
     scalars->InsertNextTupleValue(white);
-    }
+  }
 
   for (int j = 0; j < 7; j++)
-    {
+  {
     points->InsertNextPoint(coords[j][0] - hotspot[0],
                             coords[j][1] - hotspot[1], +0.1);
     scalars->InsertNextTupleValue(black);
-    }
+  }
 
   for (int k = 0; k < 7; k++)
-    {
+  {
     points->InsertNextPoint(coords[k][0] - hotspot[0],
                             coords[k][1] - hotspot[1], -0.1);
     scalars->InsertNextTupleValue(black);
-    }
+  }
 
   // Make the strips
   strips->InsertNextCell(stripIds[0], &stripIds[1]);
@@ -194,22 +194,22 @@ vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
   };
 
   for (int i = 0; i < 8; i++)
-    {
+  {
     points->InsertNextPoint(coords[i][0]+0.5, coords[i][1]-0.5, +0.1);
     scalars->InsertNextTupleValue(black);
-    }
+  }
 
   for (int j = 0; j < 8; j++)
-    {
+  {
     points->InsertNextPoint(coords[j][0]+0.5, coords[j][1]-0.5, -0.1);
     scalars->InsertNextTupleValue(black);
-    }
+  }
 
   for (int k = 0; k < 16; k++)
-    {
+  {
     points->InsertNextPoint(outCoords[k][0]+0.5, outCoords[k][1]-0.5, 0);
     scalars->InsertNextTupleValue(white);
-    }
+  }
 
   // Make the crosshairs
   lines->InsertNextCell(toplineIds[0], &toplineIds[1]);

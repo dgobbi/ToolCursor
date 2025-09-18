@@ -52,23 +52,23 @@ vtkROIContourDataToPolyData::vtkROIContourDataToPolyData()
 vtkROIContourDataToPolyData::~vtkROIContourDataToPolyData()
 {
   if (this->SelectionPlane)
-    {
+  {
     this->SelectionPlane->Delete();
-    }
+  }
   if (this->Spline)
-    {
+  {
     this->Spline->Delete();
-    }
+  }
   if (this->SplineX)
-    {
+  {
     this->SplineX->Delete();
     this->SplineY->Delete();
     this->SplineZ->Delete();
-    }
+  }
   if (this->KnotPositions)
-    {
+  {
     this->KnotPositions->Delete();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -105,13 +105,13 @@ int vtkROIContourDataToPolyData::ComputePipelineMTime(
   vtkPlane *plane = this->SelectionPlane;
 
   if (plane)
-    {
+  {
     unsigned long planeMTime = plane->GetMTime();
     if (planeMTime > mTime)
-      {
+    {
       mTime = planeMTime;
-      }
     }
+  }
 
   *mtime = mTime;
 
@@ -129,7 +129,7 @@ void vtkROIContourDataToPolyData::ComputeSpline(
   vtkPoints *points, bool closed, double &tmax, double &dmax)
 {
   if (this->SplineX && !this->SplineX->IsA(this->Spline->GetClassName()))
-    {
+  {
     this->SplineX->Delete();
     this->SplineY->Delete();
     this->SplineZ->Delete();
@@ -137,20 +137,20 @@ void vtkROIContourDataToPolyData::ComputeSpline(
     this->SplineX = 0;
     this->SplineY = 0;
     this->SplineZ = 0;
-    }
+  }
   if (this->SplineX == 0)
-    {
+  {
     this->SplineX = this->Spline->NewInstance();
     this->SplineX->DeepCopy(this->Spline);
     this->SplineY = this->Spline->NewInstance();
     this->SplineY->DeepCopy(this->Spline);
     this->SplineZ = this->Spline->NewInstance();
     this->SplineZ->DeepCopy(this->Spline);
-    }
+  }
   if (this->KnotPositions == 0)
-    {
+  {
     this->KnotPositions = vtkDoubleArray::New();
-    }
+  }
 
   vtkSpline *xspline = this->SplineX;
   vtkSpline *yspline = this->SplineY;
@@ -179,17 +179,17 @@ void vtkROIContourDataToPolyData::ComputeSpline(
 
   // verify that there are enough knots for the spline
   if (n < 2)
-    {
+  {
     tmax = 0;
     dmax = 0;
     return;
-    }
+  }
 
   // get the first and last point
   points->GetPoint(0, p0);
 
   if (closed)
-    {
+  {
     // require a tolerance, base it off the desired subdivision
     double tol = this->SubdivisionTarget*1e-3;
     tol *= tol;
@@ -198,33 +198,33 @@ void vtkROIContourDataToPolyData::ComputeSpline(
     // on top of the first point, we must ignore such points
     vtkIdType m = n;
     do
-      {
+    {
       points->GetPoint(--m, p);
       lastd = vtkMath::Distance2BetweenPoints(p0, p);
-      }
+    }
     while (m > 0 && lastd < tol);
     n = m + 1;
 
     // set factor to scale the implicit segment to unity
     if (lastd > 0)
-      {
+    {
       lastd = sqrt(lastd);
       f = 1.0/lastd;
-      }
     }
+  }
 
   // verify that there are still enough knots for the spline
   if (n < 2)
-    {
+  {
     tmax = 0;
     dmax = 0;
     return;
-    }
+  }
 
   // add all the points to the spline
   double d = 0.0;
   for (vtkIdType i = 0; i < n; i++)
-    {
+  {
     points->GetPoint(i, p);
     d += sqrt(vtkMath::Distance2BetweenPoints(p0, p));
 
@@ -238,7 +238,7 @@ void vtkROIContourDataToPolyData::ComputeSpline(
     p0[0] = p[0];
     p0[1] = p[1];
     p0[2] = p[2];
-    }
+  }
 
   // do the spline precomputations
   xspline->Compute();
@@ -252,9 +252,9 @@ void vtkROIContourDataToPolyData::ComputeSpline(
 
   // add another knot point for closed splines
   if (closed)
-    {
+  {
     knots->InsertNextValue(tmax);
-    }
+  }
 }
 
 
@@ -274,9 +274,9 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
   vtkIdType m = knots->GetNumberOfTuples();
 
   if (m < 2)
-    {
+  {
     return false;
-    }
+  }
 
   // Because InsertNextPoint is very slow
   vtkDoubleArray *da = vtkDoubleArray::SafeDownCast(points->GetData());
@@ -285,40 +285,40 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
   double t0 = 0;
   double f = dmax/(tmax*this->SubdivisionTarget);
   for (vtkIdType j = 1; j < m; j++)
-    {
+  {
     double t1 = knots->GetValue(j);
     int n = vtkMath::Floor((t1 - t0)*f) + 1;
     vtkIdType id = points->GetNumberOfPoints();
     double *p = da->WritePointer(id*3, n*3);
     for (int i = 0; i < n; i++)
-      {
+    {
       double t = (t0*(n-i) + t1*i)/n;
       p[0] = xspline->Evaluate(t);
       p[1] = yspline->Evaluate(t);
       p[2] = zspline->Evaluate(t);
       p += 3;
-      }
+    }
     if (subIds)
-      {
+    {
       int *iptr = subIds->WritePointer(subIds->GetMaxId()+1, n);
       int k = j-1;
       do { *iptr++ = k; } while (--n);
-      }
-    t0 = t1;
     }
+    t0 = t1;
+  }
 
   if (!closed)
-    {
+  {
     double p[3];
     p[0] = xspline->Evaluate(tmax);
     p[1] = yspline->Evaluate(tmax);
     p[2] = zspline->Evaluate(tmax);
     points->InsertNextPoint(p);
     if (subIds)
-      {
+    {
       subIds->InsertNextValue(m-1);
-      }
     }
+  }
 
   vtkIdType id1 = points->GetNumberOfPoints();
   lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
@@ -327,13 +327,13 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
   vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
   *iptr++ = cellSize;
   for (vtkIdType id = id0; id < id1; id++)
-    {
+  {
     *iptr++ = id;
-    }
+  }
   if (closed)
-    {
+  {
     *iptr++ = id0;
-    }
+  }
 
   // Free any memory that was used
   xspline->RemoveAllPoints();
@@ -354,7 +354,7 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
   vtkIdType m = contourPoints->GetNumberOfPoints();
 
   if (closed && m > 2)
-    {
+  {
     // require a tolerance, base it off the desired subdivision
     double tol = this->SubdivisionTarget*1e-3;
     tol *= tol;
@@ -364,18 +364,18 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     contourPoints->GetPoint(0, p0);
     double lastd = 0;
     do
-      {
+    {
       contourPoints->GetPoint(--m, p);
       lastd = vtkMath::Distance2BetweenPoints(p0, p);
-      }
+    }
     while (m > 0 && lastd < tol);
     m += 1;
-    }
+  }
 
   if (m < 2)
-    {
+  {
     return false;
-    }
+  }
 
   // Save the initial size of the point array
   vtkIdType id0 = points->GetNumberOfPoints();
@@ -397,7 +397,7 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
   int m1 = static_cast<int>(m) + closed - 1;
 
   for (int j = 0; j < m1; j++)
-    {
+  {
     int jp2 = (j + 2) % m;
     contourPoints->GetPoint(jp2, p2);
     d1 = sqrt(vtkMath::Distance2BetweenPoints(p1, p2));
@@ -444,7 +444,7 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     double *q = da->WritePointer(3*id, 3*n);
     int i = n;
     do
-      {
+    {
       double t2 = t*t;
       double t3 = t2*t;
       q[0] = cx[0] + t*cx[1] + t2*cx[2] + t3*cx[3];
@@ -453,15 +453,15 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
 
       q += 3;
       t += dt;
-      }
+    }
     while (--i);
 
     if (subIds)
-      {
+    {
       id = subIds->GetMaxId() + 1;
       int *iptr = subIds->WritePointer(id, n);
       do { *iptr++ = j; } while (--n);
-      }
+    }
 
     p0[0] = p1[0];
     p0[1] = p1[1];
@@ -476,18 +476,18 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
     dz0 = dz1;
 
     d0 = d1;
-    }
+  }
 
   if (!closed)
-    {
+  {
     double q[3];
     contourPoints->GetPoint(m1, q);
     points->InsertNextPoint(q);
     if (subIds)
-      {
+    {
       subIds->InsertNextValue(m1);
-      }
     }
+  }
 
   vtkIdType id1 = points->GetNumberOfPoints();
   lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
@@ -496,13 +496,13 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
   vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
   *iptr++ = cellSize;
   for (vtkIdType id = id0; id < id1; id++)
-    {
+  {
     *iptr++ = id;
-    }
+  }
   if (closed)
-    {
+  {
     *iptr++ = id0;
-    }
+  }
 
   return true;
 }
@@ -541,77 +541,77 @@ int vtkROIContourDataToPolyData::RequestData(
   // Go through all the contours
   int n = input->GetNumberOfContours();
   for (int i = 0; i < n; i++)
-    {
+  {
     vtkPoints *points = input->GetContourPoints(i);
     int t = input->GetContourType(i);
 
     if (points)
-      {
+    {
       vtkIdType m = points->GetNumberOfPoints();
       bool includeContour = true;
 
       if (plane)
-        {
+      {
         for (int j = 0; j < m; j++)
-          {
+        {
           double p[3];
           points->GetPoint(j, p);
           double d = plane->DistanceToPlane(p);
           if (d < -tol || d > tol)
-            {
+          {
             includeContour = false;
             break;
-            }
           }
         }
+      }
 
       // Include this contour in the output
       if (includeContour)
-        {
+      {
         bool closed = false;
         vtkCellArray *cells = 0;
         if (t == vtkROIContourData::POINT)
-          {
+        {
           if (!verts)
-            {
-            verts = vtkCellArray::New();
-            }
-          cells = verts;
-          }
-        else
           {
+            verts = vtkCellArray::New();
+          }
+          cells = verts;
+        }
+        else
+        {
           if (!lines)
-            {
+          {
             lines = vtkCellArray::New();
-            }
+          }
           cells = lines;
 
           if (t == vtkROIContourData::CLOSED_PLANAR)
-            {
+          {
             closed = true;
-            }
           }
+        }
 
         // Cell requires extra point id if contour is closed
         vtkIdType cellSize = m + closed;
         bool success = false;
 
         if (this->Subdivision && m > 2 && t != vtkROIContourData::POINT)
-          {
+        {
           // Use a spline to subdivide and smooth contour
           if (this->Spline)
-            {
+          {
             success = this->GenerateSpline(
               points, closed, outPoints, lines, contourSubIds);
-            }
+          }
           else
-            {
+          {
             success = this->CatmullRomSpline(
               points, closed, outPoints, lines, contourSubIds);
-            }
           }
+        }
         else if (m > 0)
-          {
+        {
           // Add the contour without subdivision
           cells->SetNumberOfCells(cells->GetNumberOfCells() + 1);
           vtkIdTypeArray *ida = cells->GetData();
@@ -626,37 +626,37 @@ int vtkROIContourDataToPolyData::RequestData(
           double *p = da->WritePointer(id*3, m*3);
 
           for (int j = 0; j < m; j++)
-            {
+          {
             points->GetPoint(j, p);
             *idptr++ = id++;
             p += 3;
-            }
+          }
           if (contourSubIds)
-            {
+          {
             id = contourSubIds->GetMaxId() + 1;
             int *iptr = contourSubIds->WritePointer(id, m);
             for (int j = 0; j < m; j++)
-              {
+            {
               *iptr++ = j;
-              }
             }
+          }
 
           // Close the contour, if necessary
           if (cellSize > m)
-            {
+          {
             *idptr++ = firstPointId;
-            }
-          success = true;
           }
+          success = true;
+        }
 
         // Add a scalar to allow identification of countour
         if (contourIds && success)
-          {
+        {
           contourIds->InsertNextValue(i);
-          }
         }
       }
     }
+  }
 
   output->SetPoints(outPoints);
   output->SetLines(lines);
@@ -665,25 +665,25 @@ int vtkROIContourDataToPolyData::RequestData(
   output->GetPointData()->AddArray(contourSubIds);
 
   if (outPoints)
-    {
+  {
     outPoints->Delete();
-    }
+  }
   if (lines)
-    {
+  {
     lines->Delete();
-    }
+  }
   if (verts)
-    {
+  {
     verts->Delete();
-    }
+  }
   if (contourIds)
-    {
+  {
     contourIds->Delete();
-    }
+  }
   if (contourSubIds)
-    {
+  {
     contourSubIds->Delete();
-    }
+  }
 
   // assign colors to the output points
   unsigned char color[3] = { 255, 0, 0 };
@@ -693,9 +693,9 @@ int vtkROIContourDataToPolyData::RequestData(
   vtkIdType m = outPoints->GetNumberOfPoints();
   colors->SetNumberOfTuples(m);
   for (vtkIdType j = 0; j < m; j++)
-    {
+  {
     colors->SetTupleValue(j, color);
-    }
+  }
 
   output->GetPointData()->SetScalars(colors);
   colors->Delete();

@@ -83,34 +83,34 @@ void vtkImageTool::FindCurrentImage()
   vtkCollectionSimpleIterator pit;
 
   for (props->InitTraversal(pit); (prop = props->GetNextProp(pit)); )
-    {
+  {
     for (prop->InitPathTraversal(); (path = prop->GetNextPath()); )
-      {
+    {
       vtkProp *tryProp = path->GetLastNode()->GetViewProp();
       if (tryProp->GetVisibility())
-        {
+      {
         vtkImageSlice *imageProp = 0;
         vtkLODProp3D *lodProp = 0;
 
         if ((imageProp = vtkImageSlice::SafeDownCast(tryProp)) != 0)
-          {
+        {
           mapper = imageProp->GetMapper();
           property = imageProp->GetProperty();
           matrix = path->GetLastNode()->GetMatrix();
-          }
+        }
         else if ((lodProp = vtkLODProp3D::SafeDownCast(tryProp)) != 0)
-          {
+        {
           int lodId = lodProp->GetPickLODID();
           vtkAbstractMapper3D *tryMapper = lodProp->GetLODMapper(lodId);
           if ( (mapper = vtkImageMapper3D::SafeDownCast(tryMapper)) != 0)
-            {
+          {
             lodProp->GetLODProperty(lodId, &property);
             matrix = path->GetLastNode()->GetMatrix();
-            }
           }
         }
       }
     }
+  }
 
   this->SetCurrentImage(mapper, property, matrix);
 }
@@ -120,47 +120,47 @@ void vtkImageTool::SetCurrentImage(
   vtkImageMapper3D *mapper, vtkImageProperty *property, vtkMatrix4x4 *matrix)
 {
   if (property != this->CurrentImageProperty)
-    {
+  {
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Delete();
-      }
+    }
 
     this->CurrentImageProperty = property;
 
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Register(this);
-      }
     }
+  }
 
   if (mapper != this->CurrentImageMapper)
-    {
+  {
     if (this->CurrentImageMapper)
-      {
+    {
       this->CurrentImageMapper->Delete();
-      }
+    }
 
     this->CurrentImageMapper = mapper;
 
     if (this->CurrentImageMapper)
-      {
+    {
       this->CurrentImageMapper->Register(this);
-      }
     }
+  }
 
   if (matrix != this->CurrentImageMatrix)
-    {
+  {
     if (this->CurrentImageMatrix)
-      {
+    {
       this->CurrentImageMatrix->Delete();
-      }
+    }
 
     this->CurrentImageMatrix = matrix;
 
     if (this->CurrentImageMatrix)
-      {
+    {
       this->CurrentImageMatrix->Register(this);
-      }
     }
+  }
 }

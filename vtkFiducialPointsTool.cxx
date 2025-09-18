@@ -89,7 +89,7 @@ void vtkFiducialPointsTool::PrintSelf(ostream& os, vtkIndent indent)
 void vtkFiducialPointsTool::SetPoints(vtkPoints *points)
 {
   if (1) //points != this->PointSet->GetPoints())
-    {
+  {
     this->PointSet->SetPoints(points);
     int n = points->GetNumberOfPoints();
     vtkUnsignedCharArray *colors = vtkUnsignedCharArray::New();
@@ -97,17 +97,17 @@ void vtkFiducialPointsTool::SetPoints(vtkPoints *points)
     unsigned char red[3] = { 255, 0, 0 };
     unsigned char yellow[3] = { 255, 255, 0 };
     for (int i = 0; i < n; i++)
-      {
+    {
       unsigned char *color = red;
       if (i == n-1) { color = yellow; }
       colors->InsertNextTupleValue(color);
-      }
+    }
     //this->PointSet->GetPointData()->SetScalars(colors);
     this->Glyph3D->Modified();
     colors->Delete();
 
     this->Modified();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -120,10 +120,10 @@ vtkPoints *vtkFiducialPointsTool::GetPoints()
 void vtkFiducialPointsTool::SetMarker(vtkPolyData *data)
 {
   if (data != this->Glyph3D->GetSource())
-    {
+  {
     this->Glyph3D->SET_SOURCE_DATA(data);
     this->Modified();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------

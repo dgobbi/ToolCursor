@@ -42,9 +42,9 @@ void vtkResliceMath::SetReslicePlane(
   vtkInformation *inInfo = reslice->GetInputInformation(0, 0);
   if (inInfo &&
       inInfo->Has(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
-    {
+  {
     inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
-    }
+  }
 #else
   input->Update();
   int extent[6];
@@ -57,12 +57,12 @@ void vtkResliceMath::SetReslicePlane(
   // Compute center
   double center[4], radius[3];
   for (int i = 0; i < 3; i++)
-    {
+  {
     center[i] = 0.5*(extent[2*i] + extent[2*i+1]);
     center[i] = center[i]*spacing[i] + origin[i];
     radius[i] = 0.5*(extent[2*i+1] - extent[2*i]);
     radius[i] *= spacing[i];
-    }
+  }
 
   // Transform the center
   center[3] = 1.0;
@@ -74,7 +74,7 @@ void vtkResliceMath::SetReslicePlane(
   spacing[2] = fabs(spacing[2]);
   double s[2], r[2];
   for (int j = 0; j < 2; j++)
-    {
+  {
     double xc = matrix[4*j + 0];
     double yc = matrix[4*j + 1];
     double zc = matrix[4*j + 2];
@@ -84,7 +84,7 @@ void vtkResliceMath::SetReslicePlane(
     r[j] = (xc*xc*radius[0] +
             yc*yc*radius[1] +
             zc*zc*radius[2])/sqrt(xc*xc + yc*yc + zc*zc);
-    }
+  }
   spacing[0] = s[0];
   spacing[1] = s[1];
   spacing[2] = 1.0;
@@ -105,11 +105,11 @@ void vtkResliceMath::SetReslicePlane(
 
   vtkMatrix4x4 *axes = reslice->GetResliceAxes();
   if (axes == 0)
-    {
+  {
     axes = vtkMatrix4x4::New();
     reslice->SetResliceAxes(axes);
     axes->Delete();
-    }
+  }
 
   axes->DeepCopy(matrix);
   reslice->SetOutputOrigin(origin);
@@ -129,14 +129,14 @@ void vtkResliceMath::ConvertPlaneToResliceAxes(
   int maxi = 0;
   double maxv = 0.0;
   for (int i = 0; i < 3; i++)
-    {
+  {
     double tmp = plane[i]*plane[i];
     if (tmp > maxv)
-      {
+    {
       maxi = i;
       maxv = tmp;
-      }
     }
+  }
 
   // Create the axis corresponding to that component
   double axis[3];
@@ -151,10 +151,10 @@ void vtkResliceMath::ConvertPlaneToResliceAxes(
   taxis[1] = 1.0;
   taxis[2] = 0.0;
   if (maxi == 1)
-    {
+  {
     taxis[1] = 0.0;
     taxis[2] = 1.0;
-    }
+  }
   vtkMath::Cross(taxis, axis, saxis);
 
   // Compute the rotation angle between the axis and the plane
@@ -164,11 +164,11 @@ void vtkResliceMath::ConvertPlaneToResliceAxes(
   double sintheta = vtkMath::Norm(vec);
   double theta = atan2(sintheta, costheta);
   if (sintheta != 0)
-    {
+  {
     vec[0] /= sintheta;
     vec[1] /= sintheta;
     vec[2] /= sintheta;
-    }
+  }
   // create a quaternion
   costheta = cos(0.5*theta);
   sintheta = sin(0.5*theta);

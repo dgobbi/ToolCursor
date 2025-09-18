@@ -69,27 +69,27 @@ void vtkRotateCameraTool::StartAction()
   // Get viewport height at focal plane
   double height = 1;
   if (camera->GetParallelProjection())
-    {
+  {
     height = camera->GetParallelScale();
-    }
+  }
   else
-    {
+  {
     double angle = vtkMath::RadiansFromDegrees(camera->GetViewAngle());
     height = 2*d*sin(angle/2);
-    }
+  }
 
   this->MinimumRadius = height*0.05;
 
   // Check if "sticky" interaction is possible
   if (this->Radius > this->MinimumRadius)
-    {
+  {
     this->Sticky = this->IsStickyPossible(this->StickyPosition);
-    }
+  }
   else
-    {
+  {
     this->Radius = this->MinimumRadius;
     this->Sticky = 0;
-    }
+  }
 
   // Initialize the transform
   this->Transform->Identity();
@@ -123,11 +123,11 @@ void vtkRotateCameraTool::DoAction()
   // Get the camera's x, y, and z axes
   double cvx[3], cvy[3], cvz[3];
   for (int i = 0; i < 3; i++)
-    {
+  {
     cvx[i] = viewMatrix->GetElement(0, i);
     cvy[i] = viewMatrix->GetElement(1, i);
     cvz[i] = viewMatrix->GetElement(2, i);
-    }
+  }
 
   // Get the camera's position
   double cameraPos[3];
@@ -139,23 +139,23 @@ void vtkRotateCameraTool::DoAction()
 
   // Is it possible to switch to sticky mode?
   if (!this->Sticky && cursor->GetPickFlags() != 0)
-    {
+  {
     double p[3];
     cursor->GetPosition(p);
 
     double r = sqrt(vtkMath::Distance2BetweenPoints(f, p));
     if (r > this->MinimumRadius)
-      {
+    {
       if (this->IsStickyPossible(p))
-        {
+      {
         this->Sticky = 1;
         this->Radius = r;
         this->StickyPosition[0] = p[0];
         this->StickyPosition[1] = p[1];
         this->StickyPosition[2] = p[2];
-        }
       }
     }
+  }
 
   double r = this->Radius;
 
@@ -203,7 +203,7 @@ void vtkRotateCameraTool::DoAction()
   double t = -vtkMath::Dot(u,cvz)/vtkMath::Dot(v,cvz);
 
   if (this->Sticky)
-    {
+  {
     // Vector from center of rotation to first line point
     u[0] = p1[0] - f[0];
     u[1] = p1[1] - f[1];
@@ -219,17 +219,17 @@ void vtkRotateCameraTool::DoAction()
     double discriminant = b*b - 4*a*c;
 
     if (discriminant > 0)
-      {
+    {
       // The discriminant is positive, so there are two real solutions.
       // Take the smaller of the two roots.
       double tSphere = (-b - sqrt(discriminant))/(2*a);
 
       // Only allow "t" values that are in front of interaction plane
       if (tSphere < t)
-        {
+      {
         t = tSphere;
-        }
       }
+    }
 
     // Use "t" to compute the intersection point for the view ray
     double p[3];
@@ -251,7 +251,7 @@ void vtkRotateCameraTool::DoAction()
 
     // If point is off the sphere and on the interaction plane instead
     if (s > smax)
-      {
+    {
       // Map the off-sphere point to a position on the sphere
 
       double cosphi = cx/s;
@@ -263,7 +263,7 @@ void vtkRotateCameraTool::DoAction()
 
       // Angle is +/- 10 degrees, so cos(10deg) = 0.985
       if (dotprod > 0.985 && s2 < s2max/0.99)
-        {
+      {
         // Within the allowed angle range, so do the special mapping of
         // the plane to the sphere to keep the sticky point
 
@@ -282,15 +282,15 @@ void vtkRotateCameraTool::DoAction()
         p[0] = sx*cvx[0] + sy*cvy[0] + sz*cvz[0] + f[0];
         p[1] = sx*cvx[1] + sy*cvy[1] + sz*cvz[1] + f[1];
         p[2] = sx*cvx[2] + sy*cvy[2] + sz*cvz[2] + f[2];
-        }
+      }
       else
-        {
+      {
         // Too far off, lose the sticky before things go wonky
         this->Sticky = 0;
-        }
       }
+    }
     else
-      {
+    {
       // If the cursor is on the sphere, then save the vector from the
       // center of rotation to the cursor postion (in camera view coords)
 
@@ -298,15 +298,15 @@ void vtkRotateCameraTool::DoAction()
       this->StickyDirection[1] = 0;
 
       if (s/r > 1e-3)
-        {
+      {
         this->StickyDirection[0] = cx/s;
         this->StickyDirection[1] = cy/s;
-        }
       }
+    }
 
     // Make sure sticky is still on
     if (this->Sticky)
-      {
+    {
       // Get the point we want to stick to.
       double p0[3];
       this->GetStickyPosition(p0);
@@ -320,9 +320,9 @@ void vtkRotateCameraTool::DoAction()
       // Verify that there is significant motion between the points
       double delta = vtkMath::Norm(w);
       if (delta/r < 1e-7)
-        {
+      {
         return;
-        }
+      }
 
       // pr will be the point we rotate around
       double pr[3];
@@ -339,14 +339,14 @@ void vtkRotateCameraTool::DoAction()
       // sphere, then don't keep the rotation vector perpendicular to the
       // view plane normal.  Instead, rotate around focal point.
       if (nlen/delta < 1e-5 || s > smax)
-        {
+      {
         // Can't define a line
         pr[0] = f[0];
         pr[1] = f[1];
         pr[2] = f[2];
-        }
+      }
       else
-        {
+      {
         // If we get here, everything's fine and the point is sticky.
 
         // Normalize our rotation vector.
@@ -363,7 +363,7 @@ void vtkRotateCameraTool::DoAction()
         pr[0] = f[0] + t*n[0];
         pr[1] = f[1] + t*n[1];
         pr[2] = f[2] + t*n[2];
-        }
+      }
 
       // The point pr and the points p, p0 form our rotation angle. Start
       // by computing the vectors to p and p0.
@@ -392,11 +392,11 @@ void vtkRotateCameraTool::DoAction()
       rotationAxis[0] = v3[0]/v3n;
       rotationAxis[1] = v3[1]/v3n;
       rotationAxis[2] = v3[2]/v3n;
-      }
     }
+  }
 
   if (!this->Sticky)
-    {
+  {
     // Here is the code for non-sticky interaction, it is much simpler.
 
     // Use "t" to compute the intersection point for the view ray
@@ -428,7 +428,7 @@ void vtkRotateCameraTool::DoAction()
     // Rotation axis is perpendicular to view plane normal and motion vector
     vtkMath::Cross(w, cvz, rotationAxis);
     vtkMath::Normalize(rotationAxis);
-    }
+  }
 
   // Get ready to apply the camera transformation
   this->Transform->PostMultiply();
@@ -468,9 +468,9 @@ int vtkRotateCameraTool::IsStickyPossible(const double position[3])
 
   // Sticky depends on there being an object to stick to
   if (cursor->GetPickFlags() == 0)
-    {
+  {
     return 0;
-    }
+  }
 
   vtkCamera *camera = cursor->GetRenderer()->GetActiveCamera();
   double f[3], p[3];
@@ -505,9 +505,9 @@ int vtkRotateCameraTool::IsStickyPossible(const double position[3])
   // the edge of the "rotation sphere" from the camera's viewpoint
   // will actually be in front of the center of the sphere.
   if ((!camera->GetParallelProjection() && df < r2/d) || df < 0)
-    {
+  {
     return 0;
-    }
+  }
 
   // Also check against the "smax" condition to provide a small margin,
   // since sticky motion isn't smooth right at the edge of the sphere.
@@ -515,9 +515,9 @@ int vtkRotateCameraTool::IsStickyPossible(const double position[3])
   double s2max = 0.99*r2/d2*(d2 - r2);
 
   if (r2 - df*df > s2max)
-    {
+  {
     return 0;
-    }
+  }
 
   return 1;
 }
@@ -527,9 +527,9 @@ void vtkRotateCameraTool::ConstrainCursor(double position[3],
                                             double normal[3])
 {
   if (this->Sticky)
-    {
+  {
     return;
-    }
+  }
 
   // When cursor becomes "unstuck", point normal to the center
 
@@ -540,14 +540,14 @@ void vtkRotateCameraTool::ConstrainCursor(double position[3],
   this->GetCenterOfRotation(f);
 
   if (camera->GetParallelProjection())
-    {
+  {
     normal[0] = position[0] - f[0];
     normal[1] = position[1] - f[1];
     normal[2] = position[2] - f[2];
     vtkMath::Normalize(normal);
-    }
+  }
   else
-    {
+  {
     double p[3];
     camera->GetPosition(p);
 
@@ -573,5 +573,5 @@ void vtkRotateCameraTool::ConstrainCursor(double position[3],
     normal[1] = q[1] - f[1];
     normal[2] = q[2] - f[2];
     vtkMath::Normalize(normal);
-    }
+  }
 }

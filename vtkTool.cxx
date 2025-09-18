@@ -46,10 +46,10 @@ void vtkTool::PrintSelf(ostream& os, vtkIndent indent)
 void vtkTool::SetToolCursor(vtkToolCursor *cursor)
 {
   if (cursor != this->ToolCursor)
-    {
+  {
     this->ToolCursor = cursor;
     this->Modified();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------

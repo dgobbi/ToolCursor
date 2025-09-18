@@ -41,9 +41,9 @@ vtkOpacityTool::vtkOpacityTool()
 vtkOpacityTool::~vtkOpacityTool()
 {
   if (this->CurrentImageProperty)
-    {
+  {
     this->CurrentImageProperty->Delete();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -60,10 +60,10 @@ void vtkOpacityTool::StartAction()
   this->SetCurrentImageToNthImage(-1);
 
   if (this->CurrentImageProperty)
-    {
+  {
     vtkImageProperty *property = this->CurrentImageProperty;
     this->StartOpacity = property->GetOpacity();
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -96,22 +96,22 @@ void vtkOpacityTool::DoAction()
   double theta = atan2(delta, sqrt(1.0 - delta*delta));
   theta += (x - x0)*2.0/(size[1] + 1);
   if (theta < -0.5*vtkMath::Pi())
-    {
+  {
     opacity = 0.0;
-    }
+  }
   else if (theta > 0.5*vtkMath::Pi())
-    {
+  {
     opacity = 1.0;
-    }
+  }
   else
-    {
+  {
     opacity = 0.5 + sin(theta);
-    }
+  }
 
   if (this->CurrentImageProperty)
-    {
+  {
     this->CurrentImageProperty->SetOpacity(opacity);
-    }
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -126,50 +126,50 @@ void vtkOpacityTool::SetCurrentImageToNthImage(int i)
   vtkCollectionSimpleIterator pit;
 
   for (int k = 0; k < 2; k++)
-    {
+  {
     int j = 0;
     for (props->InitTraversal(pit); (prop = props->GetNextProp(pit)); )
-      {
+    {
       for (prop->InitPathTraversal(); (path = prop->GetNextPath()); )
-        {
+      {
         vtkProp *tryProp = path->GetLastNode()->GetViewProp();
         if ( (imageProp = vtkImageSlice::SafeDownCast(tryProp)) != 0 &&
             tryProp->GetPickable() )
-          {
+        {
           if (j == i) { break; }
           imageProp = 0;
           j++;
-          }
-        }
-      if (imageProp)
-        {
-        break;
         }
       }
-    if (i < 0)
+      if (imageProp)
       {
-      i += j;
+        break;
       }
     }
+    if (i < 0)
+    {
+      i += j;
+    }
+  }
 
   vtkImageProperty *property = 0;
   if (imageProp)
-    {
+  {
     property = imageProp->GetProperty();
-    }
+  }
 
   if (property != this->CurrentImageProperty)
-    {
+  {
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Delete();
-      }
+    }
 
     this->CurrentImageProperty = property;
 
     if (this->CurrentImageProperty)
-      {
+    {
       this->CurrentImageProperty->Register(this);
-      }
     }
+  }
 }

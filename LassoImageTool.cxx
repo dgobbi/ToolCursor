@@ -104,12 +104,12 @@ void ReadDICOMImage(
   vtkMath::Cross(xdir, ydir, zdir);
 
   for (int i = 0; i < 3; i++)
-    {
+  {
     matrix->Element[i][0] = xdir[i];
     matrix->Element[i][1] = ydir[i];
     matrix->Element[i][2] = zdir[i];
     matrix->Element[i][3] = position[i];
-    }
+  }
   matrix->Element[3][0] = 0;
   matrix->Element[3][1] = 0;
   matrix->Element[3][2] = 0;
@@ -183,11 +183,11 @@ void SetViewFromMatrix(
 int main (int argc, char *argv[])
 {
   if (argc < 2)
-    {
+  {
     cout << "Usage 1: " << argv[0] << " image.mnc" << endl;
     cout << "Usage 2: " << argv[0] << " dicomdir/" << endl;
     return EXIT_FAILURE;
-    }
+  }
 
   // -------------------------------------------------------
   // load the images
@@ -201,13 +201,13 @@ int main (int argc, char *argv[])
     vtkSmartPointer<vtkMatrix4x4>::New();
   n = strlen(argv[1]);
   if (n > 4 && strcmp(&argv[1][n-4], ".mnc") == 0)
-    {
+  {
     ReadMINCImage(sourceImage, sourceMatrix, argv[1]);
-    }
+  }
   else
-    {
+  {
     ReadDICOMImage(sourceImage, sourceMatrix, argv[1]);
-    }
+  }
 
   // -------------------------------------------------------
   // display the images
