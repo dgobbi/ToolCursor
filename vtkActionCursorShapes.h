@@ -18,8 +18,8 @@
 // "Push", and "Spin".  All cursors are constructed from the
 // same 3D arrow shape and have a two-tone color scheme.
 
-#ifndef __vtkActionCursorShapes_h
-#define __vtkActionCursorShapes_h
+#ifndef vtkActionCursorShapes_h
+#define vtkActionCursorShapes_h
 
 #include "vtkCursorShapes.h"
 

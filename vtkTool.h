@@ -17,8 +17,8 @@
 // you drag the mouse in a renderer.  It contains all the necessary
 // state information, data, and code for the interaction.
 
-#ifndef __vtkTool_h
-#define __vtkTool_h
+#ifndef vtkTool_h
+#define vtkTool_h
 
 #include "vtkObject.h"
 

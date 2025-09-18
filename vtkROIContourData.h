@@ -19,8 +19,8 @@
 // be associated with an image, so they only lie on the slices of the
 // image.
 
-#ifndef __vtkROIContourData_h
-#define __vtkROIContourData_h
+#ifndef vtkROIContourData_h
+#define vtkROIContourData_h
 
 #include "vtkDataObject.h"
 

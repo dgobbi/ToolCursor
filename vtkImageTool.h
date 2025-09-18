@@ -18,8 +18,8 @@
 // actions that should always be applied to the image, even if there are
 // other pickable actors in the scene.
 
-#ifndef __vtkImageTool_h
-#define __vtkImageTool_h
+#ifndef vtkImageTool_h
+#define vtkImageTool_h
 
 #include "vtkTool.h"
 

@@ -17,8 +17,8 @@
 // automatically updates itself so that its origin and normal are
 // always the transform of the followed plane's origin and normal.
 
-#ifndef __vtkFollowerPlane_h
-#define __vtkFollowerPlane_h
+#ifndef vtkFollowerPlane_h
+#define vtkFollowerPlane_h
 
 #include "vtkPlane.h"
 

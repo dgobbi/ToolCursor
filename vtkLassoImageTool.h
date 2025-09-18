@@ -16,8 +16,8 @@
 // This class allows contours to be drawn on an image for manual segmentation
 // and region-of-interest definition.
 
-#ifndef __vtkLassoImageTool_h
-#define __vtkLassoImageTool_h
+#ifndef vtkLassoImageTool_h
+#define vtkLassoImageTool_h
 
 #include "vtkImageTool.h"
 

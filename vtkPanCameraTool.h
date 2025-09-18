@@ -17,8 +17,8 @@
 // the camera position and focal point together, not by slowly rotating
 // the camera around its position.
 
-#ifndef __vtkPanCameraTool_h
-#define __vtkPanCameraTool_h
+#ifndef vtkPanCameraTool_h
+#define vtkPanCameraTool_h
 
 #include "vtkTool.h"
 

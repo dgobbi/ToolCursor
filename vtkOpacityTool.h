@@ -15,8 +15,8 @@
 // .SECTION Description
 // This class adjusts the Opacity of an image property.
 
-#ifndef __vtkOpacityTool_h
-#define __vtkOpacityTool_h
+#ifndef vtkOpacityTool_h
+#define vtkOpacityTool_h
 
 #include "vtkTool.h"
 

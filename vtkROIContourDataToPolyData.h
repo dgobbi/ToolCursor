@@ -19,8 +19,8 @@
 // they originated from, and will have integer point scalars called "SubIds"
 // to indicate which line segment they correspond to.
 
-#ifndef __vtkROIContourDataToPolyData_h
-#define __vtkROIContourDataToPolyData_h
+#ifndef vtkROIContourDataToPolyData_h
+#define vtkROIContourDataToPolyData_h
 
 #include "vtkPolyDataAlgorithm.h"
 

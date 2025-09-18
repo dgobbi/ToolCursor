@@ -17,8 +17,8 @@
 // increases as the mouse moves right, the Level increases as the mouse
 // moves up.
 
-#ifndef __vtkWindowLevelTool_h
-#define __vtkWindowLevelTool_h
+#ifndef vtkWindowLevelTool_h
+#define vtkWindowLevelTool_h
 
 #include "vtkTool.h"
 

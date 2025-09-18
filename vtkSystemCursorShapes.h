@@ -18,8 +18,8 @@
 // cursor shapes that can be magnified or reoriented without looking
 // pixellated.  The two shapes available are "Pointer" and "Crosshair".
 
-#ifndef __vtkSystemCursorShapes_h
-#define __vtkSystemCursorShapes_h
+#ifndef vtkSystemCursorShapes_h
+#define vtkSystemCursorShapes_h
 
 #include "vtkCursorShapes.h"
 

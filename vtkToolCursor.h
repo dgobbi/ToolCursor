@@ -17,8 +17,8 @@
 // objects in a 3D scene.  It allows the picking to be customized for
 // different actors in the scene.
 
-#ifndef __vtkToolCursor_h
-#define __vtkToolCursor_h
+#ifndef vtkToolCursor_h
+#define vtkToolCursor_h
 
 #include "vtkObject.h"
 

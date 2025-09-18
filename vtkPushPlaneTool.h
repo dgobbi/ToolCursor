@@ -17,8 +17,8 @@
 // vtkVolumeMapper cropping planes, or clipping planes on all types of
 // mappers.
 
-#ifndef __vtkPushPlaneTool_h
-#define __vtkPushPlaneTool_h
+#ifndef vtkPushPlaneTool_h
+#define vtkPushPlaneTool_h
 
 #include "vtkTool.h"
 

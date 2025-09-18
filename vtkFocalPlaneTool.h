@@ -16,8 +16,8 @@
 // This class moves the focal point of the camera away from or towards the
 // viewer, in order to adjust the slice plane for the images.
 
-#ifndef __vtkFocalPlaneTool_h
-#define __vtkFocalPlaneTool_h
+#ifndef vtkFocalPlaneTool_h
+#define vtkFocalPlaneTool_h
 
 #include "vtkTool.h"
 

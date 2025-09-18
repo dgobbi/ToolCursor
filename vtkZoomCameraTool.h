@@ -18,8 +18,8 @@
 // to achieve the zoom.  If a parallel projection is used, then the zoom
 // will adjust the parallel scale.
 
-#ifndef __vtkZoomCameraTool_h
-#define __vtkZoomCameraTool_h
+#ifndef vtkZoomCameraTool_h
+#define vtkZoomCameraTool_h
 
 #include "vtkTool.h"
 

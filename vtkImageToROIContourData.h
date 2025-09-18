@@ -16,8 +16,8 @@
 // This filter will contour an image at a specified isovalue to generate
 // slice-by-slice ROI contours that will be stored in a vtkROIContourData.
 
-#ifndef __vtkImageToROIContourData_h
-#define __vtkImageToROIContourData_h
+#ifndef vtkImageToROIContourData_h
+#define vtkImageToROIContourData_h
 
 #include "vtkAlgorithm.h"
 

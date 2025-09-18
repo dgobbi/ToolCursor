@@ -17,8 +17,8 @@
 // receives events from a vtkRenderWindowInteractor and then calls the
 // appropriate methods of vtkToolCursor.
 
-#ifndef __vtkToolCursorInteractorObserver_h
-#define __vtkToolCursorInteractorObserver_h
+#ifndef vtkToolCursorInteractorObserver_h
+#define vtkToolCursorInteractorObserver_h
 
 #include "vtkInteractorObserver.h"
 

@@ -16,8 +16,8 @@
 // This is the base class for vtkToolCursor cursor shapes.  Each
 // subclass will define a set of 3D cursor shapes that can be used.
 
-#ifndef __vtkCursorShapes_h
-#define __vtkCursorShapes_h
+#ifndef vtkCursorShapes_h
+#define vtkCursorShapes_h
 
 #include "vtkObject.h"
 

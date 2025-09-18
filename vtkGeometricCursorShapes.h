@@ -19,8 +19,8 @@
 // separated  by a split at the Z plane.  The names of the shapes are
 // "Cross", "SplitCross", "Sphere", "SplitSphere", "Cone", and "DualCone".
 
-#ifndef __vtkGeometricCursorShapes_h
-#define __vtkGeometricCursorShapes_h
+#ifndef vtkGeometricCursorShapes_h
+#define vtkGeometricCursorShapes_h
 
 #include "vtkCursorShapes.h"
 

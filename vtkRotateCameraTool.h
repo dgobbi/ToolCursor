@@ -15,8 +15,8 @@
 // .SECTION Description
 // This class controls camera rotation interaction.
 
-#ifndef __vtkRotateCameraTool_h
-#define __vtkRotateCameraTool_h
+#ifndef vtkRotateCameraTool_h
+#define vtkRotateCameraTool_h
 
 #include "vtkTool.h"
 

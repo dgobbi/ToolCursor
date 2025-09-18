@@ -15,8 +15,8 @@
 // .SECTION Description
 // This class allows the placement of fiducial markers.
 
-#ifndef __vtkFiducialPointsTool_h
-#define __vtkFiducialPointsTool_h
+#ifndef vtkFiducialPointsTool_h
+#define vtkFiducialPointsTool_h
 
 #include "vtkTool.h"
 

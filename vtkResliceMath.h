@@ -16,8 +16,8 @@
 // This class provides some math functions that are useful for the
 // vtkToolCursor classes.
 
-#ifndef __vtkResliceMath_h
-#define __vtkResliceMath_h
+#ifndef vtkResliceMath_h
+#define vtkResliceMath_h
 
 #include "vtkObject.h"
 

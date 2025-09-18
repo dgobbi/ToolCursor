@@ -16,8 +16,8 @@
 // This is an interaction class for spinning the cursor around the
 // camera's view direction.
 
-#ifndef __vtkSpinCameraTool_h
-#define __vtkSpinCameraTool_h
+#ifndef vtkSpinCameraTool_h
+#define vtkSpinCameraTool_h
 
 #include "vtkTool.h"
 
