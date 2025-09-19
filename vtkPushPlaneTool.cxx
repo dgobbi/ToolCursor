@@ -75,8 +75,8 @@ vtkPushPlaneTool::vtkPushPlaneTool()
   this->StartOrigin[1] = 0.0;
   this->StartOrigin[2] = 0.0;
 
-  this->DistanceLimits[0] = -VTK_LARGE_FLOAT;
-  this->DistanceLimits[1] = +VTK_LARGE_FLOAT;
+  this->DistanceLimits[0] = -VTK_FLOAT_MAX;
+  this->DistanceLimits[1] = +VTK_FLOAT_MAX;
 
   this->IsOffOfPlane = true;
 
@@ -115,8 +115,8 @@ void vtkPushPlaneTool::StartAction()
   this->GetPropInformation();
 
   // Used for caching the distance limits
-  this->DistanceLimits[0] = -VTK_LARGE_FLOAT;
-  this->DistanceLimits[1] = +VTK_LARGE_FLOAT;
+  this->DistanceLimits[0] = -VTK_FLOAT_MAX;
+  this->DistanceLimits[1] = +VTK_FLOAT_MAX;
 
   // Check whether the normal is perpendicular to the view plane.
   // If it is, then we can't use the usual interaction calculations.
