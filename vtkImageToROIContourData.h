@@ -30,7 +30,7 @@ class VTK_EXPORT vtkImageToROIContourData : public vtkAlgorithm
 public:
   static vtkImageToROIContourData *New();
   vtkTypeMacro(vtkImageToROIContourData,vtkAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // The isovalue for which to generate the contours.
@@ -49,25 +49,25 @@ public:
 
   // Description:
   // see vtkAlgorithm for details
-  virtual int ProcessRequest(vtkInformation*,
-                             vtkInformationVector**,
-                             vtkInformationVector*);
+  int ProcessRequest(vtkInformation*,
+                     vtkInformationVector**,
+                     vtkInformationVector*) override;
 
 protected:
   vtkImageToROIContourData();
   ~vtkImageToROIContourData();
 
-  virtual int ComputePipelineMTime(
+  int ComputePipelineMTime(
     vtkInformation* request, vtkInformationVector** inputVector,
     vtkInformationVector* outputVector, int requestFromOutputPort,
-    unsigned long* mtime);
+    unsigned long* mtime) override;
 
   virtual int RequestData(
     vtkInformation* request, vtkInformationVector** inputVector,
     vtkInformationVector* outputVector);
 
-  virtual int FillOutputPortInformation(int port, vtkInformation *info);
-  virtual int FillInputPortInformation(int port, vtkInformation *info);
+  int FillOutputPortInformation(int port, vtkInformation *info) override;
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
   double Value;
 

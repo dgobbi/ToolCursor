@@ -36,7 +36,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkGeometricCursorShapes,vtkCursorShapes);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
 protected:
   vtkGeometricCursorShapes();

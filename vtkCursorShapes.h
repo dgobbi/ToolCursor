@@ -44,7 +44,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkCursorShapes,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Get the number of shapes.

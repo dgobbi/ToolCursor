@@ -38,7 +38,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkFiducialPointsTool,vtkTool);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Set the points that will used for the fiducial positions.
@@ -56,9 +56,9 @@ public:
 
   // Description:
   // These are the methods that are called when the action takes place.
-  virtual void StartAction();
-  virtual void StopAction();
-  virtual void DoAction();
+  void StartAction() override;
+  void StopAction() override;
+  void DoAction() override;
 
 protected:
   vtkFiducialPointsTool();

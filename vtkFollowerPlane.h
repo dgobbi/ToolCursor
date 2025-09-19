@@ -30,7 +30,7 @@ class VTK_EXPORT vtkFollowerPlane : public vtkPlane
 public:
   static vtkFollowerPlane *New();
   vtkTypeMacro(vtkFollowerPlane,vtkImplicitFunction);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Set the plane to follow.
@@ -50,7 +50,7 @@ public:
   void InvertFollowMatrixOn() { this->SetInvertFollowMatrix(1); }
   void InvertFollowMatrixOff() { this->SetInvertFollowMatrix(0); }
   int GetInvertFollowMatrix() { return this->InvertFollowMatrix; }
-  
+
   // Description:
   // Set a transform to transform the followed plane.  You can use this
   // or SetFollowMatrix, but not both.
@@ -64,27 +64,27 @@ public:
 
   // Description:
   // Evaluate plane equation for point x[3].
-  double EvaluateFunction(double x[3]);
+  double EvaluateFunction(double x[3]) override;
   double EvaluateFunction(double x, double y, double z) {
     return this->vtkImplicitFunction::EvaluateFunction(x, y, z); }
 
   // Description:
   // Evaluate function gradient at point x[3].
-  void EvaluateGradient(double x[3], double g[3]);
+  void EvaluateGradient(double x[3], double g[3]) override;
 
   // Description:
   // Get the normal.
-  void GetNormal(double normal[3]);
-  double *GetNormal();
+  void GetNormal(double normal[3]) override;
+  double *GetNormal() override;
 
   // Description:
   // Get the origin.
-  void GetOrigin(double origin[3]);
-  double *GetOrigin();
+  void GetOrigin(double origin[3]) override;
+  double *GetOrigin() override;
 
   // Description:
   // Get the MTime, including the followed plane and matrix or transform.
-  unsigned long GetMTime();
+  unsigned long GetMTime() override;
 
 protected:
   vtkFollowerPlane();

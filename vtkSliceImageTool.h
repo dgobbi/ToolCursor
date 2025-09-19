@@ -31,7 +31,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkSliceImageTool, vtkImageTool);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Turn this on to make the interaction jump to the nearest slice,
@@ -46,9 +46,9 @@ public:
 
   // Description:
   // These are the methods that are called when the action takes place.
-  virtual void StartAction();
-  virtual void StopAction();
-  virtual void DoAction();
+  void StartAction() override;
+  void StopAction() override;
+  void DoAction() override;
 
   // Description:
   // This is useful methods for moving back or forth by one slice.

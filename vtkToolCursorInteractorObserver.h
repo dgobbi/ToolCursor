@@ -36,11 +36,11 @@ public:
   // Standard vtkObject methods
   vtkTypeMacro(vtkToolCursorInteractorObserver,
                        vtkInteractorObserver);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Enable the cursor.
-  virtual void SetEnabled(int enable);
+  void SetEnabled(int enable) override;
 
   // Description:
   // Set the cursor that this object observes events for.

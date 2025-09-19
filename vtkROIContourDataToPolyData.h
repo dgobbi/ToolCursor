@@ -37,7 +37,7 @@ class VTK_EXPORT vtkROIContourDataToPolyData : public vtkPolyDataAlgorithm
 public:
   static vtkROIContourDataToPolyData *New();
   vtkTypeMacro(vtkROIContourDataToPolyData,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Set the plane to use for selecting the contours.  Only contours within
@@ -72,16 +72,16 @@ protected:
   vtkROIContourDataToPolyData();
   ~vtkROIContourDataToPolyData();
 
-  virtual int ComputePipelineMTime(
+  int ComputePipelineMTime(
     vtkInformation* request, vtkInformationVector** inputVector,
     vtkInformationVector* outputVector, int requestFromOutputPort,
-    unsigned long* mtime);
+    unsigned long* mtime) override;
 
   virtual int RequestData(
     vtkInformation* request, vtkInformationVector** inputVector,
-    vtkInformationVector* outputVector);
+    vtkInformationVector* outputVector) override;
 
-  virtual int FillInputPortInformation(int port, vtkInformation *info);
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
   void ComputeSpline(
     vtkPoints *points, bool closed, double &tmax, double &dmax);

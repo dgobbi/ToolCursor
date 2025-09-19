@@ -38,21 +38,21 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkROIContourData,vtkDataObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Initialize the object by removing all contours.
-  void Initialize();
+  void Initialize() override;
 
   // Description:
   // Make a deep copy from another object, which means copying all of the
   // points from the old object to the new object.
-  void DeepCopy(vtkDataObject *o);
+  void DeepCopy(vtkDataObject *o) override;
 
   // Description:
   // Make a shallow copy from another object, which means referencing the
   // points in the old object without copying them.
-  void ShallowCopy(vtkDataObject *o);
+  void ShallowCopy(vtkDataObject *o) override;
 
   // Description:
   // The various types of contours that are allowed.
@@ -66,7 +66,7 @@ public:
   // Description:
   // Return what type of data this is.  Since it doesn't have
   // an entry in vtkType.h, just call it "VTK_DATA_OBJECT."
-  int GetDataObjectType() { return VTK_DATA_OBJECT; }
+  int GetDataObjectType() override { return VTK_DATA_OBJECT; }
 
   // Description:
   // The number of contours.

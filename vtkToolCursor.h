@@ -80,7 +80,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkToolCursor,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Create the default bindings.
@@ -252,7 +252,7 @@ public:
   // Description:
   // We override this method to modify the actor, otherwise the
   // RenderWindow won't know that it needs to render.
-  virtual void Modified();
+  void Modified() override;
 
   // Description:
   // Get the button modifier bitmask corresponding to the mouse button.

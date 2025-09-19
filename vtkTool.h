@@ -34,7 +34,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkTool,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Set the cursor that this action is bound to.

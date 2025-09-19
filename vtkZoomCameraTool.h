@@ -35,7 +35,7 @@ public:
   // Description:
   // Standard vtkObject methods
   vtkTypeMacro(vtkZoomCameraTool,vtkTool);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Set whether to zoom by dollying the camera or by decreasing the
@@ -52,16 +52,16 @@ public:
   vtkSetMacro(RadialInteraction, int);
   vtkBooleanMacro(RadialInteraction, int);
   vtkGetMacro(RadialInteraction, int);
-  
+
   // Description:
   // These are the methods that are called when the action takes place.
-  virtual void StartAction();
-  virtual void StopAction();
-  virtual void DoAction();
+  void StartAction() override;
+  void StopAction() override;
+  void DoAction() override;
 
   // Description:
   // Constrain the position or orientation of the cursor.
-  virtual void ConstrainCursor(double position[3], double normal[3]);
+  void ConstrainCursor(double position[3], double normal[3]) override;
 
 protected:
   vtkZoomCameraTool();
