@@ -125,8 +125,8 @@ protected:
     normal[2] = this->Normal[2]; };
 
 private:
-  vtkPushPlaneTool(const vtkPushPlaneTool&);  //Not implemented
-  void operator=(const vtkPushPlaneTool&);  //Not implemented
+  vtkPushPlaneTool(const vtkPushPlaneTool&) = delete;
+  void operator=(const vtkPushPlaneTool&) = delete;
 };
 
 #endif

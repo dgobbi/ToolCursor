@@ -70,8 +70,8 @@ protected:
   vtkToolCursor *ToolCursor;
 
 private:
-  vtkToolCursorInteractorObserver(const vtkToolCursorInteractorObserver&);  //Not implemented
-  void operator=(const vtkToolCursorInteractorObserver&);  //Not implemented
+  vtkToolCursorInteractorObserver(const vtkToolCursorInteractorObserver&) = delete;
+  void operator=(const vtkToolCursorInteractorObserver&) = delete;
 };
 
 #endif

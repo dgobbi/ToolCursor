@@ -346,8 +346,8 @@ protected:
   static void UpdatePropsForPick(vtkPicker *picker, vtkRenderer *renderer);
 
 private:
-  vtkToolCursor(const vtkToolCursor&);  //Not implemented
-  void operator=(const vtkToolCursor&);  //Not implemented
+  vtkToolCursor(const vtkToolCursor&) = delete;
+  void operator=(const vtkToolCursor&) = delete;
 };
 
 inline void vtkToolCursor::SetModifierBits(int modifier, int mask)

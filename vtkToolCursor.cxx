@@ -86,9 +86,9 @@ protected:
 
 private:
   static vtkToolCursorRenderCommand *New(); // Not implemented.
-  vtkToolCursorRenderCommand(); // Not implemented.
-  vtkToolCursorRenderCommand(const vtkToolCursorRenderCommand&);  // Not implemented.
-  void operator=(const vtkToolCursorRenderCommand&);  // Not implemented.
+  vtkToolCursorRenderCommand() = delete;
+  vtkToolCursorRenderCommand(const vtkToolCursorRenderCommand&) = delete;
+  void operator=(const vtkToolCursorRenderCommand&) = delete;
 };
 
 //----------------------------------------------------------------------------

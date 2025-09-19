@@ -48,8 +48,8 @@ protected:
   double StartDistance;
 
 private:
-  vtkFocalPlaneTool(const vtkFocalPlaneTool&);  //Not implemented
-  void operator=(const vtkFocalPlaneTool&);  //Not implemented
+  vtkFocalPlaneTool(const vtkFocalPlaneTool&) = delete;
+  void operator=(const vtkFocalPlaneTool&) = delete;
 };
 
 #endif

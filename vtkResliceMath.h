@@ -51,8 +51,8 @@ protected:
   ~vtkResliceMath() {};
 
 private:
-  vtkResliceMath(const vtkResliceMath&);  //Not implemented
-  void operator=(const vtkResliceMath&);  //Not implemented
+  vtkResliceMath(const vtkResliceMath&) = delete;
+  void operator=(const vtkResliceMath&) = delete;
 };
 
 #endif

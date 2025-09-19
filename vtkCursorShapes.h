@@ -87,8 +87,8 @@ protected:
   vtkToolCursorShapeArray *Shapes;
 
 private:
-  vtkCursorShapes(const vtkCursorShapes&);  //Not implemented
-  void operator=(const vtkCursorShapes&);  //Not implemented
+  vtkCursorShapes(const vtkCursorShapes&) = delete;
+  void operator=(const vtkCursorShapes&) = delete;
 };
 
 #endif

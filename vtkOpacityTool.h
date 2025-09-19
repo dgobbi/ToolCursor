@@ -50,8 +50,8 @@ protected:
   void SetCurrentImageToNthImage(int i);
 
 private:
-  vtkOpacityTool(const vtkOpacityTool&);  //Not implemented
-  void operator=(const vtkOpacityTool&);  //Not implemented
+  vtkOpacityTool(const vtkOpacityTool&) = delete;
+  void operator=(const vtkOpacityTool&) = delete;
 };
 
 #endif

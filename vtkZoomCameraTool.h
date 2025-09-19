@@ -80,8 +80,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkZoomCameraTool(const vtkZoomCameraTool&);  //Not implemented
-  void operator=(const vtkZoomCameraTool&);  //Not implemented
+  vtkZoomCameraTool(const vtkZoomCameraTool&) = delete;
+  void operator=(const vtkZoomCameraTool&) = delete;
 };
 
 #endif

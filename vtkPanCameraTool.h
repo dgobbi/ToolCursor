@@ -52,8 +52,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkPanCameraTool(const vtkPanCameraTool&);  //Not implemented
-  void operator=(const vtkPanCameraTool&);  //Not implemented
+  vtkPanCameraTool(const vtkPanCameraTool&) = delete;
+  void operator=(const vtkPanCameraTool&) = delete;
 };
 
 #endif

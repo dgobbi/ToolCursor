@@ -97,8 +97,8 @@ protected:
   double InitialPointPosition[3];
 
 private:
-  vtkLassoImageTool(const vtkLassoImageTool&);  //Not implemented
-  void operator=(const vtkLassoImageTool&);  //Not implemented
+  vtkLassoImageTool(const vtkLassoImageTool&) = delete;
+  void operator=(const vtkLassoImageTool&) = delete;
 };
 
 #endif

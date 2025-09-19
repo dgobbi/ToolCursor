@@ -52,8 +52,8 @@ protected:
   void SetCurrentImageToNthImage(int i);
 
 private:
-  vtkWindowLevelTool(const vtkWindowLevelTool&);  //Not implemented
-  void operator=(const vtkWindowLevelTool&);  //Not implemented
+  vtkWindowLevelTool(const vtkWindowLevelTool&) = delete;
+  void operator=(const vtkWindowLevelTool&) = delete;
 };
 
 #endif

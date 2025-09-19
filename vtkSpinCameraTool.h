@@ -50,8 +50,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkSpinCameraTool(const vtkSpinCameraTool&);  //Not implemented
-  void operator=(const vtkSpinCameraTool&);  //Not implemented
+  vtkSpinCameraTool(const vtkSpinCameraTool&) = delete;
+  void operator=(const vtkSpinCameraTool&) = delete;
 };
 
 #endif

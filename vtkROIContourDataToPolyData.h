@@ -106,8 +106,8 @@ protected:
   vtkDoubleArray *KnotPositions;
 
 private:
-  vtkROIContourDataToPolyData(const vtkROIContourDataToPolyData&);  // Not implemented.
-  void operator=(const vtkROIContourDataToPolyData&);  // Not implemented.
+  vtkROIContourDataToPolyData(const vtkROIContourDataToPolyData&) = delete;
+  void operator=(const vtkROIContourDataToPolyData&) = delete;
 };
 
 #endif

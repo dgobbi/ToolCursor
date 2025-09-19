@@ -104,8 +104,8 @@ protected:
   void GetViewRay(double x, double y, double z, double p[3], double v[3]);
 
 private:
-  vtkTool(const vtkTool&);  //Not implemented
-  void operator=(const vtkTool&);  //Not implemented
+  vtkTool(const vtkTool&) = delete;
+  void operator=(const vtkTool&) = delete;
 };
 
 #endif

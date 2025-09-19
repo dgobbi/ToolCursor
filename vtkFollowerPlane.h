@@ -101,8 +101,8 @@ protected:
   double OffsetAlongNormal;
 
 private:
-  vtkFollowerPlane(const vtkFollowerPlane&);  // Not implemented.
-  void operator=(const vtkFollowerPlane&);  // Not implemented.
+  vtkFollowerPlane(const vtkFollowerPlane&) = delete;
+  void operator=(const vtkFollowerPlane&) = delete;
 };
 
 #endif

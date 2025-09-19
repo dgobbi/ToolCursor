@@ -96,8 +96,8 @@ protected:
   vtkROIContourVector *Contours;
 
 private:
-  vtkROIContourData(const vtkROIContourData&);  //Not implemented
-  void operator=(const vtkROIContourData&);  //Not implemented
+  vtkROIContourData(const vtkROIContourData&) = delete;
+  void operator=(const vtkROIContourData&) = delete;
 };
 
 #endif

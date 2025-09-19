@@ -65,8 +65,8 @@ protected:
   vtkMatrix4x4 *CurrentImageMatrix;
 
 private:
-  vtkImageTool(const vtkImageTool&);  //Not implemented
-  void operator=(const vtkImageTool&);  //Not implemented
+  vtkImageTool(const vtkImageTool&) = delete;
+  void operator=(const vtkImageTool&) = delete;
 };
 
 #endif

@@ -72,8 +72,8 @@ protected:
   double Value;
 
 private:
-  vtkImageToROIContourData(const vtkImageToROIContourData&);  // Not implemented.
-  void operator=(const vtkImageToROIContourData&);  // Not implemented.
+  vtkImageToROIContourData(const vtkImageToROIContourData&) = delete;
+  void operator=(const vtkImageToROIContourData&) = delete;
 
   void MarchingSquares(
     vtkImageData *input, vtkPolyData *output, int extent[6], double value);

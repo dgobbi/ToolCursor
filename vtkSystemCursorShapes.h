@@ -46,8 +46,8 @@ protected:
   static vtkDataSet *MakeCrosshairShape();
 
 private:
-  vtkSystemCursorShapes(const vtkSystemCursorShapes&);  //Not implemented
-  void operator=(const vtkSystemCursorShapes&);  //Not implemented
+  vtkSystemCursorShapes(const vtkSystemCursorShapes&) = delete;
+  void operator=(const vtkSystemCursorShapes&) = delete;
 };
 
 #endif

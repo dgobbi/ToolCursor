@@ -73,8 +73,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkRotateCameraTool(const vtkRotateCameraTool&);  //Not implemented
-  void operator=(const vtkRotateCameraTool&);  //Not implemented
+  vtkRotateCameraTool(const vtkRotateCameraTool&) = delete;
+  void operator=(const vtkRotateCameraTool&) = delete;
 };
 
 #endif

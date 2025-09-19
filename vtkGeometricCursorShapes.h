@@ -48,8 +48,8 @@ protected:
   static vtkDataSet *MakeConeShape(int doubleCone);
 
 private:
-  vtkGeometricCursorShapes(const vtkGeometricCursorShapes&);  //Not implemented
-  void operator=(const vtkGeometricCursorShapes&);  //Not implemented
+  vtkGeometricCursorShapes(const vtkGeometricCursorShapes&) = delete;
+  void operator=(const vtkGeometricCursorShapes&) = delete;
 };
 
 #endif

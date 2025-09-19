@@ -71,8 +71,8 @@ protected:
   vtkTransform *Transform;
 
 private:
-  vtkFiducialPointsTool(const vtkFiducialPointsTool&);  //Not implemented
-  void operator=(const vtkFiducialPointsTool&);  //Not implemented
+  vtkFiducialPointsTool(const vtkFiducialPointsTool&) = delete;
+  void operator=(const vtkFiducialPointsTool&) = delete;
 };
 
 #endif

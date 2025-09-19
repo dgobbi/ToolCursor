@@ -64,8 +64,8 @@ protected:
   double StartDistance;
 
 private:
-  vtkSliceImageTool(const vtkSliceImageTool&);  //Not implemented
-  void operator=(const vtkSliceImageTool&);  //Not implemented
+  vtkSliceImageTool(const vtkSliceImageTool&) = delete;
+  void operator=(const vtkSliceImageTool&) = delete;
 };
 
 #endif

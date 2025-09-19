@@ -52,8 +52,8 @@ protected:
                                       double warpZ, double warpScale);
 
 private:
-  vtkActionCursorShapes(const vtkActionCursorShapes&);  //Not implemented
-  void operator=(const vtkActionCursorShapes&);  //Not implemented
+  vtkActionCursorShapes(const vtkActionCursorShapes&) = delete;
+  void operator=(const vtkActionCursorShapes&) = delete;
 };
 
 #endif
