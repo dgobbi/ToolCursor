@@ -218,7 +218,7 @@ vtkDataSet *vtkActionCursorShapes::MakeMoveShape(
     transform->TransformPoints(leafPoints, points);
     transform->TransformNormals(leafNormals, normals);
     vtkIdType npts;
-    vtkIdType *pts;
+    const vtkIdType *pts;
     leafStrips->InitTraversal();
     while (leafStrips->GetNextCell(npts, pts))
     {
