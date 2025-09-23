@@ -22,11 +22,12 @@
 #ifndef vtkGeometricCursorShapes_h
 #define vtkGeometricCursorShapes_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkCursorShapes.h"
 
 class vtkPolyData;
 
-class VTK_EXPORT vtkGeometricCursorShapes : public vtkCursorShapes
+class VTKTOOLCURSOR_EXPORT vtkGeometricCursorShapes : public vtkCursorShapes
 {
 public:
   // Description:

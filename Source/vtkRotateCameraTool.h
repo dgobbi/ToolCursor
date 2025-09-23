@@ -18,11 +18,12 @@
 #ifndef vtkRotateCameraTool_h
 #define vtkRotateCameraTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkRotateCameraTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkRotateCameraTool : public vtkTool
 {
 public:
   // Description:

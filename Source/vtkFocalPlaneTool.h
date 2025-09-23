@@ -19,11 +19,12 @@
 #ifndef vtkFocalPlaneTool_h
 #define vtkFocalPlaneTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkFocalPlaneTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkFocalPlaneTool : public vtkTool
 {
 public:
   // Description:

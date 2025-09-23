@@ -20,11 +20,12 @@
 #ifndef vtkTool_h
 #define vtkTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkObject.h"
 
 class vtkToolCursor;
 
-class VTK_EXPORT vtkTool : public vtkObject
+class VTKTOOLCURSOR_EXPORT vtkTool : public vtkObject
 {
 public:
   // Description:

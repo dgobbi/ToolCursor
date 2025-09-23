@@ -20,11 +20,12 @@
 #ifndef vtkWindowLevelTool_h
 #define vtkWindowLevelTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkImageProperty;
 
-class VTK_EXPORT vtkWindowLevelTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkWindowLevelTool : public vtkTool
 {
 public:
   // Description:

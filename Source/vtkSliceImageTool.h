@@ -19,9 +19,10 @@
 #ifndef vtkSliceImageTool_h
 #define vtkSliceImageTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkImageTool.h"
 
-class VTK_EXPORT vtkSliceImageTool : public vtkImageTool
+class VTKTOOLCURSOR_EXPORT vtkSliceImageTool : public vtkImageTool
 {
 public:
   // Description:

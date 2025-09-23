@@ -19,11 +19,12 @@
 #ifndef vtkResliceMath_h
 #define vtkResliceMath_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkObject.h"
 
 class vtkImageReslice;
 
-class VTK_EXPORT vtkResliceMath : public vtkObject
+class VTKTOOLCURSOR_EXPORT vtkResliceMath : public vtkObject
 {
 public:
   // Description:

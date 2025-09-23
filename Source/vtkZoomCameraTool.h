@@ -21,11 +21,12 @@
 #ifndef vtkZoomCameraTool_h
 #define vtkZoomCameraTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkZoomCameraTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkZoomCameraTool : public vtkTool
 {
 public:
   // Description:

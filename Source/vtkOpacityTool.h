@@ -18,11 +18,12 @@
 #ifndef vtkOpacityTool_h
 #define vtkOpacityTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkImageProperty;
 
-class VTK_EXPORT vtkOpacityTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkOpacityTool : public vtkTool
 {
 public:
   // Description:

@@ -22,6 +22,7 @@
 #ifndef vtkROIContourDataToPolyData_h
 #define vtkROIContourDataToPolyData_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkROIContourData;
@@ -32,7 +33,8 @@ class vtkCellArray;
 class vtkDoubleArray;
 class vtkIntArray;
 
-class VTK_EXPORT vtkROIContourDataToPolyData : public vtkPolyDataAlgorithm
+class VTKTOOLCURSOR_EXPORT vtkROIContourDataToPolyData :
+  public vtkPolyDataAlgorithm
 {
 public:
   static vtkROIContourDataToPolyData *New();

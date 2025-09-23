@@ -20,11 +20,12 @@
 #ifndef vtkToolCursorInteractorObserver_h
 #define vtkToolCursorInteractorObserver_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkInteractorObserver.h"
 
 class vtkToolCursor;
 
-class VTK_EXPORT vtkToolCursorInteractorObserver :
+class VTKTOOLCURSOR_EXPORT vtkToolCursorInteractorObserver :
   public vtkInteractorObserver
 {
 public:

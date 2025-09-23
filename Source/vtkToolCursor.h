@@ -20,6 +20,7 @@
 #ifndef vtkToolCursor_h
 #define vtkToolCursor_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkObject.h"
 
 class vtkActor;
@@ -70,7 +71,7 @@ class vtkTubeFilter;
 #define VTK_TOOL_CROP_PLANE   0x2000
 #define VTK_TOOL_PLANE_EDGE   0x4000
 
-class VTK_EXPORT vtkToolCursor : public vtkObject
+class VTKTOOLCURSOR_EXPORT vtkToolCursor : public vtkObject
 {
 public:
   // Description:

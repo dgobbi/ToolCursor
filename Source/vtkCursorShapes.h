@@ -19,6 +19,7 @@
 #ifndef vtkCursorShapes_h
 #define vtkCursorShapes_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkObject.h"
 
 class vtkToolCursorShapeArray;
@@ -34,7 +35,7 @@ class vtkDataSet;
 #define VTK_TOOL_IMAGEXY  0x05  // Align cursor with image axes
 #define VTK_TOOL_RGB      0x10  // cursor uses RGB scalars
 
-class VTK_EXPORT vtkCursorShapes : public vtkObject
+class VTKTOOLCURSOR_EXPORT vtkCursorShapes : public vtkObject
 {
 public:
   // Description:

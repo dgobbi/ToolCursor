@@ -20,11 +20,12 @@
 #ifndef vtkPanCameraTool_h
 #define vtkPanCameraTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkTransform;
 
-class VTK_EXPORT vtkPanCameraTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkPanCameraTool : public vtkTool
 {
 public:
   // Description:

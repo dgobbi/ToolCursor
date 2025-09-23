@@ -19,13 +19,14 @@
 #ifndef vtkImageToROIContourData_h
 #define vtkImageToROIContourData_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkAlgorithm.h"
 
 class vtkROIContourData;
 class vtkImageData;
 class vtkPolyData;
 
-class VTK_EXPORT vtkImageToROIContourData : public vtkAlgorithm
+class VTKTOOLCURSOR_EXPORT vtkImageToROIContourData : public vtkAlgorithm
 {
 public:
   static vtkImageToROIContourData *New();

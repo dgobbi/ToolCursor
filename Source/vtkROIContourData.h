@@ -19,6 +19,7 @@
 // be associated with an image, so they only lie on the slices of the
 // image.
 
+#include "vtkToolCursorModule.h" // For export macro
 #ifndef vtkROIContourData_h
 #define vtkROIContourData_h
 
@@ -28,7 +29,7 @@ class vtkPoints;
 class vtkIdList;
 class vtkROIContourVector;
 
-class VTK_EXPORT vtkROIContourData : public vtkDataObject
+class VTKTOOLCURSOR_EXPORT vtkROIContourData : public vtkDataObject
 {
 public:
   // Description:

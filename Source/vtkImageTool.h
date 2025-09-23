@@ -21,13 +21,14 @@
 #ifndef vtkImageTool_h
 #define vtkImageTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkImageProperty;
 class vtkImageMapper3D;
 class vtkMatrix4x4;
 
-class VTK_EXPORT vtkImageTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkImageTool : public vtkTool
 {
 public:
   // Description:

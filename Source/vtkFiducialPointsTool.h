@@ -18,6 +18,7 @@
 #ifndef vtkFiducialPointsTool_h
 #define vtkFiducialPointsTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkTransform;
@@ -28,7 +29,7 @@ class vtkPointSet;
 class vtkDataSetMapper;
 class vtkActor;
 
-class VTK_EXPORT vtkFiducialPointsTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkFiducialPointsTool : public vtkTool
 {
 public:
   // Description:

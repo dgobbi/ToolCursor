@@ -19,6 +19,7 @@
 #ifndef vtkLassoImageTool_h
 #define vtkLassoImageTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkImageTool.h"
 
 class vtkMatrix4x4;
@@ -35,7 +36,7 @@ class vtkActor;
 class vtkRenderer;
 class vtkFollowerPlane;
 
-class VTK_EXPORT vtkLassoImageTool : public vtkImageTool
+class VTKTOOLCURSOR_EXPORT vtkLassoImageTool : public vtkImageTool
 {
 public:
   // Description:

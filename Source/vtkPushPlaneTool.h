@@ -20,6 +20,7 @@
 #ifndef vtkPushPlaneTool_h
 #define vtkPushPlaneTool_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkTool.h"
 
 class vtkImageActor;
@@ -29,7 +30,7 @@ class vtkAbstractMapper3D;
 class vtkLODProp3D;
 class vtkTransform;
 
-class VTK_EXPORT vtkPushPlaneTool : public vtkTool
+class VTKTOOLCURSOR_EXPORT vtkPushPlaneTool : public vtkTool
 {
 public:
   // Description:

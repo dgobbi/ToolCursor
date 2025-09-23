@@ -20,12 +20,13 @@
 #ifndef vtkFollowerPlane_h
 #define vtkFollowerPlane_h
 
+#include "vtkToolCursorModule.h" // For export macro
 #include "vtkPlane.h"
 
 class vtkMatrix4x4;
 class vtkHomogeneousTransform;
 
-class VTK_EXPORT vtkFollowerPlane : public vtkPlane
+class VTKTOOLCURSOR_EXPORT vtkFollowerPlane : public vtkPlane
 {
 public:
   static vtkFollowerPlane *New();
