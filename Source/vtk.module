@@ -1,0 +1,22 @@
+NAME
+  VTK::ToolCursor
+LIBRARY_NAME
+  vtkToolCursor
+DEPENDS
+  VTK::CommonCore
+  VTK::CommonComputationalGeometry
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  VTK::CommonMath
+  VTK::CommonTransforms
+  VTK::FiltersCore
+  VTK::FiltersGeneral
+  VTK::FiltersHybrid
+  VTK::FiltersSources
+  VTK::ImagingCore
+  VTK::ImagingStatistics
+  VTK::RenderingCore
+  VTK::RenderingImage
+  VTK::RenderingVolume
+TEST_DEPENDS
+  VTK::TestingCore

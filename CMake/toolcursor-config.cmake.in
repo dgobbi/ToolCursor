@@ -1,0 +1,38 @@
+#-----------------------------------------------------------------------------
+#
+# toolcursor-config.cmake - cmake configuration file for external projects.
+#
+#-----------------------------------------------------------------------------
+@TOOLCURSOR_CONFIG_CODE@
+# The version number
+set(TOOLCURSOR_MAJOR_VERSION "@TOOLCURSOR_MAJOR_VERSION@")
+set(TOOLCURSOR_MINOR_VERSION "@TOOLCURSOR_MINOR_VERSION@")
+set(TOOLCURSOR_PATCH_VERSION "@TOOLCURSOR_PATCH_VERSION@")
+
+# Configured settings
+set(TOOLCURSOR_BUILD_SHARED_LIBS "@BUILD_SHARED_LIBS@")
+
+# Dependencies
+set(TOOLCURSOR_VTK_DIR "@VTK_DIR@")
+if(NOT VTK_FOUND)
+  find_package(VTK PATHS "${TOOLCURSOR_VTK_DIR}")
+else()
+  get_filename_component(tmp1 "${TOOLCURSOR_VTK_DIR}" REALPATH)
+  get_filename_component(tmp2 "${VTK_DIR}" REALPATH)
+  if(NOT "${tmp1}" STREQUAL "${tmp2}")
+    message(WARNING
+      "Mismatch for VTK between vtk-dicom and current project: "
+      "TOOLCURSOR_DIR=${TOOLCURSOR_DIR} "
+      "TOOLCURSOR_VTK_DIR=${TOOLCURSOR_VTK_DIR} "
+      "VTK_DIR=${VTK_DIR}")
+  endif()
+endif()
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET ImageRegistration AND NOT TOOLCURSOR_BINARY_DIR)
+  include("${CMAKE_CURRENT_LIST_DIR}/ToolCursor-targets.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/ToolCursor-vtk-module-properties.cmake")
+endif()
+
+# These are IMPORTED targets created by TOOLCURSOR-targets.cmake
+set(TOOLCURSOR_LIBRARIES @TOOLCURSOR_LINK_TARGETS@)

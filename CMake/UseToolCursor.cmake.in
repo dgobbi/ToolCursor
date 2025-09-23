@@ -1,0 +1,27 @@
+# This module is provided as TOOLCURSOR_USE_FILE by ToolCursorConfig.cmake.
+# Include in a project to load the needed compiler and linker settings.
+
+if(NOT TOOLCURSOR_USE_FILE_INCLUDED)
+  set(TOOLCURSOR_USE_FILE_INCLUDED 1)
+
+  # Dependencies
+  if(VTK_FOUND)
+    include(${VTK_USE_FILE})
+  else()
+    message(FATAL_ERROR
+      "VTK not found in TOOLCURSOR_VTK_DIR=\"${TOOLCURSOR_VTK_DIR}\".")
+  endif()
+
+  # Update CMAKE_MODULE_PATH so includes work.
+  set(CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    ${TOOLCURSOR_CMAKE_DIR})
+
+  # Add compiler flags needed to use ToolCursor.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TOOLCURSOR_REQUIRED_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TOOLCURSOR_REQUIRED_CXX_FLAGS}")
+
+  # Add include directories needed to use TOOLCURSOR.
+  include_directories(${TOOLCURSOR_INCLUDE_DIRS})
+
+endif(NOT TOOLCURSOR_USE_FILE_INCLUDED)
