@@ -106,10 +106,10 @@ vtkDataSet *vtkGeometricCursorShapes::MakeCrossShape(int dual)
         points->InsertNextPoint(xmin, ymax, z);
         points->InsertNextPoint(xmax, ymax, z);
         points->InsertNextPoint(xmax, ymin, z);
-        scalars->InsertNextTupleValue(&colorIndex);
-        scalars->InsertNextTupleValue(&colorIndex);
-        scalars->InsertNextTupleValue(&colorIndex);
-        scalars->InsertNextTupleValue(&colorIndex);
+        scalars->InsertNextTypedTuple(&colorIndex);
+        scalars->InsertNextTypedTuple(&colorIndex);
+        scalars->InsertNextTypedTuple(&colorIndex);
+        scalars->InsertNextTypedTuple(&colorIndex);
         z = zmin;
       }
 
@@ -191,8 +191,8 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
     v[2] = s;
 
     points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
-    normals->InsertNextTupleValue(v);
-    scalars->InsertNextTupleValue(&colorIndex);
+    normals->InsertNextTypedTuple(v);
+    scalars->InsertNextTypedTuple(&colorIndex);
 
     int n = (resolution + 1)/2;
     int m = 2*resolution;
@@ -213,8 +213,8 @@ vtkDataSet *vtkGeometricCursorShapes::MakeSphereShape(int dual)
         v[0] = r*cos(theta);
         v[1] = r*sin(theta)*s;
         points->InsertNextPoint(radius*v[0], radius*v[1], radius*v[2]);
-        normals->InsertNextTupleValue(v);
-        scalars->InsertNextTupleValue(&colorIndex);
+        normals->InsertNextTypedTuple(v);
+        scalars->InsertNextTypedTuple(&colorIndex);
       }
     }
 
@@ -315,8 +315,8 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
         v[1] = f2*st*s;
         v[2] = -f1*s;
         points->InsertNextPoint(r*ct, r*st*s, z*s);
-        normals->InsertNextTupleValue(v);
-        scalars->InsertNextTupleValue(&colorIndex);
+        normals->InsertNextTypedTuple(v);
+        scalars->InsertNextTypedTuple(&colorIndex);
       }
     }
 
@@ -325,15 +325,15 @@ vtkDataSet *vtkGeometricCursorShapes::MakeConeShape(int dual)
     v[1] = 0;
     v[2] = s;
     points->InsertNextPoint(0, 0, height*s);
-    normals->InsertNextTupleValue(v);
-    scalars->InsertNextTupleValue(&colorIndex);
+    normals->InsertNextTypedTuple(v);
+    scalars->InsertNextTypedTuple(&colorIndex);
 
     for (int k = 0; k < resolution; k++)
     {
       double theta = 2*pi*k/resolution;
       points->InsertNextPoint(radius*cos(theta), radius*sin(theta)*s, height*s);
-      normals->InsertNextTupleValue(v);
-      scalars->InsertNextTupleValue(&colorIndex);
+      normals->InsertNextTypedTuple(v);
+      scalars->InsertNextTypedTuple(&colorIndex);
     }
 
     // Make the fan for the top

@@ -100,7 +100,7 @@ void vtkFiducialPointsTool::SetPoints(vtkPoints *points)
     {
       unsigned char *color = red;
       if (i == n-1) { color = yellow; }
-      colors->InsertNextTupleValue(color);
+      colors->InsertNextTypedTuple(color);
     }
     //this->PointSet->GetPointData()->SetScalars(colors);
     this->Glyph3D->Modified();
