@@ -11,7 +11,7 @@ VTK_DATA_ROOT = vtkGetDataRoot()
 if len(sys.argv) > 1:
   filename = sys.argv[1]
 else:
-  filename = "/beck/data/dgobbi/Atamai/atamai/examples/sbrain.mnc"
+  sys.exit(0)
 
 #---------------------------------------------------------
 # renderer and interactor
@@ -69,25 +69,25 @@ cropblock = (0,2,2)
 cropblockbit = (1 << (cropblock[2]*9 + cropblock[1]*3 + cropblock[0]))
 cropflags = (0x07ffffff & ~cropblockbit);
 
-volumeMapper = vtk.vtkVolumeRayCastMapper()
+volumeMapper = vtk.vtkSmartVolumeMapper()
 volumeMapper.SetInputConnection(reslice.GetOutputPort())
-volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
-volumeMapper.SetVolumeRayCastFunction(volumeFunction)
+#volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+#volumeMapper.SetVolumeRayCastFunction(volumeFunction)
 volumeMapper.CroppingOn()
 volumeMapper.SetCroppingRegionPlanes(cropping)
 volumeMapper.SetCroppingRegionFlags(cropflags)
 
-volumeMapper3D = vtk.vtkVolumeTextureMapper3D()
-volumeMapper3D.SetInputConnection(reslice.GetOutputPort())
-volumeMapper3D.CroppingOn()
-volumeMapper3D.SetCroppingRegionPlanes(cropping)
-volumeMapper3D.SetCroppingRegionFlags(cropflags)
+#volumeMapper3D = vtk.vtkVolumeTextureMapper3D()
+#volumeMapper3D.SetInputConnection(reslice.GetOutputPort())
+#volumeMapper3D.CroppingOn()
+#volumeMapper3D.SetCroppingRegionPlanes(cropping)
+#volumeMapper3D.SetCroppingRegionFlags(cropflags)
 
-volumeMapper2D = vtk.vtkVolumeTextureMapper2D()
-volumeMapper2D.SetInputConnection(reslice.GetOutputPort())
-volumeMapper2D.CroppingOn()
-volumeMapper2D.SetCroppingRegionPlanes(cropping)
-volumeMapper2D.SetCroppingRegionFlags(cropflags)
+#volumeMapper2D = vtk.vtkVolumeTextureMapper2D()
+#volumeMapper2D.SetInputConnection(reslice.GetOutputPort())
+#volumeMapper2D.CroppingOn()
+#volumeMapper2D.SetCroppingRegionPlanes(cropping)
+#volumeMapper2D.SetCroppingRegionFlags(cropflags)
 
 volumeColor = vtk.vtkColorTransferFunction()
 volumeColor.AddRGBPoint(0,0.0,0.0,0.0)
@@ -117,15 +117,15 @@ volumeProperty.SetDiffuse(0.6)
 volumeProperty.SetSpecular(0.1)
 
 volume = vtk.vtkLODProp3D()
-lod2D = volume.AddLOD(volumeMapper2D, volumeProperty, 0.01)
-lod3D = volume.AddLOD(volumeMapper3D, volumeProperty, 0.1)
+#lod2D = volume.AddLOD(volumeMapper2D, volumeProperty, 0.01)
+#lod3D = volume.AddLOD(volumeMapper3D, volumeProperty, 0.1)
 lodRC = volume.AddLOD(volumeMapper, volumeProperty, 1.0)
-volume.SetLODLevel(lod2D, 2.0)
-volume.SetLODLevel(lod3D, 1.0)
+#volume.SetLODLevel(lod2D, 2.0)
+#volume.SetLODLevel(lod3D, 1.0)
 volume.SetLODLevel(lodRC, 0.0)
 # disable ray casting
 #volume.DisableLOD(lod3D)
-volume.DisableLOD(lodRC)
+#volume.DisableLOD(lodRC)
 
 cropOutlineSource = vtk.vtkVolumeOutlineSource()
 cropOutlineSource.SetVolumeMapper(volumeMapper)
@@ -155,7 +155,7 @@ skinStripper.Update()
 
 skinLocator = vtk.vtkCellLocator()
 skinLocator.SetDataSet(skinStripper.GetOutput())
-skinLocator.LazyEvaluationOn()
+#skinLocator.LazyEvaluationOn()
 
 skinMapper = vtk.vtkPolyDataMapper()
 skinMapper.SetInputConnection(skinStripper.GetOutputPort())
@@ -235,8 +235,8 @@ skinClip.SetNormal(0,0,1)
 skinClip.SetOrigin(c[0],c[1],c[2])
 
 volumeMapper.AddClippingPlane(volumeClip)
-volumeMapper2D.AddClippingPlane(volumeClip)
-volumeMapper3D.AddClippingPlane(volumeClip)
+#volumeMapper2D.AddClippingPlane(volumeClip)
+#volumeMapper3D.AddClippingPlane(volumeClip)
 skinMapper.AddClippingPlane(skinClip)
 
 #---------------------------------------------------------
@@ -258,12 +258,12 @@ renWin.Render()
 ren.ResetCameraClippingRange()
 
 #---------------------------------------------------------
-cursor = vtk.vtkToolCursor()
+cursor = toolcursor.vtkToolCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 
-observer = vtk.vtkToolCursorInteractorObserver()
+observer = toolcursor.vtkToolCursorInteractorObserver()
 observer.SetToolCursor(cursor)
 observer.SetInteractor(iren)
 observer.SetEnabled(1)

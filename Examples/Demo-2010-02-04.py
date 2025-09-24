@@ -5,8 +5,8 @@ import sys
 import vtk
 import toolcursor
 
-from vtk.util.misc import vtkGetDataRoot
-VTK_DATA_ROOT = vtkGetDataRoot()
+#from vtk.util.misc import vtkGetDataRoot
+#VTK_DATA_ROOT = vtkGetDataRoot()
 
 # The images are img1 and img2, or the same if only 1 image
 img1 = 0
@@ -19,14 +19,13 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 2:
         img2 = 1
 else:
-    print "Usage: python " + sys.argv[0] + " sbrain.mnc sbrain_stenciled.mnc"
-    print
+    print("Usage: python " + sys.argv[0] + " sbrain.mnc sbrain_stenciled.mnc")
     sys.exit(0)
 
-print "Instructions: "
-print " 1) Use 'Tab' to cycle through different views"
-print " 2) Use 'Space' to drop a fiducial"
-print " 3) Use 'Delete/Backspace' to delete last fiducial"
+print("Instructions: ")
+print(" 1) Use 'Tab' to cycle through different views")
+print(" 2) Use 'Space' to drop a fiducial")
+print(" 3) Use 'Delete/Backspace' to delete last fiducial")
 
 #---------------------------------------------------------
 # read the volume
@@ -149,16 +148,14 @@ class VolumeLOD(vtk.vtkLODProp3D):
         #---------------------------------------------------------
         # set up the volume rendering
 
-        self.Mapper = vtk.vtkVolumeRayCastMapper()
+        self.Mapper = vtk.vtkSmartVolumeMapper()
         self.Mapper.SetInputConnection(self.Reslice.GetOutputPort())
-        volumeFunction = vtk.vtkVolumeRayCastCompositeFunction()
-        self.Mapper.SetVolumeRayCastFunction(volumeFunction)
 
-        self.Mapper3D = vtk.vtkVolumeTextureMapper3D()
-        self.Mapper3D.SetInputConnection(self.Reslice.GetOutputPort())
+        #self.Mapper3D = vtk.vtkVolumeTextureMapper3D()
+        #self.Mapper3D.SetInputConnection(self.Reslice.GetOutputPort())
 
-        self.Mapper2D = vtk.vtkVolumeTextureMapper2D()
-        self.Mapper2D.SetInputConnection(self.Reslice.GetOutputPort())
+        #self.Mapper2D = vtk.vtkVolumeTextureMapper2D()
+        #self.Mapper2D.SetInputConnection(self.Reslice.GetOutputPort())
 
         self.Color = vtk.vtkColorTransferFunction()
         self.Color.AddRGBPoint(0,0.0,0.0,0.0)
@@ -187,31 +184,31 @@ class VolumeLOD(vtk.vtkLODProp3D):
         self.Property.SetDiffuse(0.6)
         self.Property.SetSpecular(0.1)
 
-        self.lod2D = self.AddLOD(self.Mapper2D, self.Property, 0.01)
-        self.lod3D = self.AddLOD(self.Mapper3D, self.Property, 0.1)
-        self.lodRC = self.AddLOD(self.Mapper, self.Property, 1.0)
-        self.SetLODLevel(self.lod2D, 2.0)
-        self.SetLODLevel(self.lod3D, 1.0)
+        #self.lod2D = self.AddLOD(self.Mapper2D, self.Property, 0.01)
+        #self.lod3D = self.AddLOD(self.Mapper3D, self.Property, 0.1)
+        self.lodRC = self.AddLOD(self.Mapper, self.Property, 0.0)
+        #self.SetLODLevel(self.lod2D, 2.0)
+        #self.SetLODLevel(self.lod3D, 1.0)
         self.SetLODLevel(self.lodRC, 0.0)
 
         # disable ray casting
         #self.DisableLOD(self.lod3D)
         #self.DisableLOD(self.lod2D)
-        self.DisableLOD(self.lodRC)
+        #self.DisableLOD(self.lodRC)
 
     def SetEnabled(self, mode, enabled):
         if enabled:
-            if mode == '2D':
-                self.EnableLOD(self.lod2D)
-            if mode == '3D':
-                self.EnableLOD(self.lod3D)
+        #    if mode == '2D':
+        #        self.EnableLOD(self.lod2D)
+        #    if mode == '3D':
+        #        self.EnableLOD(self.lod3D)
             if mode == 'RC':
                 self.EnableLOD(self.lodRC)
         else:
-            if mode == '2D':
-                self.DisableLOD(self.lod2D)
-            if mode == '3D':
-                self.DisableLOD(self.lod3D)
+        #    if mode == '2D':
+        #        self.DisableLOD(self.lod2D)
+        #    if mode == '3D':
+        #        self.DisableLOD(self.lod3D)
             if mode == 'RC':
                 self.DisableLOD(self.lodRC)
 
@@ -244,39 +241,39 @@ class VolumeLOD(vtk.vtkLODProp3D):
 
     def SetCroppingRegionFlags(self, cropflags):
         self.Mapper.CroppingOn()
-        self.Mapper3D.CroppingOn()
-        self.Mapper2D.CroppingOn()
+        #self.Mapper3D.CroppingOn()
+        #self.Mapper2D.CroppingOn()
         self.Mapper.SetCroppingRegionFlags(cropflags)
-        self.Mapper3D.SetCroppingRegionFlags(cropflags)
-        self.Mapper2D.SetCroppingRegionFlags(cropflags)
+        #self.Mapper3D.SetCroppingRegionFlags(cropflags)
+        #self.Mapper2D.SetCroppingRegionFlags(cropflags)
 
     def SetCroppingRegion(self, cropping):
         self.Mapper.CroppingOn()
-        self.Mapper3D.CroppingOn()
-        self.Mapper2D.CroppingOn()
+        #self.Mapper3D.CroppingOn()
+        #self.Mapper2D.CroppingOn()
         self.Mapper.SetCroppingRegionPlanes(cropping)
-        self.Mapper3D.SetCroppingRegionPlanes(cropping)
-        self.Mapper2D.SetCroppingRegionPlanes(cropping)
+        #self.Mapper3D.SetCroppingRegionPlanes(cropping)
+        #self.Mapper2D.SetCroppingRegionPlanes(cropping)
 
     def CroppingOn(self):
         self.Mapper.CroppingOn()
-        self.Mapper3D.CroppingOn()
-        self.Mapper2D.CroppingOn()
+        #self.Mapper3D.CroppingOn()
+        #self.Mapper2D.CroppingOn()
 
     def CroppingOff(self):
         self.Mapper.CroppingOff()
-        self.Mapper3D.CroppingOff()
-        self.Mapper2D.CroppingOff()
+        #self.Mapper3D.CroppingOff()
+        #self.Mapper2D.CroppingOff()
 
     def AddClippingPlane(self, plane):
         self.Mapper.AddClippingPlane(plane)
-        self.Mapper3D.AddClippingPlane(plane)
-        self.Mapper2D.AddClippingPlane(plane)
+        #self.Mapper3D.AddClippingPlane(plane)
+        #self.Mapper2D.AddClippingPlane(plane)
 
     def RemoveAllClippingPlanes(self):
         self.Mapper.RemoveAllClippingPlanes()
-        self.Mapper3D.RemoveAllClippingPlanes()
-        self.Mapper2D.RemoveAllClippingPlanes()
+        #self.Mapper3D.RemoveAllClippingPlanes()
+        #self.Mapper2D.RemoveAllClippingPlanes()
 
 # original bounds: (-90.0, 90.0, -126.0, 90.0, -72.0, 108.0)
 cropping = (0.0, 90.0, -126.0, 0.0, -72.0, 0.0)
@@ -327,7 +324,6 @@ skinStripper.SetInputConnection(skinNormals.GetOutputPort())
 
 skinLocator = vtk.vtkCellLocator()
 skinLocator.SetDataSet(skinStripper.GetOutput())
-skinLocator.LazyEvaluationOn()
 
 skinMapper = vtk.vtkPolyDataMapper()
 skinMapper.SetInputConnection(skinStripper.GetOutputPort())
@@ -487,7 +483,7 @@ skinMapper.AddClippingPlane(skinClipY)
 skinMapper.AddClippingPlane(skinClipZ)
 
 #---------------------------------------------------------
-fids = vtk.vtkFiducialPointsTool()
+fids = toolcursor.vtkFiducialPointsTool()
 points = vtk.vtkPoints()
 #points.InsertNextPoint(0,0,0)
 fids.SetPoints(points)
@@ -518,12 +514,12 @@ renWin.Render()
 ren.ResetCameraClippingRange()
 
 #---------------------------------------------------------
-cursor = vtk.vtkToolCursor()
+cursor = toolcursor.vtkToolCursor()
 cursor.BindDefaultActions()
 cursor.SetRenderer(ren)
 cursor.SetScale(1)
 
-observer = vtk.vtkToolCursorInteractorObserver()
+observer = toolcursor.vtkToolCursorInteractorObserver()
 observer.SetToolCursor(cursor)
 observer.SetInteractor(iren)
 observer.SetEnabled(1)
@@ -612,8 +608,8 @@ def OnKeyPress(o, e):
         ren.RemoveViewProp(cropOutline)
         ren.RemoveViewProp(skin)
         ren.RemoveViewProp(fids.GetActor())
-        volume.SetEnabled('2D', 1)
-        volume.SetEnabled('3D', 1)
+        #volume.SetEnabled('2D', 1)
+        #volume.SetEnabled('3D', 1)
         volume2.RemoveAllClippingPlanes()
         table.SetTableValue(0, 0.0, 0.0, 0.0, 1.0)
         mapToColors.UpdateWholeExtent()
@@ -632,13 +628,13 @@ def OnKeyPress(o, e):
             volume2.AddClippingPlane(skinClipX)
             volume2.AddClippingPlane(skinClipY)
             volume2.AddClippingPlane(skinClipZ)
-            volume.SetEnabled('2D', 0)
+            #volume.SetEnabled('2D', 0)
             ren.AddViewProp(volume)
             ren.AddViewProp(volume2)
             ren.AddViewProp(fids.GetActor())
 
         if cyclestate[0] == 2:
-            volume2.SetEnabled('2D', 0)
+            #volume2.SetEnabled('2D', 0)
             ren.AddViewProp(volume2)
             ren.AddViewProp(fids.GetActor())
 
