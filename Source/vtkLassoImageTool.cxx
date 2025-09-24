@@ -321,31 +321,53 @@ void vtkLassoImageTool::StartAction()
         (cellLocator->FindClosestPointWithinRadius(
          position, tol, p, cellId, subId, d2)))
     {
-      vtkIntArray *contourIds = vtkIntArray::SafeDownCast(
+      // Access arrays safely
+      vtkIntArray* contourIds = vtkIntArray::SafeDownCast(
         contourData->GetCellData()->GetArray("Labels"));
-      vtkIntArray *contourSubIds = vtkIntArray::SafeDownCast(
+      vtkIntArray* contourSubIds = vtkIntArray::SafeDownCast(
         contourData->GetPointData()->GetArray("SubIds"));
 
       // Get the cell for this contour
-      vtkIdType npts, *pts;
-      contourData->GetCellType(cellId);
-      contourData->GetCellPoints(cellId, npts, pts);
+      vtkCell* cell = contourData->GetCell(cellId); // vtkCell in VTK 9
+      vtkIdType npts = cell->GetNumberOfPoints();
 
-      // Get the pointId for insertion, and get the contourId
+      // Copy point IDs into a vector for easy access
+      std::vector<vtkIdType> pts(npts);
+      for (vtkIdType i = 0; i < npts; ++i)
+      {
+        pts[i] = cell->GetPointId(i);
+      }
+
+      // Get the subId for insertion, and contourId
       subId = contourSubIds->GetValue(pts[subId + 1]);
       int contourId = contourIds->GetValue(cellId);
-      vtkPoints *points = data->GetContourPoints(contourId);
+      vtkPoints* points = data->GetContourPoints(contourId);
 
-      // Insert the point at the correct position
-      int m = static_cast<int>(points->InsertNextPoint(p));
-      for (int i = m; i > subId + 1; --i)
+      // Step 1: Copy all points into a temporary buffer
+      vtkIdType totalPoints = points->GetNumberOfPoints();
+      std::vector<std::array<double, 3>> buffer(totalPoints + 1); // +1 for new point
+      for (vtkIdType i = 0; i < totalPoints; ++i)
       {
-        double ptmp[3];
-        points->GetPoint(i-1, ptmp);
-        points->SetPoint(i, ptmp);
+        points->GetPoint(i, buffer[i].data());
       }
-      points->SetPoint(subId + 1, p);
 
+      // Step 2: Shift points after subId+1
+      for (vtkIdType i = totalPoints; i > static_cast<vtkIdType>(subId + 1); --i)
+      {
+        buffer[i] = buffer[i - 1];
+      }
+
+      // Step 3: Insert the new point
+      buffer[subId + 1] = {p[0], p[1], p[2]};
+
+      // Step 4: Update vtkPoints in one go
+      points->SetNumberOfPoints(static_cast<vtkIdType>(buffer.size()));
+      for (vtkIdType i = 0; i < static_cast<vtkIdType>(buffer.size()); ++i)
+      {
+        points->SetPoint(i, buffer[i].data());
+      }
+
+      // Update tracking variables
       this->CurrentContourId = contourId;
       this->CurrentPointId = subId + 1;
       this->InitialPointPosition[0] = p[0];
