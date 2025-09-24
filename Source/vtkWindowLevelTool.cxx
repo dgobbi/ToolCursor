@@ -15,6 +15,7 @@
 #include "vtkWindowLevelTool.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkMath.h"
 #include "vtkToolCursor.h"
 #include "vtkVolumePicker.h"
 #include "vtkTransform.h"
