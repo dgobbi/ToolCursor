@@ -28,6 +28,8 @@
 #include "vtkMarchingSquaresLineCases.h"
 #include "vtkTemplateAliasMacro.h"
 
+#include <array>
+
 vtkStandardNewMacro(vtkImageToROIContourData);
 
 //----------------------------------------------------------------------------
