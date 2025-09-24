@@ -40,7 +40,8 @@ set(VTK_LIBS)
 # required libraries
 foreach(_lib RenderingCore RenderingImage InteractionStyle
   RenderingFreeType IOImage IOMINC CommonSystem CommonCore
-  ImagingStencil ImagingMath FiltersSources FiltersGeneral)
+  ImagingGeneral ImagingStencil ImagingMath
+  FiltersSources FiltersGeneral)
 
   list(APPEND VTK_LIBS ${VTK_TARGET_PREFIX}${_lib})
 endforeach()
