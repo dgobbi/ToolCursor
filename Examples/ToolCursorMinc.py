@@ -89,22 +89,27 @@ volumeMapper.SetCroppingRegionFlags(cropflags)
 #volumeMapper2D.SetCroppingRegionPlanes(cropping)
 #volumeMapper2D.SetCroppingRegionFlags(cropflags)
 
+# find scaling factor vs nominal 12-bit full-scale data
+dataRange = [0.0, 4095.0]
+reslice.GetOutput().GetPointData().GetScalars().GetRange(dataRange)
+f = dataRange[1]/4095.0
+
 volumeColor = vtk.vtkColorTransferFunction()
-volumeColor.AddRGBPoint(0,0.0,0.0,0.0)
-volumeColor.AddRGBPoint(180,0.3,0.1,0.2)
-volumeColor.AddRGBPoint(1200,1.0,0.7,0.6)
-volumeColor.AddRGBPoint(2500,1.0,1.0,0.9)
+volumeColor.AddRGBPoint(f*0,0.0,0.0,0.0)
+volumeColor.AddRGBPoint(f*180,0.3,0.1,0.2)
+volumeColor.AddRGBPoint(f*1200,1.0,0.7,0.6)
+volumeColor.AddRGBPoint(f*2500,1.0,1.0,0.9)
 
 volumeScalarOpacity = vtk.vtkPiecewiseFunction()
-volumeScalarOpacity.AddPoint(0,0.0)
-volumeScalarOpacity.AddPoint(180,0.0)
-volumeScalarOpacity.AddPoint(1200,0.2)
-volumeScalarOpacity.AddPoint(2500,0.8)
+volumeScalarOpacity.AddPoint(f*0,0.0)
+volumeScalarOpacity.AddPoint(f*180,0.0)
+volumeScalarOpacity.AddPoint(f*1200,0.2)
+volumeScalarOpacity.AddPoint(f*2500,0.8)
 
 volumeGradientOpacity = vtk.vtkPiecewiseFunction()
-volumeGradientOpacity.AddPoint(0,0.0)
-volumeGradientOpacity.AddPoint(90,0.5)
-volumeGradientOpacity.AddPoint(100,1.0)
+volumeGradientOpacity.AddPoint(f*0,0.0)
+volumeGradientOpacity.AddPoint(f*90,0.5)
+volumeGradientOpacity.AddPoint(f*100,1.0)
 
 volumeProperty = vtk.vtkVolumeProperty()
 volumeProperty.SetColor(volumeColor)

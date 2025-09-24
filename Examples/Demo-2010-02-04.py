@@ -19,7 +19,7 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 2:
         img2 = 1
 else:
-    print("Usage: python " + sys.argv[0] + " sbrain.mnc sbrain_stenciled.mnc")
+    print("Usage: python " + sys.argv[0] + " colin27_t1_tal_lin.mnc colin27_t1_tal_lin_mask.mnc")
     sys.exit(0)
 
 print("Instructions: ")
@@ -228,6 +228,13 @@ class VolumeLOD(vtk.vtkLODProp3D):
         return self.ShiftScale.GetInput()
 
     def UpdatePipelineIvars(self):
+        # get upstream producer
+        upstream = self.ShiftScale.GetInputConnection(0,0).GetProducer()
+        upstream.Update()
+        data = upstream.GetOutput()
+        # find scaling factor for data
+        dataRange = data.GetPointData().GetScalars().GetRange()
+        self.ShiftScale.SetScale(4095.0/dataRange[1])
         self.ShiftScale.Update()
         origin = self.ShiftScale.GetOutput().GetOrigin()
         spacing = self.ShiftScale.GetOutput().GetSpacing()
@@ -338,9 +345,11 @@ skin.SetProperty(skinProperty)
 
 #---------------------------------------------------------
 # Create an image actor
+dataRange = readers[img1].GetOutput().GetPointData().GetScalars().GetRange()
+dataScale = dataRange[1]/4095.0
 table = vtk.vtkLookupTable()
 table.SetRange(intercept2, 2000*slope2 + intercept2)
-table.SetRange(170, 2500)
+table.SetRange(dataScale*170, dataScale*2500)
 table.SetRampToLinear()
 table.SetValueRange(0,1)
 table.SetHueRange(0,0)
@@ -352,7 +361,7 @@ table.SetTableValue(0, 0.0, 0.0, 0.0, 0.0)
 
 table2 = vtk.vtkLookupTable()
 table2.SetRange(intercept2, 2000*slope2 + intercept2)
-table2.SetRange(170, 2500)
+table2.SetRange(dataScale*170, dataScale*2500)
 table2.SetRampToLinear()
 table2.SetValueRange(0,1)
 table2.SetHueRange(0,0)
