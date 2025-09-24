@@ -66,7 +66,7 @@ public:
   // Description:
   // Evaluate plane equation for point x[3].
   double EvaluateFunction(double x[3]) override;
-  double EvaluateFunction(double x, double y, double z) {
+  double EvaluateFunction(double x, double y, double z) override {
     return this->vtkImplicitFunction::EvaluateFunction(x, y, z); }
 
   // Description:
