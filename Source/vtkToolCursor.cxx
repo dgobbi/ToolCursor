@@ -30,7 +30,7 @@
 #include "vtkProperty.h"
 #include "vtkDataSetMapper.h"
 #include "vtkAbstractVolumeMapper.h"
-#include "vtkVolumeRayCastMapper.h"
+#include "vtkFixedPointVolumeRayCastMapper.h"
 #include "vtkLookupTable.h"
 #include "vtkDataSetCollection.h"
 #include "vtkImageData.h"
@@ -413,7 +413,7 @@ int vtkToolCursor::FindShape(int mode, int pickFlags, int modifier)
   }
 
   int tuple[4];
-  this->ShapeBindings->GetTupleValue(i, tuple);
+  this->ShapeBindings->GetTypedTuple(i, tuple);
 
   return tuple[3];
 }
@@ -431,7 +431,7 @@ int vtkToolCursor::FindAction(int mode, int pickFlags, int modifier)
   }
 
   int tuple[4];
-  this->ActionBindings->GetTupleValue(i, tuple);
+  this->ActionBindings->GetTypedTuple(i, tuple);
 
   return tuple[3];
 }
@@ -453,7 +453,7 @@ int vtkToolCursor::FindActionButtons(int mode, int pickFlags, int modifier)
                                  mode, pickFlags, modifier);
     if (i < 0) { break; }
 
-    this->ActionBindings->GetTupleValue(i, tuple);
+    this->ActionBindings->GetTypedTuple(i, tuple);
     modifierMask |= tuple[2];
 
     j = i + 1;
@@ -564,11 +564,7 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         vtkDataSet *data = actor->GetMapper()->GetInput();
         if (data)
         {
-#if VTK_MAJOR_VERSION >= 6
           actor->GetMapper()->Update();
-#else
-          data->Update();
-#endif
         }
       }
       else if ( (volume = vtkVolume::SafeDownCast(anyProp)) )
@@ -576,15 +572,8 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         vtkDataSet *data = volume->GetMapper()->GetDataSetInput();
         if (data)
         {
-#if VTK_MAJOR_VERSION >= 6
           volume->GetMapper()->UpdateInformation();
-          volume->GetMapper()->SetUpdateExtentToWholeExtent();
-          volume->GetMapper()->Update();
-#else
-          data->UpdateInformation();
-          data->SetUpdateExtentToWholeExtent();
-          data->Update();
-#endif
+          volume->GetMapper()->UpdateWholeExtent();
         }
       }
       else if ( (imageActor = vtkImageActor::SafeDownCast(anyProp)) )
@@ -593,7 +582,6 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
         if (data)
         {
           int extent[6], wextent[6], dextent[6];
-#if VTK_MAJOR_VERSION >= 6
           imageActor->GetMapper()->UpdateInformation();
           data->GetExtent(extent);
           data->GetExtent(wextent);
@@ -605,11 +593,6 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
             info->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
                       wextent);
           }
-#else
-          data->UpdateInformation();
-          data->GetExtent(extent);
-          data->GetWholeExtent(wextent);
-#endif
           imageActor->GetDisplayExtent(dextent);
           if (dextent[0] == -1)
           {
@@ -633,15 +616,7 @@ void vtkToolCursor::UpdatePropsForPick(vtkPicker *picker,
               if (extent[h] < dextent[h]) { extent[h] = dextent[h]; }
             }
           }
-#if VTK_MAJOR_VERSION >= 6
-          imageActor->GetMapper()->SetUpdateExtent(extent);
-          //imageActor->GetMapper()->PropagateUpdateExtent();
-          imageActor->GetMapper()->Update();
-#else
-          data->SetUpdateExtent(extent);
-          data->PropagateUpdateExtent();
-          data->UpdateData();
-#endif
+          imageActor->GetMapper()->UpdateExtent(extent);
         }
       }
     }
@@ -1016,7 +991,7 @@ void vtkToolCursor::CheckGuideVisibility()
     this->SliceOutlineActor->SetVisibility(this->GuideVisibility);
     //this->SliceOutlineSource->SetBounds(imageMapper->GetBounds());
     // a dummy volume mapper
-    vtkVolumeRayCastMapper *vmapper = vtkVolumeRayCastMapper::New();
+    vtkFixedPointVolumeRayCastMapper *vmapper = vtkFixedPointVolumeRayCastMapper::New();
     vmapper->SET_INPUT_DATA(imageMapper->GetInput());
     this->SliceOutlineSource->SetActivePlaneId(imageEdgeId);
     this->SliceOutlineSource->SetVolumeMapper(vmapper);
@@ -1459,11 +1434,11 @@ void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
   if (i >= 0)
   {
     // If it's an exact match, then replace
-    array->GetTupleValue(i, tuple);
+    array->GetTypedTuple(i, tuple);
     if (tuple[0] == mode && tuple[1] == pickFlags && tuple[2] == modifier)
     {
       tuple[3] = item;
-      array->SetTupleValue(i, tuple);
+      array->SetTypedTuple(i, tuple);
       return;
     }
   }
@@ -1482,14 +1457,14 @@ void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
 
   // Extend array by one value.  Actually, this is just a dummy tuple,
   // it's just the easiest way of increasing the size of the array.
-  array->InsertNextTupleValue(tuple);
+  array->InsertNextTypedTuple(tuple);
 
   //cerr << "n = " << n << " i = " << i << "\n";
   // Shuffle values up by one
   for (int j = n; j > i; j--)
   {
-    array->GetTupleValue(j-1, tuple);
-    array->SetTupleValue(j, tuple);
+    array->GetTypedTuple(j-1, tuple);
+    array->SetTypedTuple(j, tuple);
   }
 
   // Set the tuple at the desired index
@@ -1498,7 +1473,7 @@ void vtkToolCursor::AddBinding(vtkIntArray *array, int item, int mode,
   tuple[2] = modifier;
   tuple[3] = item;
 
-  array->SetTupleValue(i, tuple);
+  array->SetTypedTuple(i, tuple);
 }
 
 //----------------------------------------------------------------------------
@@ -1528,7 +1503,7 @@ int vtkToolCursor::ResolveBinding(vtkIntArray *array, int start,
   int n = array->GetNumberOfTuples();
   for (int i = start; i < n; i++)
   {
-    array->GetTupleValue(i, tuple);
+    array->GetTypedTuple(i, tuple);
 
     //cerr << "item " << i << " of " << n << ": " << tuple[0] << " ";
     //PrintFlags(tuple[1]);
