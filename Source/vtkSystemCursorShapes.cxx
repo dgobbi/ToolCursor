@@ -98,21 +98,21 @@ vtkDataSet *vtkSystemCursorShapes::MakePointerShape()
   {
     points->InsertNextPoint(coords[i][0] - hotspot[0],
                             coords[i][1] - hotspot[1], 0.0);
-    scalars->InsertNextTupleValue(white);
+    scalars->InsertNextTypedTuple(white);
   }
 
   for (int j = 0; j < 7; j++)
   {
     points->InsertNextPoint(coords[j][0] - hotspot[0],
                             coords[j][1] - hotspot[1], +0.1);
-    scalars->InsertNextTupleValue(black);
+    scalars->InsertNextTypedTuple(black);
   }
 
   for (int k = 0; k < 7; k++)
   {
     points->InsertNextPoint(coords[k][0] - hotspot[0],
                             coords[k][1] - hotspot[1], -0.1);
-    scalars->InsertNextTupleValue(black);
+    scalars->InsertNextTypedTuple(black);
   }
 
   // Make the strips
@@ -141,11 +141,13 @@ vtkDataSet *vtkSystemCursorShapes::MakePointerShape()
 //----------------------------------------------------------------------------
 vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
 {
-  vtkUnsignedCharArray *scalars = vtkUnsignedCharArray::New();
+  vtkNew<vtkUnsignedCharArray> scalars;
   scalars->SetNumberOfComponents(4);
-  vtkPoints *points = vtkPoints::New();
-  vtkCellArray *strips = vtkCellArray::New();
-  vtkCellArray *lines = vtkCellArray::New();
+  scalars->SetName("Colors");
+
+  vtkNew<vtkPoints> points;
+  vtkNew<vtkCellArray> strips;
+  vtkNew<vtkCellArray> lines;
 
   static unsigned char black[4] = {  0,   0,   0, 255};
   static unsigned char white[4] = {255, 255, 255, 255};
@@ -193,57 +195,53 @@ vtkDataSet *vtkSystemCursorShapes::MakeCrosshairShape()
     4, 28, 29, 31, 30,
   };
 
+  // Insert crosshair points
   for (int i = 0; i < 8; i++)
   {
     points->InsertNextPoint(coords[i][0]+0.5, coords[i][1]-0.5, +0.1);
-    scalars->InsertNextTupleValue(black);
+    scalars->InsertNextTypedTuple(black);
   }
 
   for (int j = 0; j < 8; j++)
   {
     points->InsertNextPoint(coords[j][0]+0.5, coords[j][1]-0.5, -0.1);
-    scalars->InsertNextTupleValue(black);
+    scalars->InsertNextTypedTuple(black);
   }
 
   for (int k = 0; k < 16; k++)
   {
     points->InsertNextPoint(outCoords[k][0]+0.5, outCoords[k][1]-0.5, 0);
-    scalars->InsertNextTupleValue(white);
+    scalars->InsertNextTypedTuple(white);
   }
 
   // Make the crosshairs
-  lines->InsertNextCell(toplineIds[0], &toplineIds[1]);
-  lines->InsertNextCell(toplineIds[3], &toplineIds[4]);
-  lines->InsertNextCell(toplineIds[6], &toplineIds[7]);
-  lines->InsertNextCell(toplineIds[9], &toplineIds[10]);
+  lines->InsertNextCell(2, &toplineIds[1]);
+  lines->InsertNextCell(2, &toplineIds[4]);
+  lines->InsertNextCell(2, &toplineIds[7]);
+  lines->InsertNextCell(2, &toplineIds[10]);
 
-  // Make the crosshairs
-  lines->InsertNextCell(botlineIds[0], &botlineIds[1]);
-  lines->InsertNextCell(botlineIds[3], &botlineIds[4]);
-  lines->InsertNextCell(botlineIds[6], &botlineIds[7]);
-  lines->InsertNextCell(botlineIds[9], &botlineIds[10]);
+  lines->InsertNextCell(2, &botlineIds[1]);
+  lines->InsertNextCell(2, &botlineIds[4]);
+  lines->InsertNextCell(2, &botlineIds[7]);
+  lines->InsertNextCell(2, &botlineIds[10]);
 
   // Make the outline
-  lines->InsertNextCell(outlineIds[0], &outlineIds[1]);
-  lines->InsertNextCell(outlineIds[6], &outlineIds[7]);
-  lines->InsertNextCell(outlineIds[12], &outlineIds[13]);
-  lines->InsertNextCell(outlineIds[18], &outlineIds[19]);
+  lines->InsertNextCell(5, &outlineIds[1]);
+  lines->InsertNextCell(5, &outlineIds[7]);
+  lines->InsertNextCell(5, &outlineIds[13]);
+  lines->InsertNextCell(5, &outlineIds[19]);
 
   // Fill the outline
-  strips->InsertNextCell(stripIds[0], &stripIds[1]);
-  strips->InsertNextCell(stripIds[5], &stripIds[6]);
-  strips->InsertNextCell(stripIds[10], &stripIds[11]);
-  strips->InsertNextCell(stripIds[15], &stripIds[16]);
+  strips->InsertNextCell(4, &stripIds[1]);
+  strips->InsertNextCell(4, &stripIds[6]);
+  strips->InsertNextCell(4, &stripIds[11]);
+  strips->InsertNextCell(4, &stripIds[16]);
 
   vtkPolyData *data = vtkPolyData::New();
   data->SetPoints(points);
-  points->Delete();
   data->SetLines(lines);
-  lines->Delete();
   data->SetStrips(strips);
-  strips->Delete();
   data->GetPointData()->SetScalars(scalars);
-  scalars->Delete();
 
   return data;
 }

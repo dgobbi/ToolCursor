@@ -279,7 +279,6 @@ void vtkPushPlaneTool::DoAction()
     int extent[6];
     input->GetSpacing(is);
     input->GetOrigin(io);
-#if VTK_MAJOR_VERSION >= 6
     input->GetExtent(extent);
     vtkInformation *inInfo = this->ImageMapper->GetInputInformation(0, 0);
     if (inInfo &&
@@ -287,9 +286,6 @@ void vtkPushPlaneTool::DoAction()
     {
       inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
     }
-#else
-    input->GetWholeExtent(extent);
-#endif
 
     // get the center of the volume
     double point[3];
@@ -336,7 +332,8 @@ void vtkPushPlaneTool::DoAction()
       mapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
     }
 
-    vtkImageData *data = mapper->GetInput();
+    vtkImageData* data = vtkImageData::SafeDownCast(
+      mapper->GetInputDataObject(0, 0));
 
     // get matrix for transforming normals
     double nmatrix[16];
@@ -350,11 +347,7 @@ void vtkPushPlaneTool::DoAction()
     vtkImageHistogramStatistics *checker =
       vtkImageHistogramStatistics::New();
     checker->SetInputConnection(reslice->GetOutputPort());
-#if VTK_MAJOR_VERSION >= 6
     checker->SetStencilConnection(reslice->GetStencilOutputPort());
-#else
-    checker->SetStencil(reslice->GetStencilOutput());
-#endif
 
     double dp = -(normal[0]*origin[0] +
                   normal[1]*origin[1] +
@@ -694,7 +687,6 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
       this->ImageActor->GetInput()->GetSpacing(dataSpacing);
       int displayExtent[6];
       this->ImageActor->GetDisplayExtent(displayExtent);
-#if VTK_MAJOR_VERSION >= 6
       int wholeExtent[6];
       this->ImageActor->GetInput()->GetExtent(wholeExtent);
       vtkInformation *inInfo =
@@ -705,10 +697,6 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
         inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(),
                     wholeExtent);
       }
-#else
-      int wholeExtent[6];
-      this->ImageActor->GetInput()->GetWholeExtent(wholeExtent);
-#endif
 
       double x = (origin[i] - dataOrigin[i])/dataSpacing[i];
       if (x < wholeExtent[2*i]) { x = wholeExtent[2*i]; }
@@ -732,7 +720,8 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
 
       // Get the minimum thickness of volume allowed.
       double t = 1.0;
-      vtkImageData *data = this->VolumeMapper->GetInput();
+      vtkImageData* data = vtkImageData::SafeDownCast(
+        this->VolumeMapper->GetInputDataObject(0, 0));
       if (data)
       {
         double spacing[3];

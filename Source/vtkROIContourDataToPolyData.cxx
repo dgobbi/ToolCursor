@@ -694,7 +694,7 @@ int vtkROIContourDataToPolyData::RequestData(
   colors->SetNumberOfTuples(m);
   for (vtkIdType j = 0; j < m; j++)
   {
-    colors->SetTupleValue(j, color);
+    colors->SetTypedTuple(j, color);
   }
 
   output->GetPointData()->SetScalars(colors);
