@@ -36,13 +36,6 @@
 #include "vtkInformation.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
-// A macro to assist VTK 5 backwards compatibility
-#if VTK_MAJOR_VERSION >= 6
-#define SET_INPUT_DATA SetInputData
-#else
-#define SET_INPUT_DATA SetInput
-#endif
-
 vtkStandardNewMacro(vtkPushPlaneTool);
 
 //----------------------------------------------------------------------------
@@ -332,8 +325,7 @@ void vtkPushPlaneTool::DoAction()
       mapper = vtkVolumeMapper::SafeDownCast(this->Mapper);
     }
 
-    vtkImageData* data = vtkImageData::SafeDownCast(
-      mapper->GetInputDataObject(0, 0));
+    vtkImageData *data = vtkImageData::SafeDownCast(mapper->GetInput());
 
     // get matrix for transforming normals
     double nmatrix[16];
@@ -341,7 +333,7 @@ void vtkPushPlaneTool::DoAction()
 
     vtkImageReslice *reslice = vtkImageReslice::New();
     reslice->SetInterpolationModeToLinear();
-    reslice->SET_INPUT_DATA(data);
+    reslice->SetInputData(data);
     reslice->GenerateStencilOutputOn();
 
     vtkImageHistogramStatistics *checker =
@@ -720,8 +712,7 @@ void vtkPushPlaneTool::SetOrigin(const double o[3])
 
       // Get the minimum thickness of volume allowed.
       double t = 1.0;
-      vtkImageData* data = vtkImageData::SafeDownCast(
-        this->VolumeMapper->GetInputDataObject(0, 0));
+      vtkImageData *data = vtkImageData::SafeDownCast(this->VolumeMapper->GetInput());
       if (data)
       {
         double spacing[3];
