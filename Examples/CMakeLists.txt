@@ -71,5 +71,5 @@ target_link_libraries(LassoImageTool
 if(NOT VTK_VERSION VERSION_LESS 8.90)
   vtk_module_autoinit(
     TARGETS LassoImageTool
-    MODULES VTK::RenderingOpenGL2 VTK::RenderingUI VTK::InteractionStyle)
+    MODULES ${VTK_LIBS})
 endif()

@@ -44,6 +44,10 @@ Module:    LassoImageTool.cxx
 #include <vtkProperty.h>
 #include <vtkLookupTable.h>
 
+// need to include this for autoinit magic to work
+// (it is used internally by vtkToolCursor.cxx)
+#include <vtkFixedPointVolumeRayCastMapper.h>
+
 #include "vtkROIContourDataToPolyData.h"
 #include "vtkImageToROIContourData.h"
 #include "vtkROIContourData.h"
