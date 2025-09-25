@@ -34,13 +34,6 @@
 #include "vtkTransform.h"
 #include "vtkPerspectiveTransform.h"
 
-// A macro to assist VTK 5 backwards compatibility
-#if VTK_MAJOR_VERSION >= 6
-#define SET_INPUT_DATA SetInputData
-#else
-#define SET_INPUT_DATA SetInput
-#endif
-
 vtkStandardNewMacro(vtkActionCursorShapes);
 
 //----------------------------------------------------------------------------
@@ -118,7 +111,7 @@ vtkPolyData *vtkActionCursorShapes::MakeArrow()
   polys->Delete();
 
   vtkImplicitModeller *modeller = vtkImplicitModeller::New();
-  modeller->SET_INPUT_DATA(arrow);
+  modeller->SetInputData(arrow);
   modeller->SetSampleDimensions(32, 16, 8);
 
   vtkContourFilter *contour = vtkContourFilter::New();
@@ -148,7 +141,7 @@ vtkPolyData *vtkActionCursorShapes::MakeWarpedArrow(vtkPolyData *arrow,
   double warpX, double warpY, double warpZ, double warpScale)
 {
   vtkWarpTo *warp = vtkWarpTo::New();
-  warp->SET_INPUT_DATA(arrow);
+  warp->SetInputData(arrow);
   warp->SetPosition(warpX, warpY, warpZ);
   warp->SetScaleFactor(warpScale);
   warp->AbsoluteOn();

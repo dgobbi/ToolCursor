@@ -57,13 +57,6 @@ Module:    LassoImageTool.cxx
 
 #include "vtkToolCursorInteractorObserver.h"
 
-// A macro to assist VTK 5 backwards compatibility
-#if VTK_MAJOR_VERSION >= 6
-#define SET_INPUT_DATA SetInputData
-#else
-#define SET_INPUT_DATA SetInput
-#endif
-
 // internal methods for reading images, these methods read the image
 // into the specified data object and also provide a matrix for converting
 // the data coordinates into patient coordinates.
@@ -233,7 +226,7 @@ int main (int argc, char *argv[])
   vtkSmartPointer<vtkImageProperty> sourceProperty =
     vtkSmartPointer<vtkImageProperty>::New();
 
-  sourceMapper->SET_INPUT_DATA(sourceImage);
+  sourceMapper->SetInputData(sourceImage);
   sourceMapper->SliceAtFocalPointOn();
   sourceMapper->SliceFacesCameraOn();
   sourceMapper->JumpToNearestSliceOn();
@@ -322,7 +315,7 @@ int main (int argc, char *argv[])
   // blur the image to make a smoother mask
   vtkSmartPointer<vtkImageGaussianSmooth> imageBlur =
     vtkSmartPointer<vtkImageGaussianSmooth>::New();
-  imageBlur->SET_INPUT_DATA(sourceImage);
+  imageBlur->SetInputData(sourceImage);
   imageBlur->SetStandardDeviations(4,4,4);
 
   // set threshold to 10% of the data range
@@ -348,7 +341,7 @@ int main (int argc, char *argv[])
   // convert the ROI into a new mask
   vtkSmartPointer<vtkROIContourDataToPolyData> roiDataToPolyData =
     vtkSmartPointer<vtkROIContourDataToPolyData>::New();
-  roiDataToPolyData->SET_INPUT_DATA(roiData);
+  roiDataToPolyData->SetInputData(roiData);
   roiDataToPolyData->SubdivisionOn();
 
   vtkSmartPointer<vtkPolyDataToImageStencil> makeStencil =
@@ -360,7 +353,7 @@ int main (int argc, char *argv[])
 
   vtkSmartPointer<vtkImageReslice> applyStencil =
     vtkSmartPointer<vtkImageReslice>::New();
-  applyStencil->SET_INPUT_DATA(sourceImage);
+  applyStencil->SetInputData(sourceImage);
   applyStencil->SetInputConnection(1, makeStencil->GetOutputPort());
   applyStencil->Update();
 

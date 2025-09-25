@@ -35,7 +35,6 @@ void vtkResliceMath::SetReslicePlane(
 
   // Update the data
   vtkImageData *input = static_cast<vtkImageData *>(reslice->GetInput());
-#if VTK_MAJOR_VERSION >= 6
   reslice->Update();
   int extent[6];
   input->GetExtent(extent);
@@ -45,11 +44,6 @@ void vtkResliceMath::SetReslicePlane(
   {
     inInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
   }
-#else
-  input->Update();
-  int extent[6];
-  input->GetWholeExtent(extent);
-#endif
   double spacing[3], origin[3];
   input->GetSpacing(spacing);
   input->GetOrigin(origin);

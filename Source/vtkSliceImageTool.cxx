@@ -246,7 +246,6 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     int extent[6];
     data->GetOrigin(origin);
     data->GetSpacing(spacing);
-#if VTK_MAJOR_VERSION >= 6
     data->GetExtent(extent);
     vtkInformation *info = this->CurrentImageMapper->GetInputInformation(0, 0);
     if (info &&
@@ -254,9 +253,6 @@ void vtkSliceImageTool::AdvanceSlice(int delta)
     {
       info->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
     }
-#else
-    data->GetWholeExtent(extent);
-#endif
 
     bounds[0] = origin[0] + spacing[0]*extent[0];
     bounds[1] = origin[0] + spacing[0]*extent[1];

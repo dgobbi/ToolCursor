@@ -32,15 +32,6 @@
 
 #include "vtkVolumePicker.h"
 
-// A macro to assist VTK 5 backwards compatibility
-#if VTK_MAJOR_VERSION >= 6
-#define SET_INPUT_DATA SetInputData
-#define SET_SOURCE_DATA SetSourceData
-#else
-#define SET_INPUT_DATA SetInput
-#define SET_SOURCE_DATA SetSource
-#endif
-
 vtkStandardNewMacro(vtkFiducialPointsTool);
 
 //----------------------------------------------------------------------------
@@ -54,8 +45,8 @@ vtkFiducialPointsTool::vtkFiducialPointsTool()
   this->Glyph3D = vtkGlyph3D::New();
   this->Glyph3D->SetColorModeToColorByScalar();
   this->Glyph3D->SetScaleFactor(0.7);
-  this->Glyph3D->SET_INPUT_DATA(this->PointSet);
-  this->Glyph3D->SET_SOURCE_DATA(vtkPolyData::SafeDownCast(
+  this->Glyph3D->SetInputData(this->PointSet);
+  this->Glyph3D->SetSourceData(vtkPolyData::SafeDownCast(
     shapes->GetShapeData("Sphere")));
 
   this->Mapper = vtkDataSetMapper::New();
@@ -121,7 +112,7 @@ void vtkFiducialPointsTool::SetMarker(vtkPolyData *data)
 {
   if (data != this->Glyph3D->GetSource())
   {
-    this->Glyph3D->SET_SOURCE_DATA(data);
+    this->Glyph3D->SetSourceData(data);
     this->Modified();
   }
 }
