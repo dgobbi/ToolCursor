@@ -239,10 +239,15 @@ class VolumeLOD(vtk.vtkLODProp3D):
         origin = self.ShiftScale.GetOutput().GetOrigin()
         spacing = self.ShiftScale.GetOutput().GetSpacing()
         extent = self.ShiftScale.GetOutput().GetExtent()
-        newspacing = (spacing[0]*(extent[1] - extent[0])/127.0,
-                      spacing[1]*(extent[3] - extent[2])/127.0,
-                      spacing[2]*(extent[5] - extent[4])/127.0)
-        self.Reslice.SetOutputOrigin(origin)
+        newspacing = list(spacing)
+        neworigin = list(origin)
+        for i in range(3):
+            size = spacing[i]*(extent[2*i + 1] - extent[2*i])
+            if spacing[i] < 0.0:
+                size = -size
+                neworigin[i] = origin[i] - size
+            newspacing[i] = size/127.0
+        self.Reslice.SetOutputOrigin(neworigin)
         self.Reslice.SetOutputSpacing(newspacing)
         self.Reslice.Update()
 
