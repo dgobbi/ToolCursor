@@ -150,6 +150,7 @@ class VolumeLOD(vtk.vtkLODProp3D):
 
         self.Mapper = vtk.vtkSmartVolumeMapper()
         self.Mapper.SetInputConnection(self.Reslice.GetOutputPort())
+        self.Mapper.SetInteractiveUpdateRate(100000)
 
         #self.Mapper3D = vtk.vtkVolumeTextureMapper3D()
         #self.Mapper3D.SetInputConnection(self.Reslice.GetOutputPort())
