@@ -321,19 +321,24 @@ bool vtkROIContourDataToPolyData::GenerateSpline(
   }
 
   vtkIdType id1 = points->GetNumberOfPoints();
-  lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
-  vtkIdTypeArray *ia = lines->GetData();
   vtkIdType cellSize = id1 - id0 + closed;
-  vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
-  *iptr++ = cellSize;
-  for (vtkIdType id = id0; id < id1; id++)
+
+  // Build the list of point IDs for this cell
+  std::vector<vtkIdType> ids;
+  ids.reserve(cellSize);
+
+  for (vtkIdType id = id0; id < id1; ++id)
   {
-    *iptr++ = id;
+    ids.push_back(id);
   }
+
   if (closed)
   {
-    *iptr++ = id0;
+    ids.push_back(id0);
   }
+
+  // Add the cell to the vtkCellArray
+  lines->InsertNextCell(cellSize, ids.data());
 
   // Free any memory that was used
   xspline->RemoveAllPoints();
@@ -490,19 +495,25 @@ bool vtkROIContourDataToPolyData::CatmullRomSpline(
   }
 
   vtkIdType id1 = points->GetNumberOfPoints();
-  lines->SetNumberOfCells(lines->GetNumberOfCells() + 1);
-  vtkIdTypeArray *ia = lines->GetData();
   vtkIdType cellSize = id1 - id0 + closed;
-  vtkIdType *iptr = ia->WritePointer(ia->GetMaxId()+1, cellSize+1);
-  *iptr++ = cellSize;
-  for (vtkIdType id = id0; id < id1; id++)
+
+  std::vector<vtkIdType> ids;
+  ids.reserve(cellSize);
+
+  // Fill the point IDs
+  for (vtkIdType id = id0; id < id1; ++id)
   {
-    *iptr++ = id;
+      ids.push_back(id);
   }
+
+  // Add closing point if needed
   if (closed)
   {
-    *iptr++ = id0;
+      ids.push_back(id0);
   }
+
+  // Insert the polyline cell
+  lines->InsertNextCell(cellSize, ids.data());
 
   return true;
 }
