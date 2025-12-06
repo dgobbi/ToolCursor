@@ -623,40 +623,51 @@ int vtkROIContourDataToPolyData::RequestData(
         }
         else if (m > 0)
         {
-          // Add the contour without subdivision
-          cells->SetNumberOfCells(cells->GetNumberOfCells() + 1);
-          vtkIdTypeArray *ida = cells->GetData();
-          vtkIdType *idptr = ida->WritePointer(ida->GetMaxId()+1, cellSize+1);
-          *idptr++ = cellSize;
-
+          // First point index where new points will be written
           vtkIdType firstPointId = outPoints->GetNumberOfPoints();
 
-          vtkDoubleArray *da =
-            vtkDoubleArray::SafeDownCast(outPoints->GetData());
-          vtkIdType id = firstPointId;
-          double *p = da->WritePointer(id*3, m*3);
-
-          for (int j = 0; j < m; j++)
+          //
+          // ---- Add the points ----
+          //
+          for (int j = 0; j < m; ++j)
           {
-            points->GetPoint(j, p);
-            *idptr++ = id++;
-            p += 3;
+              double p[3];
+              points->GetPoint(j, p);
+              outPoints->InsertNextPoint(p);
           }
+
+          //
+          // ---- Add the cell ----
+          //
+          vtkIdType cellSize = m + (closed ? 1 : 0);
+          std::vector<vtkIdType> ids;
+          ids.reserve(cellSize);
+
+          // Fill connectivity
+          for (vtkIdType j = 0; j < m; ++j)
+          {
+              ids.push_back(firstPointId + j);
+          }
+
+          if (cellSize > m)        // meaning “closed”
+          {
+              ids.push_back(firstPointId);  // close the loop
+          }
+
+          // Insert the cell (VTK 9.6 way)
+          cells->InsertNextCell(cellSize, ids.data());
+
+          //
+          // ---- Add contour sub-IDs (if provided) ----
+          //
           if (contourSubIds)
           {
-            id = contourSubIds->GetMaxId() + 1;
-            int *iptr = contourSubIds->WritePointer(id, m);
-            for (int j = 0; j < m; j++)
-            {
-              *iptr++ = j;
-            }
+              for (int j = 0; j < m; ++j)
+              {
+                  contourSubIds->InsertNextValue(j);
+              }
           }
 
-          // Close the contour, if necessary
-          if (cellSize > m)
-          {
-            *idptr++ = firstPointId;
-          }
           success = true;
         }
 
