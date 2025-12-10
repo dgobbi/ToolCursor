@@ -48,6 +48,8 @@ Module:    LassoImageTool.cxx
 // (it is used internally by vtkToolCursor.cxx)
 #include <vtkFixedPointVolumeRayCastMapper.h>
 
+#include <iostream>
+
 #include "vtkROIContourDataToPolyData.h"
 #include "vtkImageToROIContourData.h"
 #include "vtkROIContourData.h"
@@ -181,8 +183,8 @@ int main (int argc, char *argv[])
 {
   if (argc < 2)
   {
-    cout << "Usage 1: " << argv[0] << " image.mnc" << endl;
-    cout << "Usage 2: " << argv[0] << " dicomdir/" << endl;
+    std::cout << "Usage 1: " << argv[0] << " image.mnc" << std::endl;
+    std::cout << "Usage 2: " << argv[0] << " dicomdir/" << std::endl;
     return EXIT_FAILURE;
   }
 
