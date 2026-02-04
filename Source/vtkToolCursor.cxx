@@ -211,6 +211,7 @@ vtkToolCursor::vtkToolCursor()
   this->SliceOutlineMapper = vtkDataSetMapper::New();
   this->SliceOutlineMapper->SetInputConnection(
     this->SliceOutlineTube->GetOutputPort());
+  this->SliceOutlineMapper->ScalarVisibilityOff();
 
   this->SliceOutlineActor = vtkActor::New();
   this->SliceOutlineActor->SetMapper(this->SliceOutlineMapper);
@@ -989,6 +990,7 @@ void vtkToolCursor::CheckGuideVisibility()
     this->SliceOutlineSource->SetActivePlaneId(imageEdgeId);
     this->SliceOutlineSource->SetVolumeMapper(vmapper);
     vmapper->Delete();
+
   }
   else
   {
@@ -1568,4 +1570,3 @@ static void PrintFlags(int flags)
   cerr << ")";
 }
 */
-
